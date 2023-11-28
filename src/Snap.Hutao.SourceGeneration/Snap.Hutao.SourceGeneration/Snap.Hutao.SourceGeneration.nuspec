@@ -1,7 +1,7 @@
 ﻿<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>Snap.Hutao.SourceGeneration</id>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <authors>DGP Studio</authors>
     <developmentDependency>true</developmentDependency>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -12,6 +12,6 @@
     <repository type="git" url="https://github.com/DGP-Studio/Snap.Hutao.SourceGeneration" commit="$commit$" />
   </metadata>
   <files>
-    <file src="bin\x64\Release\netstandard2.0\Snap.Hutao.SourceGeneration.dll" target="analyzer\cs\Snap.Hutao.SourceGeneration.dll" />
+    <file src="bin\x64\Release\netstandard2.0\Snap.Hutao.SourceGeneration.dll" target="analyzers\cs\Snap.Hutao.SourceGeneration.dll" />
   </files>
 </package>
