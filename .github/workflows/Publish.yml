@@ -24,4 +24,4 @@ jobs:
       run: dotnet pack --configuration Release src/Snap.Hutao.SourceGeneration/Snap.Hutao.SourceGeneration/Snap.Hutao.SourceGeneration.csproj
 
     - name: Publish to NuGet
-      run: dotnet nuget push src/Snap.Hutao.SourceGeneration/Snap.Hutao.SourceGeneration/bin/x64/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+      run: dotnet nuget push src/Snap.Hutao.SourceGeneration/Snap.Hutao.SourceGeneration/bin/Release/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
