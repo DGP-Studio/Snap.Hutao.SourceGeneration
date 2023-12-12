@@ -263,7 +263,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
             }
         }
 
-        if (syntax.Operand is DefaultExpressionSyntax expression)
+        if (syntax.Operand is DefaultExpressionSyntax)
         {
             return;
         }

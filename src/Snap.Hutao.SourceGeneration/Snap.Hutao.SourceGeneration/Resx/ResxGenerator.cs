@@ -94,14 +94,14 @@ public sealed class ResxGenerator : IIncrementalGenerator
 
             if (resourceName != null && entries != null)
             {
-                content += GenerateCode(ns, className, resourceName, entries, supportNullableReferenceTypes);
+                content += GenerateCode(ns, className, resourceName, entries);
             }
 
             context.AddSource($"{Path.GetFileName(resxGroup.Key)}.resx.g.cs", SourceText.From(content, Encoding.UTF8));
         }
     }
 
-    private static string GenerateCode(string? ns, string className, string resourceName, List<ResxEntry> entries, bool enableNullableAttributes)
+    private static string GenerateCode(string? ns, string className, string resourceName, List<ResxEntry> entries)
     {
         StringBuilder sb = new();
         sb.AppendLine();
