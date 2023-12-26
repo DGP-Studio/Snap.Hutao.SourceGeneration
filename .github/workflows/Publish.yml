@@ -18,8 +18,6 @@ jobs:
       with:
         dotnet-version: '8.x'
 
-    - name: Restore dependencies
-      run: dotnet restore src/Snap.Hutao.SourceGeneration/Snap.Hutao.SourceGeneration/Snap.Hutao.SourceGeneration.csproj
     - name: Pack
       run: dotnet pack --configuration Release src/Snap.Hutao.SourceGeneration/Snap.Hutao.SourceGeneration/Snap.Hutao.SourceGeneration.csproj
 
