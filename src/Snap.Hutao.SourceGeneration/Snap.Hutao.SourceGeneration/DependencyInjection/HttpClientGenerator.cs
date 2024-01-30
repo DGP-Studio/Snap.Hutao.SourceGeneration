@@ -122,6 +122,7 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
                     .ConfigurePrimaryHttpMessageHandler((handler, provider) =>
                             {
                                 HttpClientHandler clientHandler = (HttpClientHandler)handler;
+
                     """);
 
                 foreach (KeyValuePair<string, TypedConstant> property in properties)
