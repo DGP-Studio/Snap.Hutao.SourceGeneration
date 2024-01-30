@@ -118,18 +118,23 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
             if (context.SingleOrDefaultAttribute(PrimaryHttpMessageHandlerAttributeName) is AttributeData handlerData)
             {
                 ImmutableArray<KeyValuePair<string, TypedConstant>> properties = handlerData.NamedArguments;
-                lineBuilder.Append(@".ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler() {");
+                lineBuilder.Append("""
+                    .ConfigurePrimaryHttpMessageHandler((handler, provider) =>
+                            {
+                                HttpClientHandler clientHandler = (HttpClientHandler)handler;
+                    """);
 
                 foreach (KeyValuePair<string, TypedConstant> property in properties)
                 {
-                    lineBuilder.Append(' ');
+                    lineBuilder.Append("        clientHandler.");
                     lineBuilder.Append(property.Key);
                     lineBuilder.Append(" = ");
                     lineBuilder.Append(property.Value.ToCSharpString());
-                    lineBuilder.Append(',');
+                    lineBuilder.Append(';');
+                    lineBuilder.AppendLine();
                 }
 
-                lineBuilder.Append(" })");
+                lineBuilder.Append("        })");
             }
 
             lineBuilder.Append(';');
