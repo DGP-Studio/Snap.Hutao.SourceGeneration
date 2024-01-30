@@ -127,7 +127,7 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
 
                 foreach (KeyValuePair<string, TypedConstant> property in properties)
                 {
-                    lineBuilder.Append("        clientHandler.");
+                    lineBuilder.Append("            clientHandler.");
                     lineBuilder.Append(property.Key);
                     lineBuilder.Append(" = ");
                     lineBuilder.Append(property.Value.ToCSharpString());
