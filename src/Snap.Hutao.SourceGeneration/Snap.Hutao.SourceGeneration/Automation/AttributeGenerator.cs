@@ -128,6 +128,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 Singleton,
                 Transient,
                 Scoped,
+                HostedService,
             }
 
             [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]

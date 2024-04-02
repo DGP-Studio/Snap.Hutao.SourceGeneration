@@ -20,6 +20,7 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
     public const string InjectAsSingletonName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.Singleton";
     public const string InjectAsTransientName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.Transient";
     public const string InjectAsScopedName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.Scoped";
+    public const string InjectAsHostedServiceName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.HostedService";
 
     private static readonly DiagnosticDescriptor invalidInjectionDescriptor = new("SH101", "无效的 InjectAs 枚举值", "尚未支持生成 {0} 配置", "Quality", DiagnosticSeverity.Error, true);
 
@@ -114,6 +115,9 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
                     break;
                 case (InjectAsScopedName, true):
                     lineBuilder.Append("        services.AddKeyedScoped<");
+                    break;
+                case (InjectAsHostedServiceName, _):
+                    lineBuilder.Append("        services.AddHostedService<");
                     break;
                 default:
                     production.ReportDiagnostic(Diagnostic.Create(invalidInjectionDescriptor, context.Context.Node.GetLocation(), injectAsName));
