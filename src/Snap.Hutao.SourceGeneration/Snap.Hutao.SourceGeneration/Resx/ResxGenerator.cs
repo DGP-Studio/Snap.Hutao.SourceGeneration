@@ -266,6 +266,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
                 {
                     return GetStringOrDefault(culture: null, name: name, defaultValue: defaultValue, args: null);
                 }
+
             """);
 
         foreach (ResxEntry? entry in entries.OrderBy(e => e.Name, StringComparer.Ordinal))
@@ -287,11 +288,11 @@ public sealed class ResxGenerator : IIncrementalGenerator
                 {
                     foreach((string? each, string locale) in entry.Values.Zip(entry.Locales,(x,y)=>(x,y)))
                     {
-                        summary.Add(new XElement("para", $"{GetStringWithPadding(locale, 8)} Value: \"{each}\""));
+                        summary.Add(new XElement("code", $"{GetStringWithPadding(locale, 8)} Value: \"{each}\""));
                     }
                 }
 
-                string comment = summary.ToString().Replace("\r\n", "\r\n   /// ", StringComparison.Ordinal);
+                string comment = summary.ToString().Replace("\r\n", "\r\n    /// ", StringComparison.Ordinal);
 
                 sb.AppendLine($$"""
                         /// {{comment}}
@@ -370,7 +371,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
             return source;
         }
 
-        return source + new string('_', length - source.Length);
+        return source + new string(' ', length - source.Length);
     }
 
     private static string? ComputeResourceName(string rootNamespace, string projectDir, string resourcePath)
