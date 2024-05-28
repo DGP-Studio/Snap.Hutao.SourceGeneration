@@ -355,7 +355,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
             }
 
             sb.AppendLine($$"""
-                    public const string {{ToCSharpNameIdentifier(entry.Name!)}} = "entry.Name";
+                    public const string {{ToCSharpNameIdentifier(entry.Name!)}} = "{{entry.Name}}";
                 """);
         }
 
