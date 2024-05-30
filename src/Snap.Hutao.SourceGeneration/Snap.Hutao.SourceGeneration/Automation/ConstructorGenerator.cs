@@ -88,7 +88,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             }
             """);
 
-        string normalizedClassName = context2.Symbol.ToDisplayString().Replace('<', '{').Replace('>', '}');
+        string normalizedClassName = new StringBuilder(context2.Symbol.ToDisplayString()).Replace('<', '{').Replace('>', '}').ToString();
         production.AddSource($"{normalizedClassName}.ctor.g.cs", sourceBuilder.ToString());
     }
 

@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
@@ -92,7 +93,7 @@ internal sealed class CommandGenerator : IIncrementalGenerator
             }
             """;
 
-        string normalizedClassName = classSymbol.ToDisplayString().Replace('<', '{').Replace('>', '}');
+        string normalizedClassName = new StringBuilder(classSymbol.ToDisplayString()).Replace('<', '{').Replace('>', '}').ToString();
         production.AddSource($"{normalizedClassName}.{commandName}.g.cs", code);
     }
 }

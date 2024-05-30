@@ -8,6 +8,7 @@ using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
@@ -123,7 +124,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                     """;
             }
 
-            string normalizedClassName = context2.Symbol.ToDisplayString().Replace('<', '{').Replace('>', '}');
+            string normalizedClassName = new StringBuilder(context2.Symbol.ToDisplayString()).Replace('<', '{').Replace('>', '}').ToString();
             production.AddSource($"{normalizedClassName}.{propertyName}.g.cs", code);
         }
     }
