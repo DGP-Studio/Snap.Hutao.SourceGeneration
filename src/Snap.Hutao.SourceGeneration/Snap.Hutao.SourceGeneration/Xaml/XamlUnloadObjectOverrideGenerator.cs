@@ -17,11 +17,12 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValuesProvider<GeneratorSyntaxContext3> inheritClasses = context.SyntaxProvider
+        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext3>> inheritClasses = context.SyntaxProvider
             .CreateSyntaxProvider(FilterClassWithBaseList, ScopedPageInheritClass)
-            .Where(GeneratorSyntaxContext3.NotNull);
+            .Where(GeneratorSyntaxContext3.NotNull)
+            .Collect();
 
-        context.RegisterSourceOutput(inheritClasses, GenerateUnloadObjectOverrideImplementation);
+        context.RegisterSourceOutput(inheritClasses, GenerateUnloadObjectOverrideImplementations);
     }
 
     private static bool FilterClassWithBaseList(SyntaxNode node, CancellationToken token)
@@ -40,6 +41,14 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
         }
 
         return default;
+    }
+
+    private static void GenerateUnloadObjectOverrideImplementations(SourceProductionContext production, ImmutableArray<GeneratorSyntaxContext3> context3s)
+    {
+        foreach (GeneratorSyntaxContext3 context3 in context3s.DistinctBy(c => c.Symbol.ToDisplayString()))
+        {
+            GenerateUnloadObjectOverrideImplementation(production, context3);
+        }
     }
 
     private static void GenerateUnloadObjectOverrideImplementation(SourceProductionContext production, GeneratorSyntaxContext3 context3)

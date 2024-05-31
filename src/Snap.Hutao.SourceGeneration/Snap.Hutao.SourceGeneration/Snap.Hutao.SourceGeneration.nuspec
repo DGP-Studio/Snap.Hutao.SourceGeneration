@@ -1,7 +1,7 @@
 ﻿<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
   <metadata>
     <id>Snap.Hutao.SourceGeneration</id>
-    <version>1.0.10</version>
+    <version>1.0.11</version>
     <authors>DGP Studio</authors>
     <developmentDependency>true</developmentDependency>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
