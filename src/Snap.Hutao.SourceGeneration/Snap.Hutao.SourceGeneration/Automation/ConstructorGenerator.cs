@@ -88,8 +88,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             }
             """);
 
-        string normalizedClassName = new StringBuilder(context2.Symbol.ToDisplayString()).Replace('<', '{').Replace('>', '}').ToString();
-        production.AddSource($"{normalizedClassName}.ctor.g.cs", sourceBuilder.ToString());
+        production.AddSource($"{context2.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
     }
 
     private static void FillUpWithFieldValueAssignment(StringBuilder builder, GeneratorSyntaxContext2 context2, FieldValueAssignmentOptions options)

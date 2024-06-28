@@ -13,7 +13,7 @@ namespace Snap.Hutao.SourceGeneration.Xaml;
 [Generator]
 internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
 {
-    private const string ClassName = "Snap.Hutao.Control.ScopedPage";
+    private const string ClassName = "Snap.Hutao.UI.Xaml.Control.ScopedPage";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -71,7 +71,6 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
             }
             """);
 
-        string normalizedClassName = new StringBuilder(context3.Symbol.ToDisplayString()).Replace('<', '{').Replace('>', '}').ToString();
-        production.AddSource($"{normalizedClassName}.ctor.g.cs", sourceBuilder.ToString());
+        production.AddSource($"{context3.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
     }
 }

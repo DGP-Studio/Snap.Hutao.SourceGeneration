@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Reflection.Metadata;
 using System.Text;
 
-namespace Snap.Hutao.SourceGeneration.Resx;
+namespace Snap.Hutao.SourceGeneration.Primitive;
 
-internal static class StringExtensions
+internal static class StringExtension
 {
     public static string Replace(this string str, string oldValue, string newValue, StringComparison comparison)
     {
@@ -23,5 +24,10 @@ internal static class StringExtensions
 
         sb.Append(str, previousIndex, str.Length - previousIndex);
         return sb.ToString();
+    }
+
+    public static string NormalizeSymbolName(this string symbol)
+    {
+        return new StringBuilder(symbol).Replace('<', '{').Replace('>', '}').ToString();
     }
 }

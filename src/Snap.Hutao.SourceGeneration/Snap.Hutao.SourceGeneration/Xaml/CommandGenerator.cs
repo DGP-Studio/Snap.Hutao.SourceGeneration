@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Snap.Hutao.SourceGeneration.Automation;
+namespace Snap.Hutao.SourceGeneration.Xaml;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class CommandGenerator : IIncrementalGenerator
@@ -18,8 +18,8 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext2<IMethodSymbol>>> commands =
-            context.SyntaxProvider.CreateSyntaxProvider(FilterAttributedMethods, CommandMethod)
+        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext2<IMethodSymbol>>> commands = context.SyntaxProvider
+            .CreateSyntaxProvider(FilterAttributedMethods, CommandMethod)
             .Where(GeneratorSyntaxContext2<IMethodSymbol>.NotNull)
             .Collect();
 
@@ -62,6 +62,12 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
         AttributeData commandInfo = context2.SingleAttribute(AttributeName);
         string commandName = (string)commandInfo.ConstructorArguments[0].Value!;
+        string commandField = $"backingField_{commandName}";
+
+        string? canExecute = commandInfo.ConstructorArguments.ElementAtOrDefault(1).Value as string;
+        string canExecuteParameter = canExecute is not null
+            ? $", {canExecute}"
+            : string.Empty;
 
         string commandType = context2.Symbol.ReturnType.IsOrInheritsFrom("System.Threading.Tasks.Task")
             ? "AsyncRelayCommand"
@@ -70,6 +76,8 @@ internal sealed class CommandGenerator : IIncrementalGenerator
         string genericParameter = context2.Symbol.Parameters.ElementAtOrDefault(0) is IParameterSymbol parameter
             ? $"<{parameter.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedNonNullableFormat)}>"
             : string.Empty;
+
+        string commandFullType = $"{commandType}{genericParameter}";
 
         string concurrentExecution = commandInfo.HasNamedArgumentWith<bool>("AllowConcurrentExecutions", value => value)
             ? ", AsyncRelayCommandOptions.AllowConcurrentExecutions"
@@ -84,16 +92,17 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
             partial class {{className}}
             {
-                private ICommand _{{commandName}};
+                [Browsable(false)]
+                [EditorBrowsable(EditorBrowsableState.Never)]
+                private {{commandFullType}} {{commandField}};
 
-                public ICommand {{commandName}}
+                public {{commandFullType}} {{commandName}}
                 {
-                    get => _{{commandName}} ??= new {{commandType}}{{genericParameter}}({{context2.Symbol.Name}}{{concurrentExecution}});
+                    get => {{commandField}} ??= new {{commandFullType}}({{context2.Symbol.Name}}{{canExecuteParameter}}{{concurrentExecution}});
                 }
             }
             """;
 
-        string normalizedClassName = new StringBuilder(classSymbol.ToDisplayString()).Replace('<', '{').Replace('>', '}').ToString();
-        production.AddSource($"{normalizedClassName}.{commandName}.g.cs", code);
+        production.AddSource($"{classSymbol.ToDisplayString().NormalizeSymbolName()}.{commandName}.g.cs", code);
     }
 }

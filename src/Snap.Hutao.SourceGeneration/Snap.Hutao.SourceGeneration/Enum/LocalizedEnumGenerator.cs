@@ -109,7 +109,7 @@ internal class LocalizedEnumGenerator : IIncrementalGenerator
             }
             """);
 
-        context.AddSource($"{context2.Symbol.Name}Extension.g.cs", sourceBuilder.ToString());
+        context.AddSource($"{context2.Symbol.ToDisplayString().NormalizeSymbolName()}Extension.g.cs", sourceBuilder.ToString());
     }
 
     private static void FillUpWithSwitchBranches(StringBuilder sourceBuilder, GeneratorSyntaxContext2 context)

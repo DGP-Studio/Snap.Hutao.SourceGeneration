@@ -23,7 +23,11 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
             [AttributeUsage(AttributeTargets.Method, Inherited = false)]
             internal sealed class CommandAttribute : Attribute
             {
-                public CommandAttribute(string name)
+                public CommandAttribute(string commandName)
+                {
+                }
+
+                public CommandAttribute(string commandName, string canExecuteName)
                 {
                 }
 
@@ -58,6 +62,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
                 public bool IsAttached { get; set; }
                 public Type AttachedType { get; set; } = default;
+                public string RawDefaultValue { get; set; } = default;
             }
 
             [AttributeUsage(AttributeTargets.All, Inherited = false)]

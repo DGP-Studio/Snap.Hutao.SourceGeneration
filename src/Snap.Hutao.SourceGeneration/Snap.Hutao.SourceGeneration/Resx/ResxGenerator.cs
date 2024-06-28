@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
+using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;

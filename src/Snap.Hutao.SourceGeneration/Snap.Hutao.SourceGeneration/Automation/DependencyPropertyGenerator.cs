@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Primitive;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -66,13 +67,23 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
             bool isAttached = namedArguments.TryGetValue("IsAttached", out TypedConstant constant) && (bool)constant.Value!;
             string register = isAttached ? "RegisterAttached" : "Register";
 
-            ImmutableArray<TypedConstant> arguments = propertyInfo.ConstructorArguments;
+            ImmutableArray<TypedConstant> constructorArguments = propertyInfo.ConstructorArguments;
 
-            string propertyName = (string)arguments[0].Value!;
-            string propertyType = arguments[1].Value!.ToString();
-            string defaultValue = arguments.ElementAtOrDefault(2).ToCSharpString() ?? "default";
-            defaultValue = defaultValue == "null" ? "default" : defaultValue;
-            string propertyChangedCallback = arguments.ElementAtOrDefault(3) is { IsNull: false } arg3 ? $", {arg3.Value}" : string.Empty;
+            string propertyName = (string)constructorArguments[0].Value!;
+            string propertyType = constructorArguments[1].Value!.ToString();
+            string defaultValue = constructorArguments.ElementAtOrDefault(2).ToCSharpString() ?? "default";
+
+            if (defaultValue is "null")
+            {
+                defaultValue = "default";
+            }
+
+            if (namedArguments.TryGetValue("RawDefaultValue", out TypedConstant rawDefaultValue))
+            {
+                defaultValue = (string)rawDefaultValue.Value!;
+            }
+
+            string propertyChangedCallback = constructorArguments.ElementAtOrDefault(3) is { IsNull: false } callbackName ? $", {callbackName.Value}" : string.Empty;
 
             string code;
             if (isAttached)
@@ -124,8 +135,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                     """;
             }
 
-            string normalizedClassName = new StringBuilder(context2.Symbol.ToDisplayString()).Replace('<', '{').Replace('>', '}').ToString();
-            production.AddSource($"{normalizedClassName}.{propertyName}.g.cs", code);
+            production.AddSource($"{context2.Symbol.ToDisplayString().NormalizeSymbolName()}.{propertyName}.g.cs", code);
         }
     }
 }

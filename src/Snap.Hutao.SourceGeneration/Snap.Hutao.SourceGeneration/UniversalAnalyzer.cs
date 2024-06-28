@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Snap.Hutao.SourceGeneration.Primitive;
+using Snap.Hutao.SourceGeneration.Xaml;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -115,7 +116,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         }
 
         // ICommand can only use Task or Task<T>
-        if (methodSymbol.GetAttributes().Any(attr => attr.AttributeClass!.ToDisplayString() == Automation.CommandGenerator.AttributeName))
+        if (methodSymbol.GetAttributes().Any(attr => attr.AttributeClass!.ToDisplayString() == CommandGenerator.AttributeName))
         {
             return;
         }
