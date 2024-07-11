@@ -72,15 +72,14 @@ internal sealed class AdvancedCollectionViewItemGenerator : IIncrementalGenerato
                 {
                     return propertyName switch
                     {
-            {{FillProperties(context3.Symbol)}}
-                        _ => default,
+            {{FillProperties(context3.Symbol)}}        _ => default,
                     };
                 }
             }
             """);
 
 
-        production.AddSource($"{context3.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
+        production.AddSource($"{context3.Symbol.ToDisplayString().NormalizeSymbolName()}.g.cs", sourceBuilder.ToString());
     }
 
     private static string FillProperties(INamedTypeSymbol classSymbol)
