@@ -21,9 +21,9 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext2>> commands =
+        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> commands =
             context.SyntaxProvider.CreateSyntaxProvider(FilterAttributedClasses, CommandMethod)
-            .Where(GeneratorSyntaxContext2.NotNull)
+            .Where(AttributedGeneratorSymbolContext.NotNull)
             .Collect();
 
         context.RegisterImplementationSourceOutput(commands, GenerateDependencyPropertyImplementations);
@@ -36,7 +36,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
             && classDeclarationSyntax.HasAttributeLists();
     }
 
-    private static GeneratorSyntaxContext2 CommandMethod(GeneratorSyntaxContext context, CancellationToken token)
+    private static AttributedGeneratorSymbolContext CommandMethod(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? methodSymbol))
         {
@@ -50,19 +50,19 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
         return default;
     }
 
-    private static void GenerateDependencyPropertyImplementations(SourceProductionContext production, ImmutableArray<GeneratorSyntaxContext2> context2s)
+    private static void GenerateDependencyPropertyImplementations(SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
     {
-        foreach (GeneratorSyntaxContext2 context2 in context2s.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (AttributedGeneratorSymbolContext context2 in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
         {
             GenerateDependencyPropertyImplementation(production, context2);
         }
     }
 
-    private static void GenerateDependencyPropertyImplementation(SourceProductionContext production, GeneratorSyntaxContext2 context2)
+    private static void GenerateDependencyPropertyImplementation(SourceProductionContext production, AttributedGeneratorSymbolContext context)
     {
-        foreach (AttributeData propertyInfo in context2.Attributes.Where(attr => attr.AttributeClass!.ToDisplayString() == AttributeName))
+        foreach (AttributeData propertyInfo in context.Attributes.Where(attr => attr.AttributeClass!.ToDisplayString() is AttributeName))
         {
-            string owner = context2.Symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+            string owner = context.Symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
             Dictionary<string, TypedConstant> namedArguments = propertyInfo.NamedArguments.ToDictionary();
             bool isAttached = namedArguments.TryGetValue("IsAttached", out TypedConstant constant) && (bool)constant.Value!;
             string register = isAttached ? "RegisterAttached" : "Register";
@@ -75,7 +75,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
 
             if (defaultValue is "null")
             {
-                defaultValue = "default";
+                defaultValue = "DependencyProperty.UnsetValue";
             }
 
             if (namedArguments.TryGetValue("RawDefaultValue", out TypedConstant rawDefaultValue))
@@ -95,12 +95,16 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                 code = $$"""
                     using Microsoft.UI.Xaml;
 
-                    namespace {{context2.Symbol.ContainingNamespace}};
+                    namespace {{context.Symbol.ContainingNamespace}};
 
                     partial class {{owner}}
                     {
                         private static readonly DependencyProperty {{propertyName}}Property =
-                            DependencyProperty.RegisterAttached("{{propertyName}}", typeof({{propertyType}}), typeof({{owner}}), new PropertyMetadata(({{propertyType}}){{defaultValue}}{{propertyChangedCallback}}));
+                            DependencyProperty.RegisterAttached(
+                                "{{propertyName}}",
+                                typeof({{propertyType}}),
+                                typeof({{owner}}),
+                                new PropertyMetadata({{defaultValue}}{{propertyChangedCallback}}));
 
                         public static {{propertyType}} Get{{propertyName}}({{objType}} obj)
                         {
@@ -119,12 +123,16 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                 code = $$"""
                     using Microsoft.UI.Xaml;
 
-                    namespace {{context2.Symbol.ContainingNamespace}};
+                    namespace {{context.Symbol.ContainingNamespace}};
 
                     partial class {{owner}}
                     {
                         private static readonly DependencyProperty {{propertyName}}Property =
-                            DependencyProperty.Register(nameof({{propertyName}}), typeof({{propertyType}}), typeof({{owner}}), new PropertyMetadata(({{propertyType}}){{defaultValue}}{{propertyChangedCallback}}));
+                            DependencyProperty.Register(
+                                nameof({{propertyName}}),
+                                typeof({{propertyType}}),
+                                typeof({{owner}}),
+                                new PropertyMetadata({{defaultValue}}{{propertyChangedCallback}}));
 
                         public {{propertyType}} {{propertyName}}
                         {
@@ -135,7 +143,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                     """;
             }
 
-            production.AddSource($"{context2.Symbol.ToDisplayString().NormalizeSymbolName()}.{propertyName}.g.cs", code);
+            production.AddSource($"{context.Symbol.ToDisplayString().NormalizeSymbolName()}.{propertyName}.g.cs", code);
         }
     }
 }

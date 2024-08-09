@@ -17,9 +17,9 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext3>> inheritClasses = context.SyntaxProvider
+        IncrementalValueProvider<ImmutableArray<GeneratorSymbolContext>> inheritClasses = context.SyntaxProvider
             .CreateSyntaxProvider(FilterClassWithBaseList, ScopedPageInheritClass)
-            .Where(GeneratorSyntaxContext3.NotNull)
+            .Where(GeneratorSymbolContext.NotNull)
             .Collect();
 
         context.RegisterSourceOutput(inheritClasses, GenerateUnloadObjectOverrideImplementations);
@@ -30,11 +30,11 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
         return node is ClassDeclarationSyntax { BaseList: not null };
     }
 
-    private static GeneratorSyntaxContext3 ScopedPageInheritClass(GeneratorSyntaxContext context, CancellationToken token)
+    private static GeneratorSymbolContext ScopedPageInheritClass(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
         {
-            if (classSymbol.BaseType?.ToDisplayString() == ClassName)
+            if (classSymbol.BaseType?.ToDisplayString() is ClassName)
             {
                 return new(context, classSymbol);
             }
@@ -43,15 +43,15 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
         return default;
     }
 
-    private static void GenerateUnloadObjectOverrideImplementations(SourceProductionContext production, ImmutableArray<GeneratorSyntaxContext3> context3s)
+    private static void GenerateUnloadObjectOverrideImplementations(SourceProductionContext production, ImmutableArray<GeneratorSymbolContext> context3s)
     {
-        foreach (GeneratorSyntaxContext3 context3 in context3s.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (GeneratorSymbolContext context3 in context3s.DistinctBy(c => c.Symbol.ToDisplayString()))
         {
             GenerateUnloadObjectOverrideImplementation(production, context3);
         }
     }
 
-    private static void GenerateUnloadObjectOverrideImplementation(SourceProductionContext production, GeneratorSyntaxContext3 context3)
+    private static void GenerateUnloadObjectOverrideImplementation(SourceProductionContext production, GeneratorSymbolContext context3)
     {
         StringBuilder sourceBuilder = new StringBuilder().Append($$"""
             // Copyright (c) DGP Studio. All rights reserved.

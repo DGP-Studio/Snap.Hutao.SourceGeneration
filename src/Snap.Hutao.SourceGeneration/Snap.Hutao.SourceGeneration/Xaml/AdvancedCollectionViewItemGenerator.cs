@@ -18,9 +18,9 @@ internal sealed class AdvancedCollectionViewItemGenerator : IIncrementalGenerato
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext3>> commands = context.SyntaxProvider
+        IncrementalValueProvider<ImmutableArray<GeneratorSymbolContext>> commands = context.SyntaxProvider
             .CreateSyntaxProvider(FilterClassWithBaseList, ItemClass)
-            .Where(GeneratorSyntaxContext3.NotNull)
+            .Where(GeneratorSymbolContext.NotNull)
             .Collect();
 
         context.RegisterImplementationSourceOutput(commands, GenerateInterfaceImplementations);
@@ -31,7 +31,7 @@ internal sealed class AdvancedCollectionViewItemGenerator : IIncrementalGenerato
         return node is ClassDeclarationSyntax { BaseList: not null };
     }
 
-    private static GeneratorSyntaxContext3 ItemClass(GeneratorSyntaxContext context, CancellationToken token)
+    private static GeneratorSymbolContext ItemClass(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
         {
@@ -45,15 +45,15 @@ internal sealed class AdvancedCollectionViewItemGenerator : IIncrementalGenerato
         return default;
     }
 
-    private static void GenerateInterfaceImplementations(SourceProductionContext production, ImmutableArray<GeneratorSyntaxContext3> context3s)
+    private static void GenerateInterfaceImplementations(SourceProductionContext production, ImmutableArray<GeneratorSymbolContext> context3s)
     {
-        foreach (GeneratorSyntaxContext3 context3 in context3s.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (GeneratorSymbolContext context3 in context3s.DistinctBy(c => c.Symbol.ToDisplayString()))
         {
             GenerateInterfaceImplementation(production, context3);
         }
     }
 
-    private static void GenerateInterfaceImplementation(SourceProductionContext production, GeneratorSyntaxContext3 context3)
+    private static void GenerateInterfaceImplementation(SourceProductionContext production, GeneratorSymbolContext context3)
     {
         context3.Symbol.GetMembers().OfType<IPropertySymbol>();
         StringBuilder sourceBuilder = new StringBuilder().Append($$"""

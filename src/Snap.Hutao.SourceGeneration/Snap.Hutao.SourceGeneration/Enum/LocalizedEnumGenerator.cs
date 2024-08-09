@@ -17,9 +17,9 @@ internal class LocalizedEnumGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValuesProvider<GeneratorSyntaxContext2> localizationEnums = context.SyntaxProvider
+        IncrementalValuesProvider<AttributedGeneratorSymbolContext> localizationEnums = context.SyntaxProvider
             .CreateSyntaxProvider(FilterAttributedEnums, LocalizationEnum)
-            .Where(GeneratorSyntaxContext2.NotNull);
+            .Where(AttributedGeneratorSymbolContext.NotNull);
 
         context.RegisterSourceOutput(localizationEnums, GenerateGetLocalizedDescriptionImplementation);
     }
@@ -30,7 +30,7 @@ internal class LocalizedEnumGenerator : IIncrementalGenerator
             && enumDeclarationSyntax.HasAttributeLists();
     }
 
-    private static GeneratorSyntaxContext2 LocalizationEnum(GeneratorSyntaxContext context, CancellationToken token)
+    private static AttributedGeneratorSymbolContext LocalizationEnum(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.SemanticModel.GetDeclaredSymbol(context.Node, token) is INamedTypeSymbol enumSymbol)
         {
@@ -44,7 +44,7 @@ internal class LocalizedEnumGenerator : IIncrementalGenerator
         return default;
     }
 
-    private static void GenerateGetLocalizedDescriptionImplementation(SourceProductionContext context, GeneratorSyntaxContext2 context2)
+    private static void GenerateGetLocalizedDescriptionImplementation(SourceProductionContext context, AttributedGeneratorSymbolContext context2)
     {
         StringBuilder sourceBuilder = new StringBuilder().Append($$"""
             // Copyright (c) DGP Studio. All rights reserved.
@@ -112,7 +112,7 @@ internal class LocalizedEnumGenerator : IIncrementalGenerator
         context.AddSource($"{context2.Symbol.ToDisplayString().NormalizeSymbolName()}Extension.g.cs", sourceBuilder.ToString());
     }
 
-    private static void FillUpWithSwitchBranches(StringBuilder sourceBuilder, GeneratorSyntaxContext2 context)
+    private static void FillUpWithSwitchBranches(StringBuilder sourceBuilder, AttributedGeneratorSymbolContext context)
     {
         IEnumerable<IFieldSymbol> fields = context.Symbol.GetMembers()
             .Where(m => m.Kind == SymbolKind.Field)

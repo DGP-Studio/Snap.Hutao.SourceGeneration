@@ -1,7 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Text;
-using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -293,7 +292,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
                     }
                 }
 
-                string comment = summary.ToString().Replace("\r\n", "\r\n    /// ", StringComparison.Ordinal);
+                string comment = new StringBuilder(summary.ToString()).Replace("\r\n", "\r\n    /// ").ToString();
 
                 sb.AppendLine($$"""
                         /// {{comment}}

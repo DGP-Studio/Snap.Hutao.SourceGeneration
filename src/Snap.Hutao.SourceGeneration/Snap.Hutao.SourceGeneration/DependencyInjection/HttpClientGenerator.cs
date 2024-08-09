@@ -26,9 +26,9 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext2>> injectionClasses = context.SyntaxProvider
+        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> injectionClasses = context.SyntaxProvider
             .CreateSyntaxProvider(FilterAttributedClasses, HttpClientClass)
-            .Where(GeneratorSyntaxContext2.NotNull)
+            .Where(AttributedGeneratorSymbolContext.NotNull)
             .Collect();
 
         context.RegisterImplementationSourceOutput(injectionClasses, GenerateAddHttpClientsImplementation);
@@ -40,12 +40,12 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
             && classDeclarationSyntax.HasAttributeLists();
     }
 
-    private static GeneratorSyntaxContext2 HttpClientClass(GeneratorSyntaxContext context, CancellationToken token)
+    private static AttributedGeneratorSymbolContext HttpClientClass(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
         {
             ImmutableArray<AttributeData> attributes = classSymbol.GetAttributes();
-            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() == AttributeName))
+            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() is AttributeName))
             {
                 return new(context, classSymbol, attributes);
             }
@@ -54,7 +54,7 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
         return default;
     }
 
-    private static void GenerateAddHttpClientsImplementation(SourceProductionContext context, ImmutableArray<GeneratorSyntaxContext2> context2s)
+    private static void GenerateAddHttpClientsImplementation(SourceProductionContext context, ImmutableArray<AttributedGeneratorSymbolContext> context2s)
     {
         StringBuilder sourceBuilder = new StringBuilder().Append($$"""
             // Copyright (c) DGP Studio. All rights reserved.
@@ -83,20 +83,23 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
         context.AddSource("IocHttpClientConfiguration.g.cs", sourceBuilder.ToString());
     }
 
-    private static void FillUpWithAddHttpClient(StringBuilder sourceBuilder, SourceProductionContext production, ImmutableArray<GeneratorSyntaxContext2> contexts)
+    private static void FillUpWithAddHttpClient(StringBuilder sourceBuilder, SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
     {
         List<string> lines = [];
         StringBuilder lineBuilder = new();
 
-        foreach (GeneratorSyntaxContext2 context in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (AttributedGeneratorSymbolContext context in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
         {
             if (context.SingleOrDefaultAttribute(InjectionGenerator.AttributeName) is AttributeData injectionData)
             {
-                if (injectionData.ConstructorArguments[0].ToCSharpString() == InjectionGenerator.InjectAsTransientName)
+                if (injectionData.ConstructorArguments[0].ToCSharpString() is InjectionGenerator.InjectAsTransientName)
                 {
                     if (injectionData.ConstructorArguments.Length < 2)
                     {
-                        production.ReportDiagnostic(Diagnostic.Create(injectionShouldOmitDescriptor, context.Context.Node.GetLocation(), context.Context.Node));
+                        if (context.SyntaxContext.Node is BaseTypeDeclarationSyntax syntax)
+                        {
+                            production.ReportDiagnostic(Diagnostic.Create(injectionShouldOmitDescriptor, syntax.Identifier.GetLocation(), context.SyntaxContext.Node));
+                        }
                     }
                 }
             }

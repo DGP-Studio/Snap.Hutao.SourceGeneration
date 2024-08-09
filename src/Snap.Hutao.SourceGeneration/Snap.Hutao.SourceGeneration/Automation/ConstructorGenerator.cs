@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
@@ -17,15 +18,13 @@ namespace Snap.Hutao.SourceGeneration.Automation;
 internal sealed class ConstructorGenerator : IIncrementalGenerator
 {
     private const string AttributeName = "Snap.Hutao.Core.Annotation.ConstructorGeneratedAttribute";
-    private const string CompilerGenerated = "System.Runtime.CompilerServices.CompilerGeneratedAttribute";
-
-    //private static readonly DiagnosticDescriptor genericTypeNotSupportedDescriptor = new("SH102", "Generic type is not supported to generate .ctor", "Type [{0}] is not supported", "Quality", DiagnosticSeverity.Error, true);
+    private const string FromKeyedServices = "Snap.Hutao.Core.DependencyInjection.Annotation.FromKeyedServicesAttribute";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext2>> injectionClasses =
+        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> injectionClasses =
             context.SyntaxProvider.CreateSyntaxProvider(FilterAttributedClasses, ConstructorGeneratedClass)
-            .Where(GeneratorSyntaxContext2.NotNull)
+            .Where(AttributedGeneratorSymbolContext.NotNull)
             .Collect();
 
         context.RegisterSourceOutput(injectionClasses, GenerateConstructorImplementations);
@@ -38,12 +37,12 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             && classDeclarationSyntax.HasAttributeLists();
     }
 
-    private static GeneratorSyntaxContext2 ConstructorGeneratedClass(GeneratorSyntaxContext context, CancellationToken token)
+    private static AttributedGeneratorSymbolContext ConstructorGeneratedClass(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
         {
             ImmutableArray<AttributeData> attributes = classSymbol.GetAttributes();
-            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() == AttributeName))
+            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() is AttributeName))
             {
                 return new(context, classSymbol, attributes);
             }
@@ -52,50 +51,48 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         return default;
     }
 
-    private static void GenerateConstructorImplementations(SourceProductionContext production, ImmutableArray<GeneratorSyntaxContext2> context2s)
+    private static void GenerateConstructorImplementations(SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
     {
-        foreach (GeneratorSyntaxContext2 context2 in context2s.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (AttributedGeneratorSymbolContext context in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
         {
-            GenerateConstructorImplementation(production, context2);
+            GenerateConstructorImplementation(production, context);
         }
     }
 
-    private static void GenerateConstructorImplementation(SourceProductionContext production, GeneratorSyntaxContext2 context2)
+    private static void GenerateConstructorImplementation(SourceProductionContext production, AttributedGeneratorSymbolContext context)
     {
-        AttributeData constructorInfo = context2.SingleAttribute(AttributeName);
+        AttributeData constructorInfo = context.SingleAttribute(AttributeName);
 
         bool resolveHttpClient = constructorInfo.HasNamedArgumentWith<bool>("ResolveHttpClient", value => value);
         bool callBaseConstructor = constructorInfo.HasNamedArgumentWith<bool>("CallBaseConstructor", value => value);
         string httpclient = resolveHttpClient ? ", System.Net.Http.HttpClient httpClient" : string.Empty;
 
-        FieldValueAssignmentOptions options = new(resolveHttpClient, callBaseConstructor);
+        ConstructorOptions options = new(resolveHttpClient, callBaseConstructor);
 
         StringBuilder sourceBuilder = new StringBuilder().Append($$"""
-            namespace {{context2.Symbol.ContainingNamespace}};
+            namespace {{context.Symbol.ContainingNamespace}};
 
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(ConstructorGenerator)}}", "1.0.0.0")]
-            partial class {{context2.Symbol.ToDisplayString(SymbolDisplayFormats.QualifiedNonNullableFormat)}}
+            partial class {{context.Symbol.ToDisplayString(SymbolDisplayFormats.QualifiedNonNullableFormat)}}
             {
-                public {{context2.Symbol.Name}}(System.IServiceProvider serviceProvider{{httpclient}}){{(options.CallBaseConstructor ? " : base(serviceProvider)" : string.Empty)}}
+                public {{context.Symbol.Name}}(System.IServiceProvider serviceProvider{{httpclient}}){{(options.CallBaseConstructor ? " : base(serviceProvider)" : string.Empty)}}
                 {
 
             """);
 
-        FillUpWithFieldValueAssignment(sourceBuilder, context2, options);
+        FillUpWithFieldValueAssignment(sourceBuilder, context, options);
 
         sourceBuilder.Append("""
                 }
             }
             """);
 
-        production.AddSource($"{context2.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
+        production.AddSource($"{context.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
     }
 
-    private static void FillUpWithFieldValueAssignment(StringBuilder builder, GeneratorSyntaxContext2 context2, FieldValueAssignmentOptions options)
+    private static void FillUpWithFieldValueAssignment(StringBuilder builder, AttributedGeneratorSymbolContext context2, ConstructorOptions options)
     {
-        IEnumerable<IFieldSymbol> fields = context2.Symbol.GetMembers()
-            .Where(m => m.Kind == SymbolKind.Field)
-            .OfType<IFieldSymbol>();
+        IEnumerable<IFieldSymbol> fields = context2.Symbol.GetMembers().Where(m => m.Kind is SymbolKind.Field).OfType<IFieldSymbol>();
 
         foreach (IFieldSymbol fieldSymbol in fields)
         {
@@ -112,7 +109,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                     if (declarator.Initializer is not null)
                     {
                         // Skip field with initializer
-                        builder.Append("        // Skip field with initializer: ").AppendLine(fieldSymbol.Name);
+                        builder.Append("        // Skipped field with initializer: ").AppendLine(fieldSymbol.Name);
                         shoudSkip = true;
                         break;
                     }
@@ -124,45 +121,62 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (fieldSymbol.IsReadOnly && !fieldSymbol.IsStatic)
+            if (!fieldSymbol.IsReadOnly || fieldSymbol.IsStatic)
             {
-                switch (fieldSymbol.Type.ToDisplayString())
-                {
-                    case "System.IServiceProvider":
+                continue;
+            }
+
+            switch (fieldSymbol.Type.ToDisplayString())
+            {
+                case "System.IServiceProvider":
+                    builder
+                        .Append("        this.")
+                        .Append(fieldSymbol.Name)
+                        .AppendLine(" = serviceProvider;");
+                    break;
+
+                case "System.Net.Http.HttpClient":
+                    if (options.ResolveHttpClient)
+                    {
                         builder
                             .Append("        this.")
                             .Append(fieldSymbol.Name)
-                            .AppendLine(" = serviceProvider;");
-                        break;
+                            .AppendLine(" = httpClient;");
+                    }
+                    else
+                    {
+                        builder
+                            .Append("        this.")
+                            .Append(fieldSymbol.Name)
+                            .Append(" = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(")
+                            .Append(context2.Symbol.Name)
+                            .AppendLine("));");
+                    }
+                    break;
 
-                    case "System.Net.Http.HttpClient":
-                        if (options.ResolveHttpClient)
-                        {
-                            builder
-                                .Append("        this.")
-                                .Append(fieldSymbol.Name)
-                                .AppendLine(" = httpClient;");
-                        }
-                        else
-                        {
-                            builder
-                                .Append("        this.")
-                                .Append(fieldSymbol.Name)
-                                .Append(" = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(")
-                                .Append(context2.Symbol.Name)
-                                .AppendLine("));");
-                        }
-                        break;
-
-                    default:
+                default:
+                    if (fieldSymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is FromKeyedServices) is { } keyInfo)
+                    {
+                        string key = keyInfo.ConstructorArguments[0].ToCSharpString();
+                        builder
+                            .Append("        this.")
+                            .Append(fieldSymbol.Name)
+                            .Append(" = serviceProvider.GetRequiredKeyedService<")
+                            .Append(fieldSymbol.Type)
+                            .Append(">(")
+                            .Append(key)
+                            .AppendLine(");");
+                    }
+                    else
+                    {
                         builder
                             .Append("        this.")
                             .Append(fieldSymbol.Name)
                             .Append(" = serviceProvider.GetRequiredService<")
                             .Append(fieldSymbol.Type)
                             .AppendLine(">();");
-                        break;
-                }
+                    }
+                    break;
             }
         }
 
@@ -178,12 +192,12 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         }
     }
 
-    private readonly struct FieldValueAssignmentOptions
+    private readonly struct ConstructorOptions
     {
         public readonly bool ResolveHttpClient;
         public readonly bool CallBaseConstructor;
 
-        public FieldValueAssignmentOptions(bool resolveHttpClient, bool callBaseConstructor)
+        public ConstructorOptions(bool resolveHttpClient, bool callBaseConstructor)
         {
             ResolveHttpClient = resolveHttpClient;
             CallBaseConstructor = callBaseConstructor;

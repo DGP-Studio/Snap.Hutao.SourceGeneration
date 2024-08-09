@@ -17,9 +17,9 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext2<IMethodSymbol>>> commands = context.SyntaxProvider
+        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext<IMethodSymbol>>> commands = context.SyntaxProvider
             .CreateSyntaxProvider(FilterAttributedMethods, CommandMethod)
-            .Where(GeneratorSyntaxContext2<IMethodSymbol>.NotNull)
+            .Where(AttributedGeneratorSymbolContext<IMethodSymbol>.NotNull)
             .Collect();
 
         context.RegisterImplementationSourceOutput(commands, GenerateCommandImplementations);
@@ -33,7 +33,7 @@ internal sealed class CommandGenerator : IIncrementalGenerator
             && methodDeclarationSyntax.HasAttributeLists();
     }
 
-    private static GeneratorSyntaxContext2<IMethodSymbol> CommandMethod(GeneratorSyntaxContext context, CancellationToken token)
+    private static AttributedGeneratorSymbolContext<IMethodSymbol> CommandMethod(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.TryGetDeclaredSymbol(token, out IMethodSymbol? methodSymbol))
         {
@@ -47,15 +47,15 @@ internal sealed class CommandGenerator : IIncrementalGenerator
         return default;
     }
 
-    private static void GenerateCommandImplementations(SourceProductionContext production, ImmutableArray<GeneratorSyntaxContext2<IMethodSymbol>> context2s)
+    private static void GenerateCommandImplementations(SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext<IMethodSymbol>> context2s)
     {
-        foreach (GeneratorSyntaxContext2<IMethodSymbol> context2 in context2s.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (AttributedGeneratorSymbolContext<IMethodSymbol> context2 in context2s.DistinctBy(c => c.Symbol.ToDisplayString()))
         {
             GenerateCommandImplementation(production, context2);
         }
     }
 
-    private static void GenerateCommandImplementation(SourceProductionContext production, GeneratorSyntaxContext2<IMethodSymbol> context2)
+    private static void GenerateCommandImplementation(SourceProductionContext production, AttributedGeneratorSymbolContext<IMethodSymbol> context2)
     {
         INamedTypeSymbol classSymbol = context2.Symbol.ContainingType;
 

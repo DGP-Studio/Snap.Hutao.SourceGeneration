@@ -7,22 +7,22 @@ using System.Linq;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
-internal readonly struct GeneratorSyntaxContext2
+internal readonly struct AttributedGeneratorSymbolContext
 {
-    public readonly GeneratorSyntaxContext Context;
+    public readonly GeneratorSyntaxContext SyntaxContext;
     public readonly INamedTypeSymbol Symbol;
     public readonly ImmutableArray<AttributeData> Attributes;
     public readonly bool HasValue = false;
 
-    public GeneratorSyntaxContext2(GeneratorSyntaxContext context, INamedTypeSymbol symbol, ImmutableArray<AttributeData> attributes)
+    public AttributedGeneratorSymbolContext(GeneratorSyntaxContext context, INamedTypeSymbol symbol, ImmutableArray<AttributeData> attributes)
     {
-        Context = context;
+        SyntaxContext = context;
         Symbol = symbol;
         Attributes = attributes;
         HasValue = true;
     }
 
-    public static bool NotNull(GeneratorSyntaxContext2 context)
+    public static bool NotNull(AttributedGeneratorSymbolContext context)
     {
         return context.HasValue;
     }
@@ -41,31 +41,25 @@ internal readonly struct GeneratorSyntaxContext2
     {
         return Attributes.SingleOrDefault(attribute => attribute.AttributeClass!.ToDisplayString() == name);
     }
-
-    public TSyntaxNode Node<TSyntaxNode>()
-        where TSyntaxNode : SyntaxNode
-    {
-        return (TSyntaxNode)Context.Node;
-    }
 }
 
-internal readonly struct GeneratorSyntaxContext2<TSymbol>
+internal readonly struct AttributedGeneratorSymbolContext<TSymbol>
     where TSymbol : ISymbol
 {
-    public readonly GeneratorSyntaxContext Context;
+    public readonly GeneratorSyntaxContext SyntaxContext;
     public readonly TSymbol Symbol;
     public readonly ImmutableArray<AttributeData> Attributes;
     public readonly bool HasValue = false;
 
-    public GeneratorSyntaxContext2(GeneratorSyntaxContext context, TSymbol symbol, ImmutableArray<AttributeData> attributes)
+    public AttributedGeneratorSymbolContext(GeneratorSyntaxContext context, TSymbol symbol, ImmutableArray<AttributeData> attributes)
     {
-        Context = context;
+        SyntaxContext = context;
         Symbol = symbol;
         Attributes = attributes;
         HasValue = true;
     }
 
-    public static bool NotNull(GeneratorSyntaxContext2<TSymbol> context)
+    public static bool NotNull(AttributedGeneratorSymbolContext<TSymbol> context)
     {
         return context.HasValue;
     }

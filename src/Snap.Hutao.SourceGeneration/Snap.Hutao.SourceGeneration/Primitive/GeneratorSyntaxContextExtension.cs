@@ -4,15 +4,16 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
 internal static class GeneratorSyntaxContextExtension
 {
-    public static bool TryGetDeclaredSymbol<TSymbol>(this GeneratorSyntaxContext context, System.Threading.CancellationToken token, [NotNullWhen(true)] out TSymbol? symbol)
+    public static bool TryGetDeclaredSymbol<TSymbol>(this GeneratorSyntaxContext context, CancellationToken token, [NotNullWhen(true)] out TSymbol? symbol)
         where TSymbol : class, ISymbol
     {
         symbol = context.SemanticModel.GetDeclaredSymbol(context.Node, token) as TSymbol;
-        return symbol != null;
+        return symbol is not null;
     }
 }

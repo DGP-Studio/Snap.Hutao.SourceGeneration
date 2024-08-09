@@ -15,6 +15,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
     public static void GenerateAllAttributes(IncrementalGeneratorPostInitializationContext context)
     {
+        /* lang=c#-test */
         string coreAnnotations = """
             using System.Diagnostics;
 
@@ -73,6 +74,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
             """;
         context.AddSource("Snap.Hutao.Core.Annotation.Attributes.g.cs", coreAnnotations);
 
+        /* lang=c#-test */
         string coreDependencyInjectionAnnotationHttpClients = """
             namespace Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient;
 
@@ -125,6 +127,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
             """;
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.Attributes.g.cs", coreDependencyInjectionAnnotationHttpClients);
 
+        /* lang=c#-test */
         string coreDependencyInjectionAnnotations = """
             namespace Snap.Hutao.Core.DependencyInjection.Annotation;
 
@@ -149,9 +152,18 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
                 public object Key { get; set; }
             }
+
+            [AttributeUsage(AttributeTargets.Field)]
+            internal sealed class FromKeyedServicesAttribute : Attribute
+            {
+                public FromKeyedServicesAttribute(object key)
+                {
+                }
+            }
             """;
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.Attributes.g.cs", coreDependencyInjectionAnnotations);
 
+        /* lang=c#-test */
         string resourceLocalization = """
             namespace Snap.Hutao.Resource.Localization;
 

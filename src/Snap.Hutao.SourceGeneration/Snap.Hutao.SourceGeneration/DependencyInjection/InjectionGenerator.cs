@@ -22,13 +22,13 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
     public const string InjectAsScopedName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.Scoped";
     public const string InjectAsHostedServiceName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.HostedService";
 
-    private static readonly DiagnosticDescriptor invalidInjectionDescriptor = new("SH101", "无效的 InjectAs 枚举值", "尚未支持生成 {0} 配置", "Quality", DiagnosticSeverity.Error, true);
+    private static readonly DiagnosticDescriptor invalidInjectionDescriptor = new("SH101", "无效的 InjectAs 枚举值", "不支持生成 {0} 配置", "Quality", DiagnosticSeverity.Error, true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSyntaxContext2>> injectionClasses = context.SyntaxProvider
-            .CreateSyntaxProvider(FilterAttributedClasses, HttpClientClass)
-            .Where(GeneratorSyntaxContext2.NotNull)
+        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> injectionClasses = context.SyntaxProvider
+            .CreateSyntaxProvider(FilterAttributedClasses, InjectionClass)
+            .Where(AttributedGeneratorSymbolContext.NotNull)
             .Collect();
 
         context.RegisterImplementationSourceOutput(injectionClasses, GenerateAddInjectionsImplementation);
@@ -40,7 +40,7 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
             && classDeclarationSyntax.HasAttributeLists();
     }
 
-    private static GeneratorSyntaxContext2 HttpClientClass(GeneratorSyntaxContext context, CancellationToken token)
+    private static AttributedGeneratorSymbolContext InjectionClass(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
         {
@@ -54,7 +54,7 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
         return default;
     }
 
-    private static void GenerateAddInjectionsImplementation(SourceProductionContext context, ImmutableArray<GeneratorSyntaxContext2> context2s)
+    private static void GenerateAddInjectionsImplementation(SourceProductionContext context, ImmutableArray<AttributedGeneratorSymbolContext> context2s)
     {
         StringBuilder sourceBuilder = new StringBuilder().Append($$"""
             // Copyright (c) DGP Studio. All rights reserved.
@@ -80,12 +80,12 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
         context.AddSource("ServiceCollectionExtension.g.cs", sourceBuilder.ToString());
     }
 
-    private static void FillUpWithAddServices(StringBuilder sourceBuilder, SourceProductionContext production, ImmutableArray<GeneratorSyntaxContext2> contexts)
+    private static void FillUpWithAddServices(StringBuilder sourceBuilder, SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
     {
         List<string> lines = [];
         StringBuilder lineBuilder = new();
 
-        foreach (GeneratorSyntaxContext2 context in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (AttributedGeneratorSymbolContext context in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
         {
             lineBuilder.Clear().AppendLine();
 
@@ -120,7 +120,7 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
                     lineBuilder.Append("        services.AddHostedService<");
                     break;
                 default:
-                    production.ReportDiagnostic(Diagnostic.Create(invalidInjectionDescriptor, context.Context.Node.GetLocation(), injectAsName));
+                    production.ReportDiagnostic(Diagnostic.Create(invalidInjectionDescriptor, context.SyntaxContext.Node.GetLocation(), injectAsName));
                     break;
             }
 
