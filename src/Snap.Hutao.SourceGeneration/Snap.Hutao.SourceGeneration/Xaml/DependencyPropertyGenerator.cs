@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace Snap.Hutao.SourceGeneration.Automation;
+namespace Snap.Hutao.SourceGeneration.Xaml;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
@@ -75,7 +75,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
 
             if (defaultValue is "null")
             {
-                defaultValue = "DependencyProperty.UnsetValue";
+                defaultValue = "default";
             }
 
             if (namedArguments.TryGetValue("RawDefaultValue", out TypedConstant rawDefaultValue))
