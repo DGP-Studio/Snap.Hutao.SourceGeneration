@@ -34,8 +34,13 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         List<ApiEndpointsMetadata> apis = [];
         using (StringReader reader = new(csvFile.GetText(context.CancellationToken)!.ToString()))
         {
-            while (reader.ReadLine() is { Length: > 0 } line && line is not "Name,CN,OS")
+            while (reader.ReadLine() is { Length: > 0 } line)
             {
+                if (line is "Name,CN,OS")
+                {
+                    continue;
+                }
+
                 string[] parts = line.Split(',');
                 ApiEndpointsMetadata metadata = new()
                 {
