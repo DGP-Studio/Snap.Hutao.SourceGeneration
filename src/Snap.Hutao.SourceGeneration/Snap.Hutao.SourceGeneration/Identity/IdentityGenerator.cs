@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -21,7 +22,7 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
 
     private static bool MatchFileName(AdditionalText text)
     {
-        return Path.GetFileName(text.Path) == FileName;
+        return string.Equals(Path.GetFileName(text.Path), FileName, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void GenerateIdentityStructs(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
