@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Snap.Hutao.SourceGeneration.Identity;
+namespace Snap.Hutao.SourceGeneration.Automation;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
