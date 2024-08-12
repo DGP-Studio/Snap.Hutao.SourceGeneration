@@ -9,7 +9,6 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <Configurations>Debug;Release</Configurations>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <NuSpecFile>Snap.Hutao.SourceGeneration.nuspec</NuSpecFile>
   </PropertyGroup>
 
   <ItemDefinitionGroup>
@@ -22,5 +21,24 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" Version="3.3.4" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/cs"/>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <PackageId>Snap.Hutao.SourceGeneration</PackageId>
+    <Version>1.1.14</Version>
+    <Authors>DGP Studio</Authors>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Description>Source Code generator for Snap.Hutao</Description>
+    <RepositoryUrl>https://github.com/DGP-Studio/Snap.Hutao.SourceGeneration</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/DGP-Studio/Snap.Hutao.SourceGeneration</PackageProjectUrl>
+    <!-- https://github.com/nuget/home/issues/8583 -->
+    <!-- https://github.com/NuGet/docs.microsoft.com-nuget/blob/main/docs/reference/errors-and-warnings/NU5128.md -->
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+  </PropertyGroup>
 
 </Project>
