@@ -72,6 +72,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
             }
             """;
 
+        context.AddSource("ApiEndpoints.g.cs", source);
     }
 
     private static string FillWithInterfaceMethods(List<ApiEndpointsMetadata> apis)
