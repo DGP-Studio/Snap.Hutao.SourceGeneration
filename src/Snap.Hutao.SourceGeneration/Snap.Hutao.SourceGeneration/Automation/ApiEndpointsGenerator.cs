@@ -66,12 +66,12 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
             {{FillWithInterfaceMethods(apis)}}
             }
 
-            internal abstract class ApiEndpointsImplmentationForChinese
+            internal abstract class ApiEndpointsImplmentationForChinese : IApiEndpoints
             {
             {{FillWithChineseMethods(apis)}}
             }
 
-            internal abstract class ApiEndpointsImplmentationForOversea
+            internal abstract class ApiEndpointsImplmentationForOversea : IApiEndpoints
             {
             {{FillWithOverseaMethods(apis)}}
             }
