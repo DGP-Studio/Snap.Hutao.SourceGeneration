@@ -41,7 +41,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                string[] parts = line.Split(',');
+                string[] parts = ParseCsvLine(line);
                 ApiEndpointsMetadata metadata = new()
                 {
                     MethodName = parts.ElementAtOrDefault(0),
@@ -128,6 +128,45 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         }
 
         return resultBuilder.ToString();
+    }
+
+    static string[] ParseCsvLine(string line)
+    {
+        List<string> fields = [];
+        StringBuilder currentField = new();
+        bool insideQuotes = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char currentChar = line[i];
+
+            if (currentChar == '"')
+            {
+                if (insideQuotes && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    currentField.Append('"');
+                    i++;
+                }
+                else
+                {
+                    insideQuotes = !insideQuotes;
+                }
+            }
+            else if (currentChar == ',' && !insideQuotes)
+            {
+                fields.Add(currentField.ToString());
+                currentField.Clear();
+            }
+            else
+            {
+                currentField.Append(currentChar);
+            }
+        }
+
+        // 添加最后一个字段
+        fields.Add(currentField.ToString());
+
+        return [.. fields];
     }
 
     private sealed class ApiEndpointsMetadata
