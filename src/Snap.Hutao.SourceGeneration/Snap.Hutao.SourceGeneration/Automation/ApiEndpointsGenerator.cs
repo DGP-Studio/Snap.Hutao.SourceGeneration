@@ -98,13 +98,13 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
         foreach (ApiEndpointsMetadata api in apis)
         {
-            if (string.IsNullOrEmpty(api.Chinese))
+            if (string.IsNullOrWhiteSpace(api.Chinese))
             {
                 resultBuilder.AppendLine($"""    public string {api.MethodName} => throw new NotSuppportedException();""");
             }
             else
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodName} => {api.Chinese};""");
+                resultBuilder.AppendLine($"""    public string {api.MethodName} => $"{api.Chinese}";""");
             }
         }
 
@@ -117,13 +117,13 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
         foreach (ApiEndpointsMetadata api in apis)
         {
-            if (string.IsNullOrEmpty(api.Chinese))
+            if (string.IsNullOrWhiteSpace(api.Oversea))
             {
                 resultBuilder.AppendLine($"""    public string {api.MethodName} => throw new NotSuppportedException();""");
             }
             else
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodName} => {api.Oversea};""");
+                resultBuilder.AppendLine($"""    public string {api.MethodName} => $"{api.Oversea}";""");
             }
         }
 
