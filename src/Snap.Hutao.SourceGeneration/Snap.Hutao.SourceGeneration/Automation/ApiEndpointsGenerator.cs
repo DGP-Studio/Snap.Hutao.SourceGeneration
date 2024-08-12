@@ -100,7 +100,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         {
             if (string.IsNullOrWhiteSpace(api.Chinese))
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodName} => throw new NotSuppportedException();""");
+                resultBuilder.AppendLine($"""    public string {api.MethodName} => throw new NotSupportedException();""");
             }
             else
             {
@@ -119,7 +119,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         {
             if (string.IsNullOrWhiteSpace(api.Oversea))
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodName} => throw new NotSuppportedException();""");
+                resultBuilder.AppendLine($"""    public string {api.MethodName} => throw new NotSupportedException();""");
             }
             else
             {
