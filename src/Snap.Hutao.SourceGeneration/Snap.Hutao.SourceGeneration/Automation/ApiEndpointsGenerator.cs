@@ -63,7 +63,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
             namespace Snap.Hutao.Web.Endpoint.Hoyolab;
 
-            internal interface IApiEndpoints
+            internal partial interface IApiEndpoints
             {
             {{FillWithInterfaceMethods(apis)}}
             }
