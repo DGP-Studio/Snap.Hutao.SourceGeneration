@@ -59,6 +59,8 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         }
 
         string source = $$"""
+            using Snap.Hutao.Web.Hoyolab;
+
             namespace Snap.Hutao.Web.Endpoint.Hoyolab;
 
             internal interface IApiEndpoints
