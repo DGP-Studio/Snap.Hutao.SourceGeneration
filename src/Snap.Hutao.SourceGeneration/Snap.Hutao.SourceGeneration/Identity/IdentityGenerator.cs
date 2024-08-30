@@ -168,6 +168,25 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
                 """);
         }
 
+        if (metadata.SubtractionOperators)
+        {
+            sourceBuilder.AppendLine($$"""
+                
+                internal readonly partial struct {{name}} : ISubtractionOperators<{{name}}, {{name}}, {{name}}>, ISubtractionOperators<{{name}}, uint, {{name}}>
+                {
+                    public static {{name}} operator -({{name}} left, {{name}} right)
+                    {
+                        return left.Value - right.Value;
+                    }
+
+                    public static {{name}} operator -({{name}} left, uint right)
+                    {
+                        return left.Value - right;
+                    }
+                }
+            """);
+        }
+
         if (metadata.IncrementOperators)
         {
             sourceBuilder.AppendLine($$"""
@@ -177,6 +196,21 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
                     public static unsafe {{name}} operator ++({{name}} value)
                     {
                         ++*(uint*)&value;
+                        return value;
+                    }
+                }
+                """);
+        }
+
+        if (metadata.DecrementOperators)
+        {
+            sourceBuilder.AppendLine($$"""
+
+                internal readonly partial struct {{name}} : IDecrementOperators<{{name}}>
+                {
+                    public static unsafe {{name}} operator --({{name}} value)
+                    {
+                        --*(uint*)&value;
                         return value;
                     }
                 }
@@ -198,6 +232,10 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
 
         public bool AdditionOperators { get; set; }
 
+        public bool SubtractionOperators { get; set; }
+
         public bool IncrementOperators { get; set; }
+
+        public bool DecrementOperators { get; set; }
     }
 }
