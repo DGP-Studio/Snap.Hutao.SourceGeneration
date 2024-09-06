@@ -19,7 +19,7 @@
   
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" Version="3.3.4" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.10.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageReference Include="PolySharp" Version="1.14.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/cs"/>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/cs" />
   </ItemGroup>
 
   <PropertyGroup>
