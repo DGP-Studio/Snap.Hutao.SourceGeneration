@@ -10,9 +10,6 @@ using System.Linq;
 
 namespace Snap.Hutao.SourceGeneration;
 
-/// <summary>
-/// 通用分析器
-/// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 {
@@ -22,6 +19,8 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor useIsNullPatternMatchingDescriptor = new("SH005", "Use \"is null\" instead of \"== null\" whenever possible", "Use \"is null\" instead of \"== null\"", "Quality", DiagnosticSeverity.Info, true);
     private static readonly DiagnosticDescriptor useIsPatternRecursiveMatchingDescriptor = new("SH006", "Use \"is { } obj\" whenever possible", "Use \"is {{ }} {0}\"", "Quality", DiagnosticSeverity.Info, true);
     private static readonly DiagnosticDescriptor useArgumentNullExceptionThrowIfNullDescriptor = new("SH007", "Use \"ArgumentNullException.ThrowIfNull()\" instead of \"!\"", "Use \"ArgumentNullException.ThrowIfNull()\"", "Quality", DiagnosticSeverity.Info, true);
+
+    private static readonly DiagnosticDescriptor avoidUsingContentDialogShowAsyncDescriptor = new("SH100", "Use \"IContentDialogFactory.EnqueueAndShowAsync\" instead", "Use \"IContentDialogFactory.EnqueueAndShowAsync\" instead", "Quality", DiagnosticSeverity.Warning, true);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
     {
@@ -34,7 +33,8 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
                 useIsNotNullPatternMatchingDescriptor,
                 useIsNullPatternMatchingDescriptor,
                 useIsPatternRecursiveMatchingDescriptor,
-                useArgumentNullExceptionThrowIfNullDescriptor
+                useArgumentNullExceptionThrowIfNullDescriptor,
+                avoidUsingContentDialogShowAsyncDescriptor
             }.ToImmutableArray();
         }
     }
@@ -49,14 +49,13 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 
     private static void CompilationStart(CompilationStartAnalysisContext context)
     {
-        SyntaxKind[] commonTypes = [SyntaxKind.ClassDeclaration, SyntaxKind.InterfaceDeclaration, SyntaxKind.StructDeclaration, SyntaxKind.EnumDeclaration,];
-        context.RegisterSyntaxNodeAction(HandleTypeShouldBeInternal, commonTypes);
+        context.RegisterSyntaxNodeAction(HandleTypeShouldBeInternal, SyntaxKind.ClassDeclaration, SyntaxKind.InterfaceDeclaration, SyntaxKind.StructDeclaration, SyntaxKind.EnumDeclaration);
         context.RegisterSyntaxNodeAction(HandleMethodReturnTypeShouldUseValueTaskInsteadOfTask, SyntaxKind.MethodDeclaration);
-
-        SyntaxKind[] expressions = [SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression,];
-        context.RegisterSyntaxNodeAction(HandleEqualsAndNotEqualsExpressionShouldUsePatternMatching, expressions);
+        context.RegisterSyntaxNodeAction(HandleEqualsAndNotEqualsExpressionShouldUsePatternMatching, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression);
         context.RegisterSyntaxNodeAction(HandleIsPatternShouldUseRecursivePattern, SyntaxKind.IsPatternExpression);
         context.RegisterSyntaxNodeAction(HandleArgumentNullExceptionThrowIfNull, SyntaxKind.SuppressNullableWarningExpression);
+
+        context.RegisterSyntaxNodeAction(HandleContentDialogShowAsyncAccess, SyntaxKind.SimpleMemberAccessExpression);
     }
 
     private static void HandleTypeShouldBeInternal(SyntaxNodeAnalysisContext context)
@@ -118,7 +117,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         }
     }
 
-    public static void HandleEqualsAndNotEqualsExpressionShouldUsePatternMatching(SyntaxNodeAnalysisContext context)
+    private static void HandleEqualsAndNotEqualsExpressionShouldUsePatternMatching(SyntaxNodeAnalysisContext context)
     {
         BinaryExpressionSyntax syntax = (BinaryExpressionSyntax)context.Node;
         if (syntax.IsKind(SyntaxKind.NotEqualsExpression) && syntax.Right.IsKind(SyntaxKind.NullLiteralExpression))
@@ -172,5 +171,20 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         Location location = syntax.GetLocation();
         Diagnostic diagnostic = Diagnostic.Create(useArgumentNullExceptionThrowIfNullDescriptor, location);
         context.ReportDiagnostic(diagnostic);
+    }
+
+    private static void HandleContentDialogShowAsyncAccess(SyntaxNodeAnalysisContext context)
+    {
+        MemberAccessExpressionSyntax syntax = (MemberAccessExpressionSyntax)context.Node;
+        if (syntax.Name.Identifier.Text == "ShowAsync")
+        {
+            ITypeSymbol? type = context.SemanticModel.GetTypeInfo(syntax.Expression).Type;
+            if (type?.ToDisplayString() == "Microsoft.UI.Xaml.Controls.ContentDialog")
+            {
+                Location location = syntax.GetLocation();
+                Diagnostic diagnostic = Diagnostic.Create(avoidUsingContentDialogShowAsyncDescriptor, location);
+                context.ReportDiagnostic(diagnostic);
+            }
+        }
     }
 }
