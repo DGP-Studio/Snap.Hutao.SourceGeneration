@@ -124,13 +124,13 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
                 lineBuilder.Append("""
                     .ConfigurePrimaryHttpMessageHandler((handler, provider) =>
                             {
-                                HttpClientHandler clientHandler = (HttpClientHandler)handler;
+                                SocketsHttpHandler typedHandler = (SocketsHttpHandler)handler;
 
                     """);
 
                 foreach (KeyValuePair<string, TypedConstant> property in properties)
                 {
-                    lineBuilder.Append("            clientHandler.");
+                    lineBuilder.Append("            typedHandler.");
                     lineBuilder.Append(property.Key);
                     lineBuilder.Append(" = ");
                     lineBuilder.Append(property.Value.ToCSharpString());
