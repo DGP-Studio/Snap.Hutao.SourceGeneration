@@ -72,7 +72,7 @@ internal sealed class AdvancedCollectionViewItemGenerator : IIncrementalGenerato
                 {
                     return propertyName switch
                     {
-            {{FillProperties(context3.Symbol)}}        _ => default,
+            {{FillProperties(context3.Symbol)}}            _ => default,
                     };
                 }
             }
