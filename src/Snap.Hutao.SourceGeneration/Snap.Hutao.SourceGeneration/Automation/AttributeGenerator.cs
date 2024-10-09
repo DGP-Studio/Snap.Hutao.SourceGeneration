@@ -116,6 +116,11 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 /// 米哈游启动器登录请求配置
                 /// </summary>
                 XRpc5,
+
+                /// <summary>
+                /// HoyoPlay 登录请求配置
+                /// </summary>
+                XRpc6,
             }
 
             [AttributeUsage(AttributeTargets.Class, Inherited = false)]
