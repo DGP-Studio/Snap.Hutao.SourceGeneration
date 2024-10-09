@@ -111,6 +111,11 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 /// Hoyolab app
                 /// </summary>
                 XRpc3,
+
+                /// <summary>
+                /// 米哈游启动器登录请求配置
+                /// </summary>
+                XRpc5,
             }
 
             [AttributeUsage(AttributeTargets.Class, Inherited = false)]
