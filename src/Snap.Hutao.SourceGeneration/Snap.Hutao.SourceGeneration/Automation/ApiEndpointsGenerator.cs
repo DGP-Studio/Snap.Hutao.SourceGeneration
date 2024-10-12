@@ -88,7 +88,12 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
         foreach (ApiEndpointsMetadata metadata in apis)
         {
+            resultBuilder.AppendLine($@"    /// <summary>");
+            resultBuilder.AppendLine($@"    /// <code>CN: {metadata.Chinese}</code>");
+            resultBuilder.AppendLine($@"    /// <code>OS: {metadata.Oversea}</code>");
+            resultBuilder.AppendLine($@"    /// </summary>");
             resultBuilder.AppendLine($@"    string {metadata.MethodName};");
+            resultBuilder.AppendLine();
         }
 
         return resultBuilder.ToString();
