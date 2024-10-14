@@ -32,7 +32,7 @@
 
   <PropertyGroup>
     <PackageId>Snap.Hutao.SourceGeneration</PackageId>
-    <Version>1.1.23</Version>
+    <Version>1.1.24</Version>
     <Authors>DGP Studio</Authors>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>

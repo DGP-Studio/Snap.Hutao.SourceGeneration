@@ -65,9 +65,10 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
         bool resolveHttpClient = constructorInfo.HasNamedArgumentWith<bool>("ResolveHttpClient", value => value);
         bool callBaseConstructor = constructorInfo.HasNamedArgumentWith<bool>("CallBaseConstructor", value => value);
+        bool initializeComponent = constructorInfo.HasNamedArgumentWith<bool>("InitializeComponent", value => value);
         string httpclient = resolveHttpClient ? ", System.Net.Http.HttpClient httpClient" : string.Empty;
 
-        ConstructorOptions options = new(resolveHttpClient, callBaseConstructor);
+        ConstructorOptions options = new(resolveHttpClient, callBaseConstructor, initializeComponent);
 
         StringBuilder sourceBuilder = new StringBuilder().Append($$"""
             namespace {{context.Symbol.ContainingNamespace}};
@@ -190,17 +191,24 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                     .AppendLine(">(serviceProvider.GetRequiredService<CommunityToolkit.Mvvm.Messaging.IMessenger>(), this);");
             }
         }
+
+        if (options.InitializeComponent)
+        {
+            builder.Append("        InitializeComponent();");
+        }
     }
 
     private readonly struct ConstructorOptions
     {
         public readonly bool ResolveHttpClient;
         public readonly bool CallBaseConstructor;
+        public readonly bool InitializeComponent;
 
-        public ConstructorOptions(bool resolveHttpClient, bool callBaseConstructor)
+        public ConstructorOptions(bool resolveHttpClient, bool callBaseConstructor, bool initializeComponent)
         {
             ResolveHttpClient = resolveHttpClient;
             CallBaseConstructor = callBaseConstructor;
+            InitializeComponent = initializeComponent;
         }
     }
 }
