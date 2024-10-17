@@ -194,7 +194,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
         if (options.InitializeComponent)
         {
-            builder.Append("        InitializeComponent();");
+            builder.AppendLine("        InitializeComponent();");
         }
     }
 
