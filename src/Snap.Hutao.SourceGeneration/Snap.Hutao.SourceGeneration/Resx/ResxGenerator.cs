@@ -343,7 +343,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
         sb.AppendLine($$"""
             }
 
-            internal partial enum {{className}}Name
+            internal enum {{className}}Name
             {
             """);
 
