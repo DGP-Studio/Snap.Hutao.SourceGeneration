@@ -343,7 +343,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
         sb.AppendLine($$"""
             }
 
-            internal partial class {{className}}Names
+            internal partial enum {{className}}Name
             {
             """);
 
@@ -355,7 +355,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
             }
 
             sb.AppendLine($$"""
-                    public const string {{ToCSharpNameIdentifier(entry.Name!)}} = "{{entry.Name}}";
+                    {{ToCSharpNameIdentifier(entry.Name!)}},
                 """);
         }
 
