@@ -269,6 +269,13 @@ public sealed class ResxGenerator : IIncrementalGenerator
 
             """);
 
+        StringBuilder enumBuilder = new($$"""
+            }
+
+            internal enum {{className}}Name
+            {
+            """);
+
         foreach (ResxEntry? entry in entries.OrderBy(e => e.Name, StringComparer.Ordinal))
         {
             if (string.IsNullOrEmpty(entry.Name))
@@ -302,6 +309,12 @@ public sealed class ResxGenerator : IIncrementalGenerator
                         }
 
                     """);
+                
+                enumBuilder.AppendLine($"""
+                    /// {comment}
+                    {ToCSharpNameIdentifier(entry.Name!)},
+                                             
+                """);
 
                 if (entry.Values.FirstOrDefault() is string value)
                 {
@@ -340,25 +353,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
             }
         }
 
-        sb.AppendLine($$"""
-            }
-
-            internal enum {{className}}Name
-            {
-            """);
-
-        foreach (ResxEntry entry in entries)
-        {
-            if (string.IsNullOrEmpty(entry.Name))
-            {
-                continue;
-            }
-
-            sb.AppendLine($$"""
-                    {{ToCSharpNameIdentifier(entry.Name!)}},
-                """);
-        }
-
+        sb.AppendLine(enumBuilder.ToString());
         sb.AppendLine("}");
 
         return sb.ToString();
