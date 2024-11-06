@@ -54,8 +54,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         context.RegisterSyntaxNodeAction(HandleEqualsAndNotEqualsExpressionShouldUsePatternMatching, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression);
         context.RegisterSyntaxNodeAction(HandleIsPatternShouldUseRecursivePattern, SyntaxKind.IsPatternExpression);
         context.RegisterSyntaxNodeAction(HandleArgumentNullExceptionThrowIfNull, SyntaxKind.SuppressNullableWarningExpression);
-
-        context.RegisterSyntaxNodeAction(HandleContentDialogShowAsyncAccess, SyntaxKind.SimpleMemberAccessExpression);
+        context.RegisterSyntaxNodeAction(HandleContentDialogShowAsyncAccess, SyntaxKind.SimpleMemberAccessExpression, SyntaxKind.InvocationExpression);
     }
 
     private static void HandleTypeShouldBeInternal(SyntaxNodeAnalysisContext context)
@@ -154,6 +153,12 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
     {
         PostfixUnaryExpressionSyntax syntax = (PostfixUnaryExpressionSyntax)context.Node;
 
+        if (syntax.Kind() is not SyntaxKind.SuppressNullableWarningExpression)
+        {
+            return;
+        }
+
+        // default!
         if (syntax.Operand is LiteralExpressionSyntax literal)
         {
             if (literal.IsKind(SyntaxKind.DefaultLiteralExpression))
@@ -162,11 +167,11 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
             }
         }
 
+        // default(?)!
         if (syntax.Operand is DefaultExpressionSyntax)
         {
             return;
         }
-
 
         Location location = syntax.GetLocation();
         Diagnostic diagnostic = Diagnostic.Create(useArgumentNullExceptionThrowIfNullDescriptor, location);
@@ -175,16 +180,42 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 
     private static void HandleContentDialogShowAsyncAccess(SyntaxNodeAnalysisContext context)
     {
-        MemberAccessExpressionSyntax syntax = (MemberAccessExpressionSyntax)context.Node;
-        if (syntax.Name.Identifier.Text == "ShowAsync")
+        switch (context.Node)
         {
-            ITypeSymbol? type = context.SemanticModel.GetTypeInfo(syntax.Expression).Type;
-            if (type?.ToDisplayString() == "Microsoft.UI.Xaml.Controls.ContentDialog")
-            {
-                Location location = syntax.GetLocation();
-                Diagnostic diagnostic = Diagnostic.Create(avoidUsingContentDialogShowAsyncDescriptor, location);
-                context.ReportDiagnostic(diagnostic);
-            }
+            case MemberAccessExpressionSyntax memberAccess:
+                {
+                    if (memberAccess.Name.Identifier.Text is "ShowAsync")
+                    {
+                        ISymbol? containingSymbol = context.SemanticModel.GetSymbolInfo(memberAccess.Name).Symbol?.ContainingSymbol;
+
+                        if (containingSymbol?.ToDisplayString() is "Microsoft.UI.Xaml.Controls.ContentDialog")
+                        {
+                            Location location = memberAccess.GetLocation();
+                            Diagnostic diagnostic = Diagnostic.Create(avoidUsingContentDialogShowAsyncDescriptor, location);
+                            context.ReportDiagnostic(diagnostic);
+                        }
+                    }
+                }
+
+                break;
+            case InvocationExpressionSyntax invocation:
+                {
+                    if (invocation.Expression is IdentifierNameSyntax identifierName)
+                    {
+                        if (identifierName.Identifier.Text is "ShowAsync")
+                        {
+                            ISymbol? containingSymbol = context.SemanticModel.GetSymbolInfo(identifierName).Symbol?.ContainingSymbol;
+
+                            if (containingSymbol?.ToDisplayString() is "Microsoft.UI.Xaml.Controls.ContentDialog")
+                            {
+                                Location location = invocation.GetLocation();
+                                Diagnostic diagnostic = Diagnostic.Create(avoidUsingContentDialogShowAsyncDescriptor, location);
+                                context.ReportDiagnostic(diagnostic);
+                            }
+                        }
+                    }
+                }
+                break;
         }
     }
 }
