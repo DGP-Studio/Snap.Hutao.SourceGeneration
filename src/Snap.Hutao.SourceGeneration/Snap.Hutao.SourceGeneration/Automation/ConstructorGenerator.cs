@@ -63,6 +63,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     {
         AttributeData constructorInfo = context.SingleAttribute(AttributeName);
 
+        bool injectToPropertiesInstead = constructorInfo.HasNamedArgumentWith<bool>("InjectToPropertiesInstead", value => value);
         bool resolveHttpClient = constructorInfo.HasNamedArgumentWith<bool>("ResolveHttpClient", value => value);
         bool callBaseConstructor = constructorInfo.HasNamedArgumentWith<bool>("CallBaseConstructor", value => value);
         bool initializeComponent = constructorInfo.HasNamedArgumentWith<bool>("InitializeComponent", value => value);
@@ -73,7 +74,6 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         StringBuilder sourceBuilder = new StringBuilder().Append($$"""
             namespace {{context.Symbol.ContainingNamespace}};
 
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(ConstructorGenerator)}}", "1.0.0.0")]
             partial class {{context.Symbol.ToDisplayString(SymbolDisplayFormats.QualifiedNonNullableFormat)}}
             {
                 public {{context.Symbol.Name}}(System.IServiceProvider serviceProvider{{httpclient}}){{(options.CallBaseConstructor ? " : base(serviceProvider)" : string.Empty)}}
@@ -81,7 +81,14 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
             """);
 
-        FillUpWithFieldValueAssignment(sourceBuilder, context, options);
+        if (injectToPropertiesInstead)
+        {
+            FillUpWithPropertyAssignment(sourceBuilder, context, options);
+        }
+        else
+        {
+            FillUpWithFieldValueAssignment(sourceBuilder, context, options);
+        }
 
         sourceBuilder.Append("""
                 }
@@ -97,7 +104,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
         foreach (IFieldSymbol fieldSymbol in fields)
         {
-            if (fieldSymbol.Name.AsSpan()[0] is '<')
+            if (fieldSymbol.IsImplicitlyDeclared || fieldSymbol.Name.AsSpan()[0] is '<')
             {
                 continue;
             }
@@ -175,6 +182,130 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                             .Append(fieldSymbol.Name)
                             .Append(" = serviceProvider.GetRequiredService<")
                             .Append(fieldSymbol.Type)
+                            .AppendLine(">();");
+                    }
+                    break;
+            }
+        }
+
+        foreach (INamedTypeSymbol interfaceSymbol in context2.Symbol.Interfaces)
+        {
+            if (interfaceSymbol.Name == "IRecipient")
+            {
+                builder
+                    .Append("        CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Register<")
+                    .Append(interfaceSymbol.TypeArguments[0])
+                    .AppendLine(">(serviceProvider.GetRequiredService<CommunityToolkit.Mvvm.Messaging.IMessenger>(), this);");
+            }
+        }
+
+        if (options.InitializeComponent)
+        {
+            builder.AppendLine("        InitializeComponent();");
+        }
+    }
+
+    private static void FillUpWithPropertyAssignment(StringBuilder builder, AttributedGeneratorSymbolContext context2, ConstructorOptions options)
+    {
+        IEnumerable<IPropertySymbol> fields = context2.Symbol.GetMembers().Where(m => m.Kind is SymbolKind.Property).OfType<IPropertySymbol>();
+
+        foreach (IPropertySymbol propertySymbol in fields)
+        {
+            if (propertySymbol.IsImplicitlyDeclared)
+            {
+                continue;
+            }
+
+            bool shoudSkip = false;
+            foreach (SyntaxReference syntaxReference in propertySymbol.DeclaringSyntaxReferences)
+            {
+                if (syntaxReference.GetSyntax() is PropertyDeclarationSyntax declarationSyntax)
+                {
+                    if (declarationSyntax.Initializer is not null)
+                    {
+                        // Skip property with initializer
+                        builder.Append("        // Skipped property with initializer: ").AppendLine(propertySymbol.Name);
+                        shoudSkip = true;
+                        break;
+                    }
+
+                    if (declarationSyntax.AccessorList is not null)
+                    {
+                        foreach (AccessorDeclarationSyntax accessorDeclaration in declarationSyntax.AccessorList.Accessors)
+                        {
+                            if (accessorDeclaration.Kind() is SyntaxKind.GetAccessorDeclaration)
+                            {
+                                if (accessorDeclaration.ExpressionBody is not null || accessorDeclaration.Body is not null)
+                                {
+                                    // Skip property with body
+                                    builder.Append("        // Skipped property with expression body: ").AppendLine(propertySymbol.Name);
+                                    shoudSkip = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (shoudSkip)
+            {
+                continue;
+            }
+
+            if (!propertySymbol.IsReadOnly || propertySymbol.IsStatic)
+            {
+                continue;
+            }
+
+            switch (propertySymbol.Type.ToDisplayString())
+            {
+                case "System.IServiceProvider":
+                    builder
+                        .Append("        ")
+                        .Append(propertySymbol.Name)
+                        .AppendLine(" = serviceProvider;");
+                    break;
+
+                case "System.Net.Http.HttpClient":
+                    if (options.ResolveHttpClient)
+                    {
+                        builder
+                            .Append("        ")
+                            .Append(propertySymbol.Name)
+                            .AppendLine(" = httpClient;");
+                    }
+                    else
+                    {
+                        builder
+                            .Append("        ")
+                            .Append(propertySymbol.Name)
+                            .Append(" = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(")
+                            .Append(context2.Symbol.Name)
+                            .AppendLine("));");
+                    }
+                    break;
+
+                default:
+                    if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is FromKeyedServices) is { } keyInfo)
+                    {
+                        string key = keyInfo.ConstructorArguments[0].ToCSharpString();
+                        builder
+                            .Append("        ")
+                            .Append(propertySymbol.Name)
+                            .Append(" = serviceProvider.GetRequiredKeyedService<")
+                            .Append(propertySymbol.Type)
+                            .Append(">(")
+                            .Append(key)
+                            .AppendLine(");");
+                    }
+                    else
+                    {
+                        builder
+                            .Append("        ")
+                            .Append(propertySymbol.Name)
+                            .Append(" = serviceProvider.GetRequiredService<")
+                            .Append(propertySymbol.Type)
                             .AppendLine(">();");
                     }
                     break;

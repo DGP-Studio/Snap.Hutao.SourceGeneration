@@ -99,6 +99,17 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
             }
             """);
 
+        sourceBuilder.AppendLine($$"""
+            internal readonly partial struct {{name}} : IComparable<{{name}}>
+            {
+                /// <inheritdoc/>
+                public int CompareTo({{name}} other)
+                {
+                    return Value.CompareTo(other.Value);
+                }
+            }
+            """);
+
         if (metadata.Equatable)
         {
             sourceBuilder.AppendLine($$"""

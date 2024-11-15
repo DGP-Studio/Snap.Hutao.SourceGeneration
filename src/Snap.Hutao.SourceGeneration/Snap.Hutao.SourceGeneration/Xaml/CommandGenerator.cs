@@ -61,7 +61,6 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
         AttributeData commandInfo = context2.SingleAttribute(AttributeName);
         string commandName = (string)commandInfo.ConstructorArguments[0].Value!;
-        string commandField = $"backingField_{commandName}";
 
         string? canExecute = commandInfo.ConstructorArguments.ElementAtOrDefault(1).Value as string;
         string canExecuteParameter = canExecute is not null
@@ -91,13 +90,10 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
             partial class {{className}}
             {
-                [Browsable(false)]
-                [EditorBrowsable(EditorBrowsableState.Never)]
-                private {{commandFullType}} {{commandField}};
-
+                [field: MaybeNull]
                 public {{commandFullType}} {{commandName}}
                 {
-                    get => {{commandField}} ??= new {{commandFullType}}({{context2.Symbol.Name}}{{canExecuteParameter}}{{concurrentExecution}});
+                    get => field ??= new {{commandFullType}}({{context2.Symbol.Name}}{{canExecuteParameter}}{{concurrentExecution}});
                 }
             }
             """;

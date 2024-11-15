@@ -1,4 +1,5 @@
 ﻿using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -28,8 +29,6 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
     private static void GenerateApiEndpoints(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
     {
         AdditionalText csvFile = texts.Single();
-
-        string endpointsText = csvFile.GetText(context.CancellationToken)!.ToString();
 
         List<ApiEndpointsMetadata> apis = [];
         using (StringReader reader = new(csvFile.GetText(context.CancellationToken)!.ToString()))
