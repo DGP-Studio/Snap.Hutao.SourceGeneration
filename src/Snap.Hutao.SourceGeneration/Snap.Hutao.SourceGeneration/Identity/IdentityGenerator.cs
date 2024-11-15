@@ -100,6 +100,7 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
             """);
 
         sourceBuilder.AppendLine($$"""
+
             internal readonly partial struct {{name}} : IComparable<{{name}}>
             {
                 /// <inheritdoc/>
