@@ -63,7 +63,6 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     {
         AttributeData constructorInfo = context.SingleAttribute(AttributeName);
 
-        bool injectToPropertiesInstead = constructorInfo.HasNamedArgumentWith<bool>("InjectToPropertiesInstead", value => value);
         bool resolveHttpClient = constructorInfo.HasNamedArgumentWith<bool>("ResolveHttpClient", value => value);
         bool callBaseConstructor = constructorInfo.HasNamedArgumentWith<bool>("CallBaseConstructor", value => value);
         bool initializeComponent = constructorInfo.HasNamedArgumentWith<bool>("InitializeComponent", value => value);
@@ -81,19 +80,10 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
             """);
 
-        if (injectToPropertiesInstead)
-        {
-            FillUpWithPropertyAssignment(sourceBuilder, context, options);
-        }
-        else
-        {
-            FillUpWithFieldValueAssignment(sourceBuilder, context, options);
-        }
+        FillUpWithFieldValueAssignment(sourceBuilder, context, options);
+        FillUpWithPropertyAssignment(sourceBuilder, context, options);
 
-        sourceBuilder.Append("""
-                }
-            }
-            """);
+        sourceBuilder.Append("}");
 
         production.AddSource($"{context.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
     }
@@ -109,7 +99,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            bool shoudSkip = false;
+            bool shouldSkip = false;
             foreach (SyntaxReference syntaxReference in fieldSymbol.DeclaringSyntaxReferences)
             {
                 if (syntaxReference.GetSyntax() is VariableDeclaratorSyntax declarator)
@@ -118,13 +108,13 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                     {
                         // Skip field with initializer
                         builder.Append("        // Skipped field with initializer: ").AppendLine(fieldSymbol.Name);
-                        shoudSkip = true;
+                        shouldSkip = true;
                         break;
                     }
                 }
             }
 
-            if (shoudSkip)
+            if (shouldSkip)
             {
                 continue;
             }
@@ -187,27 +177,12 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                     break;
             }
         }
-
-        foreach (INamedTypeSymbol interfaceSymbol in context2.Symbol.Interfaces)
-        {
-            if (interfaceSymbol.Name == "IRecipient")
-            {
-                builder
-                    .Append("        CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Register<")
-                    .Append(interfaceSymbol.TypeArguments[0])
-                    .AppendLine(">(serviceProvider.GetRequiredService<CommunityToolkit.Mvvm.Messaging.IMessenger>(), this);");
-            }
-        }
-
-        if (options.InitializeComponent)
-        {
-            builder.AppendLine("        InitializeComponent();");
-        }
     }
 
     private static void FillUpWithPropertyAssignment(StringBuilder builder, AttributedGeneratorSymbolContext context2, ConstructorOptions options)
     {
         IEnumerable<IPropertySymbol> fields = context2.Symbol.GetMembers().Where(m => m.Kind is SymbolKind.Property).OfType<IPropertySymbol>();
+        StringBuilder propsBuilder = new();
 
         foreach (IPropertySymbol propertySymbol in fields)
         {
@@ -216,39 +191,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            bool shoudSkip = false;
-            foreach (SyntaxReference syntaxReference in propertySymbol.DeclaringSyntaxReferences)
-            {
-                if (syntaxReference.GetSyntax() is PropertyDeclarationSyntax declarationSyntax)
-                {
-                    if (declarationSyntax.Initializer is not null)
-                    {
-                        // Skip property with initializer
-                        builder.Append("        // Skipped property with initializer: ").AppendLine(propertySymbol.Name);
-                        shoudSkip = true;
-                        break;
-                    }
-
-                    if (declarationSyntax.AccessorList is not null)
-                    {
-                        foreach (AccessorDeclarationSyntax accessorDeclaration in declarationSyntax.AccessorList.Accessors)
-                        {
-                            if (accessorDeclaration.Kind() is SyntaxKind.GetAccessorDeclaration)
-                            {
-                                if (accessorDeclaration.ExpressionBody is not null || accessorDeclaration.Body is not null)
-                                {
-                                    // Skip property with body
-                                    builder.Append("        // Skipped property with expression body: ").AppendLine(propertySymbol.Name);
-                                    shoudSkip = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (shoudSkip)
+            if (!propertySymbol.IsPartialDefinition)
             {
                 continue;
             }
@@ -289,8 +232,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 default:
                     if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is FromKeyedServices) is { } keyInfo)
                     {
-                        string key = keyInfo.ConstructorArguments[0].ToCSharpString();
-                        builder
+                        string key = keyInfo.ConstructorArguments[0].ToCSharpString(); builder
                             .Append("        ")
                             .Append(propertySymbol.Name)
                             .Append(" = serviceProvider.GetRequiredKeyedService<")
@@ -310,6 +252,16 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                     }
                     break;
             }
+
+            propsBuilder
+                .AppendLine()
+                .Append("    ")
+                .Append(propertySymbol.DeclaredAccessibility.ToCSharpString())
+                .Append(" partial ")
+                .Append(propertySymbol.Type)
+                .Append(" ")
+                .Append(propertySymbol.Name)
+                .AppendLine(" { get => field; }");
         }
 
         foreach (INamedTypeSymbol interfaceSymbol in context2.Symbol.Interfaces)
@@ -327,6 +279,9 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         {
             builder.AppendLine("        InitializeComponent();");
         }
+
+        builder.AppendLine("    }");
+        builder.Append(propsBuilder);
     }
 
     private readonly struct ConstructorOptions

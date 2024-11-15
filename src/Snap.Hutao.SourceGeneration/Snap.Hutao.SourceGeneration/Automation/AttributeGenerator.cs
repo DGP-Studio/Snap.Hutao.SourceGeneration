@@ -45,7 +45,6 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 public bool CallBaseConstructor { get; set; }
                 public bool ResolveHttpClient { get; set; }
                 public bool InitializeComponent { get; set; }
-                public bool InjectToPropertiesInstead { get; set; }
             }
 
             [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
