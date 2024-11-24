@@ -66,20 +66,16 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 public Type AttachedType { get; set; } = default;
                 public string RawDefaultValue { get; set; } = default;
             }
-
-            [Obsolete]
-            [AttributeUsage(AttributeTargets.All, Inherited = false)]
-            [Conditional("DEBUG")]
-            internal sealed class HighQualityAttribute : Attribute
-            {
-            }
             """;
         context.AddSource("Snap.Hutao.Core.Annotation.Attributes.g.cs", coreAnnotations);
 
         /* lang=c#-test */
         string coreDependencyInjectionAnnotationHttpClients = """
+            using JetBrains.Annotations;
+            
             namespace Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient;
 
+            [MeansImplicitUse]
             [AttributeUsage(AttributeTargets.Class, Inherited = false)]
             internal sealed class HttpClientAttribute : Attribute
             {
@@ -141,6 +137,8 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         /* lang=c#-test */
         string coreDependencyInjectionAnnotations = """
+            using JetBrains.Annotations;
+            
             namespace Snap.Hutao.Core.DependencyInjection.Annotation;
 
             internal enum InjectAs
@@ -151,6 +149,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 HostedService,
             }
 
+            [MeansImplicitUse]
             [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
             internal sealed class InjectionAttribute : Attribute
             {
