@@ -54,7 +54,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 
     private static void CompilationStart(CompilationStartAnalysisContext context)
     {
-        context.RegisterSyntaxNodeAction(HandleFileHeader, SyntaxKind.CompilationUnit);
+        context.RegisterSyntaxTreeAction(HandleFileHeader);
 
         context.RegisterSyntaxNodeAction(HandleTypeShouldBeInternal, SyntaxKind.ClassDeclaration, SyntaxKind.InterfaceDeclaration, SyntaxKind.StructDeclaration, SyntaxKind.EnumDeclaration);
         context.RegisterSyntaxNodeAction(HandleMethodReturnTypeShouldUseValueTaskInsteadOfTask, SyntaxKind.MethodDeclaration);
@@ -63,9 +63,9 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         context.RegisterSyntaxNodeAction(HandleArgumentNullExceptionThrowIfNull, SyntaxKind.SuppressNullableWarningExpression);
     }
 
-    private static void HandleFileHeader(SyntaxNodeAnalysisContext context)
+    private static void HandleFileHeader(SyntaxTreeAnalysisContext context)
     {
-        CompilationUnitSyntax syntax = (CompilationUnitSyntax)context.Node;
+        CompilationUnitSyntax syntax = context.Tree.GetCompilationUnitRoot();
 
         SourceText sourceText = syntax.GetText();
         if (!(sourceText.Length >= Header.Length && sourceText.GetSubText(new TextSpan(0, Header.Length)).ContentEquals(Header)))
