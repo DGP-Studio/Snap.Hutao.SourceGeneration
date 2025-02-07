@@ -196,34 +196,4 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         Diagnostic diagnostic = Diagnostic.Create(UseArgumentNullExceptionThrowIfNullDescriptor, location);
         context.ReportDiagnostic(diagnostic);
     }
-
-    private sealed class SourceTextReader : TextReader
-    {
-        private readonly SourceText text;
-        private int position;
-
-        public SourceTextReader(SourceText text)
-        {
-            this.text = text;
-        }
-
-        public override int Read()
-        {
-            return position >= text.Length ? -1 : text[position++];
-        }
-
-        public override int Peek()
-        {
-            return position >= text.Length ? -1 : text[position];
-        }
-
-        public override int Read(char[] buffer, int index, int count)
-        {
-            int remaining = text.Length - position;
-            int charactersToRead = Math.Min(remaining, count);
-            text.CopyTo(position, buffer, index, charactersToRead);
-            position += charactersToRead;
-            return charactersToRead;
-        }
-    }
 }
