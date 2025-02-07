@@ -2,10 +2,12 @@
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
 using Snap.Hutao.SourceGeneration.Primitive;
 using Snap.Hutao.SourceGeneration.Xaml;
-using System.Collections.Generic;
+using System;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 
 namespace Snap.Hutao.SourceGeneration;
@@ -13,30 +15,33 @@ namespace Snap.Hutao.SourceGeneration;
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 {
-    private static readonly DiagnosticDescriptor typeInternalDescriptor = new("SH001", "Type should be internal", "Type [{0}] should be internal", "Quality", DiagnosticSeverity.Info, true);
-    private static readonly DiagnosticDescriptor useValueTaskIfPossibleDescriptor = new("SH003", "Use ValueTask instead of Task whenever possible", "Use ValueTask instead of Task", "Quality", DiagnosticSeverity.Info, true);
-    private static readonly DiagnosticDescriptor useIsNotNullPatternMatchingDescriptor = new("SH004", "Use \"is not null\" instead of \"!= null\" whenever possible", "Use \"is not null\" instead of \"!= null\"", "Quality", DiagnosticSeverity.Info, true);
-    private static readonly DiagnosticDescriptor useIsNullPatternMatchingDescriptor = new("SH005", "Use \"is null\" instead of \"== null\" whenever possible", "Use \"is null\" instead of \"== null\"", "Quality", DiagnosticSeverity.Info, true);
-    private static readonly DiagnosticDescriptor useIsPatternRecursiveMatchingDescriptor = new("SH006", "Use \"is { } obj\" whenever possible", "Use \"is {{ }} {0}\"", "Quality", DiagnosticSeverity.Info, true);
-    private static readonly DiagnosticDescriptor useArgumentNullExceptionThrowIfNullDescriptor = new("SH007", "Use \"ArgumentNullException.ThrowIfNull()\" instead of \"!\"", "Use \"ArgumentNullException.ThrowIfNull()\"", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor TypeInternalDescriptor = new("SH001", "Type should be internal", "Type [{0}] should be internal", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor UseValueTaskIfPossibleDescriptor = new("SH003", "Use ValueTask instead of Task whenever possible", "Use ValueTask instead of Task", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor UseIsNotNullPatternMatchingDescriptor = new("SH004", "Use \"is not null\" instead of \"!= null\" whenever possible", "Use \"is not null\" instead of \"!= null\"", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor UseIsNullPatternMatchingDescriptor = new("SH005", "Use \"is null\" instead of \"== null\" whenever possible", "Use \"is null\" instead of \"== null\"", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor UseIsPatternRecursiveMatchingDescriptor = new("SH006", "Use \"is { } obj\" whenever possible", "Use \"is {{ }} {0}\"", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor UseArgumentNullExceptionThrowIfNullDescriptor = new("SH007", "Use \"ArgumentNullException.ThrowIfNull()\" instead of \"!\"", "Use \"ArgumentNullException.ThrowIfNull()\"", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor FileHeaderDescriptor = new("SH020", "File header mismatch", "File header mismatch", "Quality", DiagnosticSeverity.Info, true);
 
-    private static readonly DiagnosticDescriptor avoidUsingContentDialogShowAsyncDescriptor = new("SH100", "Use \"IContentDialogFactory.EnqueueAndShowAsync\" instead", "Use \"IContentDialogFactory.EnqueueAndShowAsync\" instead", "Quality", DiagnosticSeverity.Warning, true);
+    private static readonly SourceText Header = SourceText.From("""
+        // Copyright (c) DGP Studio. All rights reserved.
+        // Licensed under the MIT license.
+        
+        
+        """);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
     {
-        get
-        {
-            return new DiagnosticDescriptor[]
-            {
-                typeInternalDescriptor,
-                useValueTaskIfPossibleDescriptor,
-                useIsNotNullPatternMatchingDescriptor,
-                useIsNullPatternMatchingDescriptor,
-                useIsPatternRecursiveMatchingDescriptor,
-                useArgumentNullExceptionThrowIfNullDescriptor,
-                avoidUsingContentDialogShowAsyncDescriptor
-            }.ToImmutableArray();
-        }
+        get =>
+        [
+            TypeInternalDescriptor,
+            UseValueTaskIfPossibleDescriptor,
+            UseIsNotNullPatternMatchingDescriptor,
+            UseIsNullPatternMatchingDescriptor,
+            UseIsPatternRecursiveMatchingDescriptor,
+            UseArgumentNullExceptionThrowIfNullDescriptor,
+            FileHeaderDescriptor,
+        ];
     }
 
     public override void Initialize(AnalysisContext context)
@@ -49,12 +54,26 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 
     private static void CompilationStart(CompilationStartAnalysisContext context)
     {
+        context.RegisterSyntaxNodeAction(HandleFileHeader, SyntaxKind.CompilationUnit);
+
         context.RegisterSyntaxNodeAction(HandleTypeShouldBeInternal, SyntaxKind.ClassDeclaration, SyntaxKind.InterfaceDeclaration, SyntaxKind.StructDeclaration, SyntaxKind.EnumDeclaration);
         context.RegisterSyntaxNodeAction(HandleMethodReturnTypeShouldUseValueTaskInsteadOfTask, SyntaxKind.MethodDeclaration);
         context.RegisterSyntaxNodeAction(HandleEqualsAndNotEqualsExpressionShouldUsePatternMatching, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression);
         context.RegisterSyntaxNodeAction(HandleIsPatternShouldUseRecursivePattern, SyntaxKind.IsPatternExpression);
         context.RegisterSyntaxNodeAction(HandleArgumentNullExceptionThrowIfNull, SyntaxKind.SuppressNullableWarningExpression);
-        context.RegisterSyntaxNodeAction(HandleContentDialogShowAsyncAccess, SyntaxKind.SimpleMemberAccessExpression, SyntaxKind.InvocationExpression);
+    }
+
+    private static void HandleFileHeader(SyntaxNodeAnalysisContext context)
+    {
+        CompilationUnitSyntax syntax = (CompilationUnitSyntax)context.Node;
+
+        SourceText sourceText = syntax.GetText();
+        if (!(sourceText.Length >= Header.Length && sourceText.GetSubText(new TextSpan(0, Header.Length)).ContentEquals(Header)))
+        {
+            Location location = syntax.GetLocation();
+            Diagnostic diagnostic = Diagnostic.Create(FileHeaderDescriptor, location);
+            context.ReportDiagnostic(diagnostic);
+        }
     }
 
     private static void HandleTypeShouldBeInternal(SyntaxNodeAnalysisContext context)
@@ -86,7 +105,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         if (!privateExists && !internalExists && !fileExists)
         {
             Location location = syntax.Identifier.GetLocation();
-            Diagnostic diagnostic = Diagnostic.Create(typeInternalDescriptor, location, syntax.Identifier);
+            Diagnostic diagnostic = Diagnostic.Create(TypeInternalDescriptor, location, syntax.Identifier);
             context.ReportDiagnostic(diagnostic);
         }
     }
@@ -111,7 +130,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         if (methodSymbol.ReturnType.IsOrInheritsFrom("System.Threading.Tasks.Task"))
         {
             Location location = methodSyntax.ReturnType.GetLocation();
-            Diagnostic diagnostic = Diagnostic.Create(useValueTaskIfPossibleDescriptor, location);
+            Diagnostic diagnostic = Diagnostic.Create(UseValueTaskIfPossibleDescriptor, location);
             context.ReportDiagnostic(diagnostic);
         }
     }
@@ -122,13 +141,13 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         if (syntax.IsKind(SyntaxKind.NotEqualsExpression) && syntax.Right.IsKind(SyntaxKind.NullLiteralExpression))
         {
             Location location = syntax.OperatorToken.GetLocation();
-            Diagnostic diagnostic = Diagnostic.Create(useIsNotNullPatternMatchingDescriptor, location);
+            Diagnostic diagnostic = Diagnostic.Create(UseIsNotNullPatternMatchingDescriptor, location);
             context.ReportDiagnostic(diagnostic);
         }
         else if (syntax.IsKind(SyntaxKind.EqualsExpression) && syntax.Right.IsKind(SyntaxKind.NullLiteralExpression))
         {
             Location location = syntax.OperatorToken.GetLocation();
-            Diagnostic diagnostic = Diagnostic.Create(useIsNullPatternMatchingDescriptor, location);
+            Diagnostic diagnostic = Diagnostic.Create(UseIsNullPatternMatchingDescriptor, location);
             context.ReportDiagnostic(diagnostic);
         }
     }
@@ -143,7 +162,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
             if (SymbolEqualityComparer.Default.Equals(leftType, rightType))
             {
                 Location location = declaration.GetLocation();
-                Diagnostic diagnostic = Diagnostic.Create(useIsPatternRecursiveMatchingDescriptor, location, declaration.Designation);
+                Diagnostic diagnostic = Diagnostic.Create(UseIsPatternRecursiveMatchingDescriptor, location, declaration.Designation);
                 context.ReportDiagnostic(diagnostic);
             }
         }
@@ -174,48 +193,37 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         }
 
         Location location = syntax.GetLocation();
-        Diagnostic diagnostic = Diagnostic.Create(useArgumentNullExceptionThrowIfNullDescriptor, location);
+        Diagnostic diagnostic = Diagnostic.Create(UseArgumentNullExceptionThrowIfNullDescriptor, location);
         context.ReportDiagnostic(diagnostic);
     }
 
-    private static void HandleContentDialogShowAsyncAccess(SyntaxNodeAnalysisContext context)
+    private sealed class SourceTextReader : TextReader
     {
-        switch (context.Node)
+        private readonly SourceText text;
+        private int position;
+
+        public SourceTextReader(SourceText text)
         {
-            case MemberAccessExpressionSyntax memberAccess:
-                {
-                    if (memberAccess.Name.Identifier.Text is "ShowAsync")
-                    {
-                        ISymbol? containingSymbol = context.SemanticModel.GetSymbolInfo(memberAccess.Name).Symbol?.ContainingSymbol;
+            this.text = text;
+        }
 
-                        if (containingSymbol?.ToDisplayString() is "Microsoft.UI.Xaml.Controls.ContentDialog")
-                        {
-                            Location location = memberAccess.GetLocation();
-                            Diagnostic diagnostic = Diagnostic.Create(avoidUsingContentDialogShowAsyncDescriptor, location);
-                            context.ReportDiagnostic(diagnostic);
-                        }
-                    }
-                }
+        public override int Read()
+        {
+            return position >= text.Length ? -1 : text[position++];
+        }
 
-                break;
-            case InvocationExpressionSyntax invocation:
-                {
-                    if (invocation.Expression is IdentifierNameSyntax identifierName)
-                    {
-                        if (identifierName.Identifier.Text is "ShowAsync")
-                        {
-                            ISymbol? containingSymbol = context.SemanticModel.GetSymbolInfo(identifierName).Symbol?.ContainingSymbol;
+        public override int Peek()
+        {
+            return position >= text.Length ? -1 : text[position];
+        }
 
-                            if (containingSymbol?.ToDisplayString() is "Microsoft.UI.Xaml.Controls.ContentDialog")
-                            {
-                                Location location = invocation.GetLocation();
-                                Diagnostic diagnostic = Diagnostic.Create(avoidUsingContentDialogShowAsyncDescriptor, location);
-                                context.ReportDiagnostic(diagnostic);
-                            }
-                        }
-                    }
-                }
-                break;
+        public override int Read(char[] buffer, int index, int count)
+        {
+            int remaining = text.Length - position;
+            int charactersToRead = Math.Min(remaining, count);
+            text.CopyTo(position, buffer, index, charactersToRead);
+            position += charactersToRead;
+            return charactersToRead;
         }
     }
 }

@@ -15,7 +15,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
     public static void GenerateAllAttributes(IncrementalGeneratorPostInitializationContext context)
     {
-        /* lang=c#-test */
+        /* lang=c# */
         string coreAnnotations = """
             using System.Diagnostics;
 
@@ -69,7 +69,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
             """;
         context.AddSource("Snap.Hutao.Core.Annotation.Attributes.g.cs", coreAnnotations);
 
-        /* lang=c#-test */
+        /* lang=c# */
         string coreDependencyInjectionAnnotationHttpClients = """
             using JetBrains.Annotations;
             
@@ -135,7 +135,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
             """;
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.Attributes.g.cs", coreDependencyInjectionAnnotationHttpClients);
 
-        /* lang=c#-test */
+        /* lang=c# */
         string coreDependencyInjectionAnnotations = """
             using JetBrains.Annotations;
             
@@ -174,7 +174,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
             """;
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.Attributes.g.cs", coreDependencyInjectionAnnotations);
 
-        /* lang=c#-test */
+        /* lang=c# */
         string resourceLocalization = """
             namespace Snap.Hutao.Resource.Localization;
 
@@ -192,5 +192,19 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
             }
             """;
         context.AddSource("Snap.Hutao.Resource.Localization.Attributes.g.cs", resourceLocalization);
+
+        /* lang=c# */
+        string interceptsLocation = """
+            namespace System.Runtime.CompilerServices;
+
+            [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+            internal sealed class InterceptsLocationAttribute : Attribute
+            {
+                public InterceptsLocationAttribute(int version, string data)
+                {
+                }
+            }
+            """;
+        context.AddSource("System.Runtime.CompilerServices.InterceptsLocationAttribute.g.cs", interceptsLocation);
     }
 }
