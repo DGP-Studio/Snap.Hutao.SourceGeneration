@@ -21,14 +21,6 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor UseIsNullPatternMatchingDescriptor = new("SH005", "Use \"is null\" instead of \"== null\" whenever possible", "Use \"is null\" instead of \"== null\"", "Quality", DiagnosticSeverity.Info, true);
     private static readonly DiagnosticDescriptor UseIsPatternRecursiveMatchingDescriptor = new("SH006", "Use \"is { } obj\" whenever possible", "Use \"is {{ }} {0}\"", "Quality", DiagnosticSeverity.Info, true);
     private static readonly DiagnosticDescriptor UseArgumentNullExceptionThrowIfNullDescriptor = new("SH007", "Use \"ArgumentNullException.ThrowIfNull()\" instead of \"!\"", "Use \"ArgumentNullException.ThrowIfNull()\"", "Quality", DiagnosticSeverity.Info, true);
-    private static readonly DiagnosticDescriptor FileHeaderDescriptor = new("SH020", "File header mismatch", "File header mismatch", "Quality", DiagnosticSeverity.Info, true);
-
-    private static readonly SourceText Header = SourceText.From("""
-        // Copyright (c) DGP Studio. All rights reserved.
-        // Licensed under the MIT license.
-        
-        
-        """);
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
     {
@@ -40,7 +32,6 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
             UseIsNullPatternMatchingDescriptor,
             UseIsPatternRecursiveMatchingDescriptor,
             UseArgumentNullExceptionThrowIfNullDescriptor,
-            FileHeaderDescriptor,
         ];
     }
 
@@ -54,26 +45,11 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 
     private static void CompilationStart(CompilationStartAnalysisContext context)
     {
-        context.RegisterSyntaxTreeAction(HandleFileHeader);
-
         context.RegisterSyntaxNodeAction(HandleTypeShouldBeInternal, SyntaxKind.ClassDeclaration, SyntaxKind.InterfaceDeclaration, SyntaxKind.StructDeclaration, SyntaxKind.EnumDeclaration);
         context.RegisterSyntaxNodeAction(HandleMethodReturnTypeShouldUseValueTaskInsteadOfTask, SyntaxKind.MethodDeclaration);
         context.RegisterSyntaxNodeAction(HandleEqualsAndNotEqualsExpressionShouldUsePatternMatching, SyntaxKind.EqualsExpression, SyntaxKind.NotEqualsExpression);
         context.RegisterSyntaxNodeAction(HandleIsPatternShouldUseRecursivePattern, SyntaxKind.IsPatternExpression);
         context.RegisterSyntaxNodeAction(HandleArgumentNullExceptionThrowIfNull, SyntaxKind.SuppressNullableWarningExpression);
-    }
-
-    private static void HandleFileHeader(SyntaxTreeAnalysisContext context)
-    {
-        CompilationUnitSyntax syntax = context.Tree.GetCompilationUnitRoot();
-
-        SourceText sourceText = syntax.GetText();
-        if (!(sourceText.Length >= Header.Length && sourceText.GetSubText(new TextSpan(0, Header.Length)).ContentEquals(Header)))
-        {
-            Location location = syntax.GetLocation();
-            Diagnostic diagnostic = Diagnostic.Create(FileHeaderDescriptor, location);
-            context.ReportDiagnostic(diagnostic);
-        }
     }
 
     private static void HandleTypeShouldBeInternal(SyntaxNodeAnalysisContext context)
