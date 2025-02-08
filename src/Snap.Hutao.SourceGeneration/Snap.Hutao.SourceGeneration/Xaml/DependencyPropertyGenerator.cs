@@ -5,11 +5,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Primitive;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using System.Threading;
 
 namespace Snap.Hutao.SourceGeneration.Xaml;
@@ -106,11 +104,17 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                                 typeof({{owner}}),
                                 new PropertyMetadata({{defaultValue}}{{propertyChangedCallback}}));
 
+                        /// <summary>
+                        /// Gets the value of the {{propertyName}} from the specified object.
+                        /// </summary>
                         public static {{propertyType}} Get{{propertyName}}({{objType}} obj)
                         {
                             return ({{propertyType}})obj?.GetValue({{propertyName}}Property);
                         }
 
+                        /// <summary>
+                        /// Sets the value of the {{propertyName}} on the specified object.
+                        /// </summary>
                         public static void Set{{propertyName}}({{objType}} obj, {{propertyType}} value)
                         {
                             obj.SetValue({{propertyName}}Property, value);
