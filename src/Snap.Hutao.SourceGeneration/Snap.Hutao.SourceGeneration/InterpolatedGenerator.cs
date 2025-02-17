@@ -527,7 +527,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
             code.AddLine($"{{({EscapeString(call.FileLocation)}, {call.LineStart} .. {call.LineEnd}), new(new string[] {{ {string.Join(", ", call.Components.Select(EscapeString))} }} )}},");
         }
 
-        code.EndBlock();
+        code.EndBlock(";");
         code.EndBlock();
         code.EndBlock();
         code.EndBlock();
@@ -649,7 +649,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
                 return;
             }
 
-            builder.AppendLine(new string('\t', indent) + line);
+            builder.AppendLine(new string(' ', indent * 4) + line);
         }
 
         public void AddLines(params string[] lines)
@@ -668,14 +668,21 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
 
         public void StartBlock(string blockStart)
         {
-            AddLine(blockStart + " {");
+            AddLine(blockStart);
             Indent();
+            AddLine("{");
         }
 
         public void EndBlock()
         {
             Unindent();
             AddLine("}");
+        }
+
+        public void EndBlock(string blockEnd)
+        {
+            Unindent();
+            AddLine($"}}{blockEnd}");
         }
 
         public void Indent()
