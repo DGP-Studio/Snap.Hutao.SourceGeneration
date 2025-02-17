@@ -3,7 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 
-namespace Snap.Hutao.SourceGeneration.Automation;
+namespace Snap.Hutao.SourceGeneration;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class AttributeGenerator : IIncrementalGenerator
