@@ -38,8 +38,6 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        Debugger.Launch();
-
         context.RegisterPostInitializationOutput(InitializationOutput);
 
         IncrementalValueProvider<ImmutableArray<ParserCall>> interpolationCalls = context.SyntaxProvider
@@ -609,7 +607,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
 
     private static string EscapeString(string str)
     {
-        return new StringBuilder(str)
+        return new StringBuilder($"\"{str}\"")
             .Replace("\\", """\\""")
             .Replace("\r", """\r""")
             .Replace("\n", """\n""")
