@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -37,6 +38,8 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
+        Debugger.Launch();
+
         context.RegisterPostInitializationOutput(InitializationOutput);
 
         IncrementalValueProvider<ImmutableArray<ParserCall>> interpolationCalls = context.SyntaxProvider
@@ -526,7 +529,6 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
             code.AddLine($"{{({EscapeString(call.FileLocation)}, {call.LineStart} .. {call.LineEnd}), new(new string[] {{ {string.Join(", ", call.Components.Select(EscapeString))} }} )}},");
         }
 
-        code.Unindent();
         code.EndBlock();
         code.EndBlock();
         code.EndBlock();
