@@ -4,6 +4,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
@@ -57,15 +58,18 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
         const string Source = """"
             #nullable enable
 
+            using System.Collections.Immutable;
             using System.Globalization;
             using System.Runtime.CompilerServices;
-
+            using System.Runtime.InteropServices;
+            
             namespace Snap.Hutao.Core.Text;
 
             internal static partial class Interpolated
             {
                 public static void Parse(string input, [InterpolatedStringHandlerArgument("input")] InterpolatedParseStringHandler template)
                 {
+                    // Do nothing
                 }
             
                 [InterpolatedStringHandler]
@@ -92,7 +96,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
                         currentIndex = 0;
                         currentStringPosition = 0;
                         inputString = input;
-                        if (Sources.TryGetValue((sourceFilePath, sourceLineNumber), out source!) == false)
+                        if (!Sources.TryGetValue((sourceFilePath, sourceLineNumber), out source!))
                         {
                             throw new InvalidOperationException($"""
                                 Unable to find source string for {sourceFilePath}:{sourceLineNumber}.
@@ -105,10 +109,10 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
                     private static Dictionary<(string File, int Line), InterpolatedStringSource> GetSourcesLineExpanded()
                     {
                         Dictionary<(string File, int Line), InterpolatedStringSource> dict = [];
-                        Dictionary<(string File, Range Line), InterpolatedStringSource> sources = GetInterpolatedStringSources();
-                        foreach (((string file, Range range), InterpolatedStringSource source) in sources)
+                        Dictionary<(string File, LineRange Lines), InterpolatedStringSource> sources = GetInterpolatedStringSources();
+                        foreach (((string file, LineRange lines), InterpolatedStringSource source) in sources)
                         {
-                            for (int i = range.Start.Value; i <= range.End.Value; i++)
+                            for (int i = lines.Start; i <= lines.End; i++)
                             {
                                 dict.Add((file, i), source);
                             }
@@ -120,7 +124,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
                     private static List<T> GetListFromCharsParsable<T>(ReadOnlySpan<char> chars, ReadOnlySpan<char> separator)
                         where T : IParsable<T>
                     {
-                        if (separator[0] == '\'' && separator[^1] == '\'')
+                        if (separator[0] is '\'' && separator[^1] is '\'')
                         {
                             separator = separator[1..^1];
                         }
@@ -130,7 +134,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
                         while (true)
                         {
                             int index = chars.IndexOf(separator);
-                            if (index == -1)
+                            if (index is -1)
                             {
                                 list.Add(T.Parse(new(chars), CultureInfo.InvariantCulture));
                                 break;
@@ -146,7 +150,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
                     private static List<T> GetListFromCharsSpanParsable<T>(ReadOnlySpan<char> chars, ReadOnlySpan<char> separator)
                         where T : ISpanParsable<T>
                     {
-                        if (separator[0] == '\'' && separator[^1] == '\'')
+                        if (separator[0] is '\'' && separator[^1] is '\'')
                         {
                             separator = separator[1..^1];
                         }
@@ -156,7 +160,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
                         while (true)
                         {
                             int index = chars.IndexOf(separator);
-                            if (index == -1)
+                            if (index is -1)
                             {
                                 list.Add(T.Parse(chars, CultureInfo.InvariantCulture));
                                 break;
@@ -201,15 +205,29 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
                         return inputString.AsSpan(startPos, index - startPos);
                     }
             
-                    private class InterpolatedStringSource
+                    private sealed class InterpolatedStringSource
                     {
                         public InterpolatedStringSource(string[] components)
                         {
-                            Components = components;
+                            Components = ImmutableCollectionsMarshal.AsImmutableArray(components);
                         }
             
-                        public string[] Components { get; }
+                        public ImmutableArray<string> Components { get; }
                     }
+            
+                    private sealed class LineRange
+                    {
+                        public LineRange(int start, int end)
+                        {
+                            Start = start;
+                            End = end;
+                        }
+            
+                        public int Start { get; }
+            
+                        public int End { get; }
+                    }
+            
                 }
             }
 
@@ -517,14 +535,15 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
     {
         CodeBuilder code = new();
         code.AddLine("namespace Snap.Hutao.Core.Text;");
+        code.AddLine();
         code.StartBlock("partial class Interpolated");
         code.StartBlock("partial struct InterpolatedParseStringHandler");
-        code.StartBlock("private static Dictionary<(string File, System.Range Line), InterpolatedStringSource> GetInterpolatedStringSources()");
+        code.StartBlock("private static Dictionary<(string File, LineRange Line), InterpolatedStringSource> GetInterpolatedStringSources()");
         code.StartBlock("return new()");
 
         foreach (ParserCall call in parserCalls)
         {
-            code.AddLine($"{{({EscapeString(call.FileLocation)}, {call.LineStart} .. {call.LineEnd}), new(new string[] {{ {string.Join(", ", call.Components.Select(EscapeString))} }} )}},");
+            code.AddLine($"{{({EscapeString(call.FileLocation)}, new({call.LineStart}, {call.LineEnd})), new([{string.Join(", ", call.Components.Select(EscapeString))}])}},");
         }
 
         code.EndBlock(";");
@@ -557,6 +576,7 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
         CodeBuilder code = new();
         code.AddLine("#nullable enable");
         code.AddLine("namespace Snap.Hutao.Core.Text;");
+        code.AddLine();
         code.StartBlock("partial class Interpolated");
         code.StartBlock("partial struct InterpolatedParseStringHandler");
 
@@ -637,6 +657,11 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
             indent = 0;
         }
 
+        public void AddLine()
+        {
+            builder.AppendLine();
+        }
+
         public void AddLine(string line)
         {
             if (line.Contains("\n"))
@@ -669,8 +694,8 @@ internal sealed class InterpolatedGenerator : IIncrementalGenerator
         public void StartBlock(string blockStart)
         {
             AddLine(blockStart);
-            Indent();
             AddLine("{");
+            Indent();
         }
 
         public void EndBlock()
