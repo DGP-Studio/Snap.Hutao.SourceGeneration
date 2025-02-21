@@ -24,8 +24,8 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     {
         IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> injectionClasses =
             context.SyntaxProvider.CreateSyntaxProvider(FilterAttributedClasses, ConstructorGeneratedClass)
-            .Where(AttributedGeneratorSymbolContext.NotNull)
-            .Collect();
+                .Where(AttributedGeneratorSymbolContext.NotNull)
+                .Collect();
 
         context.RegisterSourceOutput(injectionClasses, GenerateConstructorImplementations);
     }
@@ -77,12 +77,41 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             {
                 public {{context.Symbol.Name}}(System.IServiceProvider serviceProvider{{httpclient}}){{(options.CallBaseConstructor ? " : base(serviceProvider)" : string.Empty)}}
                 {
+                    PreConstruct(serviceProvider);
 
             """);
 
         FillUpWithFieldValueAssignment(sourceBuilder, context, options);
-        FillUpWithPropertyAssignment(sourceBuilder, context, options);
+        StringBuilder propBuilder = FillUpWithPropertyAssignment(sourceBuilder, context, options);
 
+        foreach (INamedTypeSymbol interfaceSymbol in context.Symbol.Interfaces)
+        {
+            if (interfaceSymbol.Name == "IRecipient")
+            {
+                sourceBuilder
+                    .Append("        CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Register<")
+                    .Append(interfaceSymbol.TypeArguments[0])
+                    .AppendLine(">(serviceProvider.GetRequiredService<CommunityToolkit.Mvvm.Messaging.IMessenger>(), this);");
+            }
+        }
+
+        if (options.InitializeComponent)
+        {
+            sourceBuilder.AppendLine("        InitializeComponent();");
+        }
+
+        sourceBuilder.AppendLine("""
+                    PostConstruct(serviceProvider);
+                }
+            """);
+        sourceBuilder.Append(propBuilder);
+        sourceBuilder.Append("""
+            
+                partial void PreConstruct(System.IServiceProvider serviceProvider);
+            
+                partial void PostConstruct(System.IServiceProvider serviceProvider);
+
+            """);
         sourceBuilder.Append("}");
 
         production.AddSource($"{context.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
@@ -179,7 +208,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         }
     }
 
-    private static void FillUpWithPropertyAssignment(StringBuilder builder, AttributedGeneratorSymbolContext context2, ConstructorOptions options)
+    private static StringBuilder FillUpWithPropertyAssignment(StringBuilder builder, AttributedGeneratorSymbolContext context2, ConstructorOptions options)
     {
         IEnumerable<IPropertySymbol> fields = context2.Symbol.GetMembers().Where(m => m.Kind is SymbolKind.Property).OfType<IPropertySymbol>();
         StringBuilder propsBuilder = new();
@@ -232,7 +261,8 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 default:
                     if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is FromKeyedServices) is { } keyInfo)
                     {
-                        string key = keyInfo.ConstructorArguments[0].ToCSharpString(); builder
+                        string key = keyInfo.ConstructorArguments[0].ToCSharpString();
+                        builder
                             .Append("        ")
                             .Append(propertySymbol.Name)
                             .Append(" = serviceProvider.GetRequiredKeyedService<")
@@ -264,24 +294,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 .AppendLine(" { get => field; }");
         }
 
-        foreach (INamedTypeSymbol interfaceSymbol in context2.Symbol.Interfaces)
-        {
-            if (interfaceSymbol.Name == "IRecipient")
-            {
-                builder
-                    .Append("        CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Register<")
-                    .Append(interfaceSymbol.TypeArguments[0])
-                    .AppendLine(">(serviceProvider.GetRequiredService<CommunityToolkit.Mvvm.Messaging.IMessenger>(), this);");
-            }
-        }
-
-        if (options.InitializeComponent)
-        {
-            builder.AppendLine("        InitializeComponent();");
-        }
-
-        builder.AppendLine("    }");
-        builder.Append(propsBuilder);
+        return propsBuilder;
     }
 
     private readonly struct ConstructorOptions
