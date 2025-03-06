@@ -38,7 +38,7 @@ public static class JsonParser
     [ThreadStatic]
     private static Dictionary<Type, Dictionary<string, PropertyInfo>>? propertyInfoCache;
 
-    public static T? FromJson<T>(this string json)
+    public static T? FromJson<T>(string json)
     {
         // Initialize, if needed, the ThreadStatic variables
         propertyInfoCache ??= [];

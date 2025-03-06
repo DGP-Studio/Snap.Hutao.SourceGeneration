@@ -11,41 +11,72 @@ namespace Snap.Hutao.SourceGeneration.Automation;
 [Generator(LanguageNames.CSharp)]
 internal sealed class SaltConstantGenerator : IIncrementalGenerator
 {
-    private static readonly HttpClient httpClient;
-    private static readonly Lazy<Response<SaltLatest>> lazySaltInfo;
+    private static readonly Lazy<Response<SaltLatest>?> LazySaltInfo;
 
     static SaltConstantGenerator()
     {
-        httpClient = new();
-        lazySaltInfo = new Lazy<Response<SaltLatest>>(() =>
+        LazySaltInfo = new(() =>
         {
-            string body = httpClient.GetStringAsync("https://internal.snapgenshin.cn/Archive/Salt/Latest").GetAwaiter().GetResult();
-            return JsonParser.FromJson<Response<SaltLatest>>(body)!;
+            try
+            {
+                string body = new HttpClient().GetStringAsync("https://internal.snapgenshin.cn/Archive/Salt/Latest").GetAwaiter().GetResult();
+                return JsonParser.FromJson<Response<SaltLatest>>(body);
+            }
+            catch
+            {
+                return default!;
+            }
         });
     }
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        context.RegisterPostInitializationOutput(GenerateSaltContstants);
+        context.RegisterPostInitializationOutput(GenerateSaltConstants);
     }
 
-    private static void GenerateSaltContstants(IncrementalGeneratorPostInitializationContext context)
+    private static void GenerateSaltConstants(IncrementalGeneratorPostInitializationContext context)
     {
-        Response<SaltLatest> saltInfo = lazySaltInfo.Value;
-        string code = $$"""
-            namespace Snap.Hutao.Web.Hoyolab;
+        Response<SaltLatest>? saltInfo = LazySaltInfo.Value;
 
-            internal sealed class SaltConstants
-            {
-                public const string CNVersion = "{{saltInfo.Data.CNVersion}}";
-                public const string CNK2 = "{{saltInfo.Data.CNK2}}";
-                public const string CNLK2 = "{{saltInfo.Data.CNLK2}}";
+        string code;
+        if (saltInfo is null)
+        {
+            code = """
+                namespace Snap.Hutao.Web.Hoyolab;
 
-                public const string OSVersion = "{{saltInfo.Data.OSVersion}}";
-                public const string OSK2 = "{{saltInfo.Data.OSK2}}";
-                public const string OSLK2 = "{{saltInfo.Data.OSLK2}}";
-            }
-            """;
+                [global::System.Obsolete(Info, true)]
+                internal sealed class SaltConstants
+                {
+                    private const string Info = "Failed to get the latest salt information. You may need to restart the IDE and compiler";
+                
+                    [global::System.Obsolete(Info, true)] public const string CNVersion = "";
+                    [global::System.Obsolete(Info, true)] public const string CNK2 = "";
+                    [global::System.Obsolete(Info, true)] public const string CNLK2 = "";
+                
+                    [global::System.Obsolete(Info, true)] public const string OSVersion = "";
+                    [global::System.Obsolete(Info, true)] public const string OSK2 = "";
+                    [global::System.Obsolete(Info, true)] public const string OSLK2 = "";
+                }
+                """;
+        }
+        else
+        {
+            code = $$"""
+                namespace Snap.Hutao.Web.Hoyolab;
+
+                internal sealed class SaltConstants
+                {
+                    public const string CNVersion = "{{saltInfo.Data.CNVersion}}";
+                    public const string CNK2 = "{{saltInfo.Data.CNK2}}";
+                    public const string CNLK2 = "{{saltInfo.Data.CNLK2}}";
+                
+                    public const string OSVersion = "{{saltInfo.Data.OSVersion}}";
+                    public const string OSK2 = "{{saltInfo.Data.OSK2}}";
+                    public const string OSLK2 = "{{saltInfo.Data.OSLK2}}";
+                }
+                """;
+        }
+
         context.AddSource("SaltConstants.g.cs", code);
     }
 

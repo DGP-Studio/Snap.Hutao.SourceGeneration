@@ -30,7 +30,7 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
         AdditionalText jsonFile = texts.Single();
 
         string identityJson = jsonFile.GetText(context.CancellationToken)!.ToString();
-        List<IdentityStructMetadata> identities = identityJson.FromJson<List<IdentityStructMetadata>>()!;
+        List<IdentityStructMetadata> identities = JsonParser.FromJson<List<IdentityStructMetadata>>(identityJson)!;
 
         if (identities.Any())
         {
