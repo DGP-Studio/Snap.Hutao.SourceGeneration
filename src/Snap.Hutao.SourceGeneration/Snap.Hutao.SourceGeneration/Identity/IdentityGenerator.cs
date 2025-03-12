@@ -101,6 +101,28 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
 
         sourceBuilder.AppendLine($$"""
 
+            internal readonly partial struct {{name}} : IComparable
+            {
+                /// <inheritdoc/>
+                public int CompareTo(object? obj)
+                {
+                    if (obj is null)
+                    {
+                        return 1;
+                    }
+                    
+                    if (obj is not {{name}} other)
+                    {
+                        throw new ArgumentException("Object must be of type {{name}}");
+                    }
+                    
+                    return Value.CompareTo(other.Value);
+                }
+            }
+            """);
+
+        sourceBuilder.AppendLine($$"""
+
             internal readonly partial struct {{name}} : IComparable<{{name}}>
             {
                 /// <inheritdoc/>
