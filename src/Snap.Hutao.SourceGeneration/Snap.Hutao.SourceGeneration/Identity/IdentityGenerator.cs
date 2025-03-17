@@ -49,6 +49,8 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
             // Copyright (c) DGP Studio. All rights reserved.
             // Licensed under the MIT license.
 
+            #nullable enable
+            
             using Snap.Hutao.Model.Primitive.Converter;
             using System.Numerics;
 
@@ -113,7 +115,7 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
                     
                     if (obj is not {{name}} other)
                     {
-                        throw new ArgumentException("Object must be of type {{name}}");
+                        throw new ArgumentException("Object must be of type {{name}}.");
                     }
                     
                     return Value.CompareTo(other.Value);
