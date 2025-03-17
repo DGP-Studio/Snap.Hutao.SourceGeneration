@@ -142,7 +142,7 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
                 internal readonly partial struct {{name}} : IEquatable<{{name}}>
                 {
                     /// <inheritdoc/>
-                    public override bool Equals(object obj)
+                    public override bool Equals(object? obj)
                     {
                         return obj is {{name}} other && Equals(other);
                     }
