@@ -19,7 +19,7 @@ internal sealed class SaltConstantGenerator : IIncrementalGenerator
         {
             try
             {
-                string body = new HttpClient().GetStringAsync("https://internal.snapgenshin.cn/Archive/Salt/Latest").GetAwaiter().GetResult();
+                string body = new HttpClient().GetStringAsync("https://internal.snapgenshin.com/Archive/Salt/Latest").GetAwaiter().GetResult();
                 return JsonParser.FromJson<Response<SaltLatest>>(body);
             }
             catch
