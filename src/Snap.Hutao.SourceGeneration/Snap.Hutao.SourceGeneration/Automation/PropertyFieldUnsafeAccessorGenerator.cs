@@ -27,9 +27,7 @@ internal sealed class PropertyFieldUnsafeAccessorGenerator : IIncrementalGenerat
 
     private static bool FilterAttributedProperties(SyntaxNode node, CancellationToken cancellationToken)
     {
-        return node is PropertyDeclarationSyntax propertyDeclaration
-            && propertyDeclaration.Modifiers.Count > 1
-            && propertyDeclaration.HasAttributeLists();
+        return node is PropertyDeclarationSyntax propertyDeclaration && propertyDeclaration.HasAttributeLists();
     }
 
     private static AttributedGeneratorSymbolContext<IPropertySymbol> FieldAccessProperty(GeneratorSyntaxContext context, CancellationToken token)
