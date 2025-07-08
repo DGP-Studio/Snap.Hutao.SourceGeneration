@@ -58,7 +58,7 @@ internal sealed class PropertyFieldUnsafeAccessorGenerator : IIncrementalGenerat
     {
         INamedTypeSymbol typeSymbol = context.Symbol.ContainingType;
         string propertyName = context.Symbol.Name;
-        string fieldName = $"<{propertyName}>_k__BackingField";
+        string fieldName = $"<{propertyName}>k__BackingField";
 
         string typeName = typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
         string propertyTypeName = context.Symbol.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
@@ -68,7 +68,7 @@ internal sealed class PropertyFieldUnsafeAccessorGenerator : IIncrementalGenerat
             
             namespace {{typeSymbol.ContainingNamespace.ToDisplayString()}}
             {
-                public partial class {{typeName}}
+                partial class {{typeName}}
                 {
                     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "{{fieldName}}")]
                     private static extern ref {{propertyTypeName}} FieldRefOf{{propertyName}}({{typeSymbol}} self);
