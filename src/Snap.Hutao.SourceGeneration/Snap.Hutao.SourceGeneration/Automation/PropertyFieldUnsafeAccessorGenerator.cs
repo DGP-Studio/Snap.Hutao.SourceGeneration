@@ -59,7 +59,7 @@ internal sealed class PropertyFieldUnsafeAccessorGenerator : IIncrementalGenerat
         string fieldName = $"<{propertyName}>k__BackingField";
 
         string typeName = typeSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-        string propertyTypeName = context.Symbol.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+        string propertyTypeName = context.Symbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
         string code = $$"""
             using System.Runtime.CompilerServices;
