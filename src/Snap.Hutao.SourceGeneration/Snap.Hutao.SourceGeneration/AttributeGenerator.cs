@@ -206,5 +206,19 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
             }
             """;
         context.AddSource("System.Runtime.CompilerServices.InterceptsLocationAttribute.g.cs", interceptsLocation);
+
+        /* lang=c# */
+        string fieldAccess = """
+            namespace Snap.Hutao.Core.Annotation;
+            
+            [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+            internal sealed class FieldAccessAttribute : Attribute
+            {
+                public FieldAccessAttribute()
+                {
+                }
+            }
+            """;
+        context.AddSource("Snap.Hutao.Core.Annotation.FieldAccessAttribute.g.cs", fieldAccess);
     }
 }
