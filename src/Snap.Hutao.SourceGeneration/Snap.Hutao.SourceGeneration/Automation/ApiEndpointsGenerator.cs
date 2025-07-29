@@ -1,87 +1,117 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 {
-    private const string FileName = "ApiEndpoints.csv";
+    private const string FileName = "Endpoints.csv";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<AdditionalText>> provider = context.AdditionalTextsProvider.Where(MatchFileName).Collect();
-
-        context.RegisterImplementationSourceOutput(provider, GenerateApiEndpoints);
+        IncrementalValueProvider<ImmutableArray<AdditionalText>> provider = context.AdditionalTextsProvider.Where(Match).Collect();
+        context.RegisterImplementationSourceOutput(provider, GenerateAll);
     }
 
-    private static bool MatchFileName(AdditionalText text)
+    private static bool Match(AdditionalText text)
     {
-        return string.Equals(Path.GetFileName(text.Path), FileName, StringComparison.OrdinalIgnoreCase);
+        // Match '*Endpoints.csv' files
+        return Path.GetFileName(text.Path).EndsWith(FileName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void GenerateApiEndpoints(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
+    private static void GenerateAll(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
     {
-        AdditionalText csvFile = texts.Single();
-
-        List<ApiEndpointsMetadata> apis = [];
-        using (StringReader reader = new(csvFile.GetText(context.CancellationToken)!.ToString()))
+        foreach (AdditionalText csvFile in texts)
         {
-            while (reader.ReadLine() is { Length: > 0 } line)
+            string fileName = Path.GetFileName(csvFile.Path);
+
+            ImmutableArray<ApiEndpointsMetadata>.Builder endpointsBuilder = ImmutableArray.CreateBuilder<ApiEndpointsMetadata>();
+            using (StringReader reader = new(csvFile.GetText(context.CancellationToken)!.ToString()))
             {
-                if (line is "Name,CN,OS")
+                while (reader.ReadLine() is { Length: > 0 } line)
                 {
-                    continue;
+                    if (line is "Name,CN,OS")
+                    {
+                        continue;
+                    }
+
+                    IReadOnlyList<string> columns = ParseCsvLine(line);
+                    ApiEndpointsMetadata metadata = new()
+                    {
+                        MethodSignature = columns.ElementAtOrDefault(0),
+                        Chinese = columns.ElementAtOrDefault(1),
+                        Oversea = columns.ElementAtOrDefault(2)
+                    };
+
+                    endpointsBuilder.Add(metadata);
+                }
+            }
+
+            if (endpointsBuilder.Count <= 0)
+            {
+                return;
+            }
+
+            ImmutableArray<ApiEndpointsMetadata> endpoints = endpointsBuilder.ToImmutable();
+
+            string interfaceName = $"I{fileName}";
+            string chineseImplName = $"{fileName}ImplementationForChinese";
+            string overseaImplName = $"{fileName}ImplementationForOversea";
+
+            _ = CompilationUnit()
+                .WithUsings(SingletonList(UsingDirective("Snap", "Hutao", "Web", "Hoyolab")))
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap", "Hutao", "Web", "Endpoint", "Hoyolab")
+                    .WithMembers(
+                        List<MemberDeclarationSyntax>(
+                        [
+                            InterfaceDeclaration(interfaceName)
+                                .WithModifiers(TokenList(InternalKeyword, PartialKeyWord))
+                                .WithMembers(List<MemberDeclarationSyntax>()),
+                            ClassDeclaration(chineseImplName)
+                                .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
+                                .WithMembers(List<MemberDeclarationSyntax>()),
+                            ClassDeclaration(overseaImplName)
+                                .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
+                                .WithMembers(List<MemberDeclarationSyntax>())
+                        ]))))
+                .NormalizeWhitespace();
+
+            string source = $$"""
+                using Snap.Hutao.Web.Hoyolab;
+
+                namespace Snap.Hutao.Web.Endpoint.Hoyolab;
+
+                internal partial interface IApiEndpoints
+                {
+                {{FillWithInterfaceMethods(endpoints)}}
                 }
 
-                string[] parts = ParseCsvLine(line);
-                ApiEndpointsMetadata metadata = new()
+                internal abstract class ApiEndpointsImplementationForChinese : IApiEndpoints
                 {
-                    MethodName = parts.ElementAtOrDefault(0),
-                    Chinese = parts.ElementAtOrDefault(1),
-                    Oversea = parts.ElementAtOrDefault(2)
-                };
+                {{FillWithChineseMethods(endpoints)}}
+                }
 
-                apis.Add(metadata);
-            }
+                internal abstract class ApiEndpointsImplementationForOversea : IApiEndpoints
+                {
+                {{FillWithOverseaMethods(endpoints)}}
+                }
+                """;
+
+            context.AddSource($"{fileName}.g.cs", source);
         }
-
-        if (apis.Count <= 0)
-        {
-            return;
-        }
-
-        string source = $$"""
-            using Snap.Hutao.Web.Hoyolab;
-
-            namespace Snap.Hutao.Web.Endpoint.Hoyolab;
-
-            internal partial interface IApiEndpoints
-            {
-            {{FillWithInterfaceMethods(apis)}}
-            }
-
-            internal abstract class ApiEndpointsImplmentationForChinese : IApiEndpoints
-            {
-            {{FillWithChineseMethods(apis)}}
-            }
-
-            internal abstract class ApiEndpointsImplmentationForOversea : IApiEndpoints
-            {
-            {{FillWithOverseaMethods(apis)}}
-            }
-            """;
-
-        context.AddSource("ApiEndpoints.g.cs", source);
     }
 
-    private static string FillWithInterfaceMethods(List<ApiEndpointsMetadata> apis)
+    private static string FillWithInterfaceMethods(ImmutableArray<ApiEndpointsMetadata> apis)
     {
         StringBuilder resultBuilder = new();
 
@@ -91,14 +121,14 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
             resultBuilder.AppendLine($@"    /// <code>CN: {metadata.Chinese?.Replace("&", "&amp;")}</code>");
             resultBuilder.AppendLine($@"    /// <code>OS: {metadata.Oversea?.Replace("&", "&amp;")}</code>");
             resultBuilder.AppendLine($@"    /// </summary>");
-            resultBuilder.AppendLine($@"    string {metadata.MethodName};");
+            resultBuilder.AppendLine($@"    string {metadata.MethodSignature};");
             resultBuilder.AppendLine();
         }
 
         return resultBuilder.ToString();
     }
 
-    private static string FillWithChineseMethods(List<ApiEndpointsMetadata> apis)
+    private static string FillWithChineseMethods(ImmutableArray<ApiEndpointsMetadata> apis)
     {
         StringBuilder resultBuilder = new();
 
@@ -106,18 +136,18 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         {
             if (string.IsNullOrWhiteSpace(api.Chinese))
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodName} => throw new NotSupportedException();""");
+                resultBuilder.AppendLine($"""    public string {api.MethodSignature} => throw new NotSupportedException();""");
             }
             else
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodName} => $"{api.Chinese}";""");
+                resultBuilder.AppendLine($"""    public string {api.MethodSignature} => $"{api.Chinese}";""");
             }
         }
 
         return resultBuilder.ToString();
     }
 
-    private static string FillWithOverseaMethods(List<ApiEndpointsMetadata> apis)
+    private static string FillWithOverseaMethods(ImmutableArray<ApiEndpointsMetadata> apis)
     {
         StringBuilder resultBuilder = new();
 
@@ -125,31 +155,33 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         {
             if (string.IsNullOrWhiteSpace(api.Oversea))
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodName} => throw new NotSupportedException();""");
+                resultBuilder.AppendLine($"""    public string {api.MethodSignature} => throw new NotSupportedException();""");
             }
             else
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodName} => $"{api.Oversea}";""");
+                resultBuilder.AppendLine($"""    public string {api.MethodSignature} => $"{api.Oversea}";""");
             }
         }
 
         return resultBuilder.ToString();
     }
 
-    static string[] ParseCsvLine(string line)
+    private static IReadOnlyList<string> ParseCsvLine(string line)
     {
         List<string> fields = [];
         StringBuilder currentField = new();
         bool insideQuotes = false;
 
-        for (int i = 0; i < line.Length; i++)
+        ReadOnlySpan<char> lineSpan = line.AsSpan();
+        for (int i = 0; i < lineSpan.Length; i++)
         {
-            char currentChar = line[i];
+            ref readonly char currentChar = ref lineSpan[i];
 
-            if (currentChar == '"')
+            if (currentChar is '"')
             {
                 if (insideQuotes && i + 1 < line.Length && line[i + 1] == '"')
                 {
+                    // 处理双引号转义
                     currentField.Append('"');
                     i++;
                 }
@@ -172,15 +204,15 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         // 添加最后一个字段
         fields.Add(currentField.ToString());
 
-        return [.. fields];
+        return fields;
     }
 
     private sealed class ApiEndpointsMetadata
     {
-        public string MethodName { get; set; } = default!;
+        public required string? MethodSignature { get; init; }
 
-        public string? Chinese { get; set; }
+        public required string? Chinese { get; init; }
 
-        public string? Oversea { get; set; }
+        public required string? Oversea { get; init; }
     }
 }

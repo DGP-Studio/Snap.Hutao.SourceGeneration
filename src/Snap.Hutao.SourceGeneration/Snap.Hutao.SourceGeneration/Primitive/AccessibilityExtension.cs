@@ -14,12 +14,12 @@ internal static class AccessibilityExtension
         {
             Accessibility.NotApplicable => string.Empty,
             Accessibility.Private => "private",
-            Accessibility.ProtectedAndInternal => "protected internal",
+            Accessibility.ProtectedAndInternal => "private protected",
             Accessibility.Protected => "protected",
             Accessibility.Internal => "internal",
             Accessibility.ProtectedOrInternal => "protected internal",
             Accessibility.Public => "public",
-            _ => throw new ArgumentOutOfRangeException(nameof(accessibility), accessibility, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(accessibility), accessibility, "Unknown accessibility")
         };
     }
 }
