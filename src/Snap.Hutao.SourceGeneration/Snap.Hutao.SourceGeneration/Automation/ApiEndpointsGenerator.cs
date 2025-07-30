@@ -46,9 +46,10 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                     }
 
                     IReadOnlyList<string> columns = ParseCsvLine(line);
+                    string? methodDeclarationString = columns.ElementAtOrDefault(0);
                     ApiEndpointsMetadata metadata = new()
                     {
-                        MethodSignature = columns.ElementAtOrDefault(0),
+                        MethodDeclaration = string.IsNullOrEmpty(methodDeclarationString) ? default : ParseMemberDeclaration(methodDeclarationString),
                         Chinese = columns.ElementAtOrDefault(1),
                         Oversea = columns.ElementAtOrDefault(2)
                     };
@@ -76,12 +77,14 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                         [
                             InterfaceDeclaration(interfaceName)
                                 .WithModifiers(TokenList(InternalKeyword, PartialKeyWord))
-                                .WithMembers(List<MemberDeclarationSyntax>()),
+                                .WithMembers(List(GenerateInterfaceMethods(endpoints))),
                             ClassDeclaration(chineseImplName)
                                 .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
+                                .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
                                 .WithMembers(List<MemberDeclarationSyntax>()),
                             ClassDeclaration(overseaImplName)
                                 .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
+                                .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
                                 .WithMembers(List<MemberDeclarationSyntax>())
                         ]))))
                 .NormalizeWhitespace();
@@ -111,6 +114,17 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         }
     }
 
+    private static IEnumerable<MemberDeclarationSyntax> GenerateInterfaceMethods(ImmutableArray<ApiEndpointsMetadata> metadataArray)
+    {
+        foreach (ApiEndpointsMetadata metadata in metadataArray)
+        {
+            if (metadata.MethodDeclaration is MethodDeclarationSyntax methodDeclaration)
+            {
+                yield return methodDeclaration.WithSemicolonToken(SemicolonToken);
+            }
+        }
+    }
+
     private static string FillWithInterfaceMethods(ImmutableArray<ApiEndpointsMetadata> apis)
     {
         StringBuilder resultBuilder = new();
@@ -121,7 +135,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
             resultBuilder.AppendLine($@"    /// <code>CN: {metadata.Chinese?.Replace("&", "&amp;")}</code>");
             resultBuilder.AppendLine($@"    /// <code>OS: {metadata.Oversea?.Replace("&", "&amp;")}</code>");
             resultBuilder.AppendLine($@"    /// </summary>");
-            resultBuilder.AppendLine($@"    string {metadata.MethodSignature};");
+            resultBuilder.AppendLine($@"    string {metadata.MethodDeclaration};");
             resultBuilder.AppendLine();
         }
 
@@ -136,11 +150,11 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         {
             if (string.IsNullOrWhiteSpace(api.Chinese))
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodSignature} => throw new NotSupportedException();""");
+                resultBuilder.AppendLine($"""    public string {api.MethodDeclaration} => throw new NotSupportedException();""");
             }
             else
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodSignature} => $"{api.Chinese}";""");
+                resultBuilder.AppendLine($"""    public string {api.MethodDeclaration} => $"{api.Chinese}";""");
             }
         }
 
@@ -155,11 +169,11 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         {
             if (string.IsNullOrWhiteSpace(api.Oversea))
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodSignature} => throw new NotSupportedException();""");
+                resultBuilder.AppendLine($"""    public string {api.MethodDeclaration} => throw new NotSupportedException();""");
             }
             else
             {
-                resultBuilder.AppendLine($"""    public string {api.MethodSignature} => $"{api.Oversea}";""");
+                resultBuilder.AppendLine($"""    public string {api.MethodDeclaration} => $"{api.Oversea}";""");
             }
         }
 
@@ -209,7 +223,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
     private sealed class ApiEndpointsMetadata
     {
-        public required string? MethodSignature { get; init; }
+        public required MemberDeclarationSyntax? MethodDeclaration { get; init; }
 
         public required string? Chinese { get; init; }
 

@@ -5,7 +5,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
-using System.Collections.Generic;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
@@ -16,6 +15,8 @@ internal static class FastSyntaxFactory
     public static SyntaxToken InternalKeyword { get; } = SyntaxFactory.Token(SyntaxKind.InternalKeyword);
 
     public static SyntaxToken PartialKeyWord { get; } = SyntaxFactory.Token(SyntaxKind.PartialKeyword);
+
+    public static SyntaxToken SemicolonToken { get; } = SyntaxFactory.Token(SyntaxKind.SemicolonToken);
 
     public static UsingDirectiveSyntax UsingDirective(params ReadOnlySpan<string> names)
     {
