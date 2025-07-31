@@ -214,7 +214,7 @@ public static class JsonParser
         }
         if (type.IsArray)
         {
-            Type arrayType = type.GetElementType();
+            Type? arrayType = type.GetElementType();
             if (json[0] != '[' || json[json.Length - 1] != ']')
             {
                 return null;

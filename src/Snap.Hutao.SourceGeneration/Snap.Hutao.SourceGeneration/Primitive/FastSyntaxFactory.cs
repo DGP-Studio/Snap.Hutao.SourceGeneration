@@ -10,18 +10,17 @@ namespace Snap.Hutao.SourceGeneration.Primitive;
 
 internal static class FastSyntaxFactory
 {
+    public static ArgumentListSyntax EmptyArgumentList { get; } = SyntaxFactory.ArgumentList();
+
     public static SyntaxToken AbstractKeyword { get; } = SyntaxFactory.Token(SyntaxKind.AbstractKeyword);
 
     public static SyntaxToken InternalKeyword { get; } = SyntaxFactory.Token(SyntaxKind.InternalKeyword);
 
     public static SyntaxToken PartialKeyWord { get; } = SyntaxFactory.Token(SyntaxKind.PartialKeyword);
 
-    public static SyntaxToken SemicolonToken { get; } = SyntaxFactory.Token(SyntaxKind.SemicolonToken);
+    public static SyntaxToken PublicKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PublicKeyword);
 
-    public static UsingDirectiveSyntax UsingDirective(params ReadOnlySpan<string> names)
-    {
-        return SyntaxFactory.UsingDirective(Name(names));
-    }
+    public static SyntaxToken SemicolonToken { get; } = SyntaxFactory.Token(SyntaxKind.SemicolonToken);
 
     public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(params ReadOnlySpan<string> names)
     {
@@ -43,5 +42,15 @@ internal static class FastSyntaxFactory
         }
 
         return name;
+    }
+
+    public static UsingDirectiveSyntax UsingDirective(params ReadOnlySpan<string> names)
+    {
+        return SyntaxFactory.UsingDirective(Name(names));
+    }
+
+    public static ObjectCreationExpressionSyntax WithArgumentList(this ObjectCreationExpressionSyntax expression)
+    {
+        return expression.WithArgumentList(EmptyArgumentList);
     }
 }

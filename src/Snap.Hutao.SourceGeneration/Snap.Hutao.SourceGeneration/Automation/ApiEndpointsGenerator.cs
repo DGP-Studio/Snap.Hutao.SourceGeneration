@@ -1,11 +1,11 @@
 ﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
@@ -16,11 +16,12 @@ namespace Snap.Hutao.SourceGeneration.Automation;
 internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 {
     private const string FileName = "Endpoints.csv";
+    private static readonly ExpressionSyntax ThrowNotSupportedException = ThrowExpression(ObjectCreationExpression(IdentifierName("NotSupportedException")).WithArgumentList());
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         IncrementalValueProvider<ImmutableArray<AdditionalText>> provider = context.AdditionalTextsProvider.Where(Match).Collect();
-        context.RegisterImplementationSourceOutput(provider, GenerateAll);
+        context.RegisterImplementationSourceOutput(provider, GenerateWrapper);
     }
 
     private static bool Match(AdditionalText text)
@@ -29,13 +30,26 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         return Path.GetFileName(text.Path).EndsWith(FileName, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static void GenerateWrapper(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
+    {
+        try
+        {
+            GenerateAll(context, texts);
+        }
+        catch (Exception ex)
+        {
+            context.AddSource("Error.g.cs", ex.ToString());
+        }
+    }
+
     private static void GenerateAll(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
     {
         foreach (AdditionalText csvFile in texts)
         {
             string fileName = Path.GetFileName(csvFile.Path);
 
-            ImmutableArray<ApiEndpointsMetadata>.Builder endpointsBuilder = ImmutableArray.CreateBuilder<ApiEndpointsMetadata>();
+            EndpointsExtraInfo? extraInfo = default;
+            ImmutableArray<EndpointsMetadata>.Builder endpointsBuilder = ImmutableArray.CreateBuilder<EndpointsMetadata>();
             using (StringReader reader = new(csvFile.GetText(context.CancellationToken)!.ToString()))
             {
                 while (reader.ReadLine() is { Length: > 0 } line)
@@ -45,13 +59,23 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                         continue;
                     }
 
+                    if (line.StartsWith("Extra:", StringComparison.OrdinalIgnoreCase))
+                    {
+                        extraInfo = JsonParser.FromJson<EndpointsExtraInfo>(line[6..]);
+                        continue;
+                    }
+
                     IReadOnlyList<string> columns = ParseCsvLine(line);
                     string? methodDeclarationString = columns.ElementAtOrDefault(0);
-                    ApiEndpointsMetadata metadata = new()
+                    string? chinese = columns.ElementAtOrDefault(1);
+                    string? oversea = columns.ElementAtOrDefault(2);
+                    EndpointsMetadata metadata = new()
                     {
                         MethodDeclaration = string.IsNullOrEmpty(methodDeclarationString) ? default : ParseMemberDeclaration(methodDeclarationString),
-                        Chinese = columns.ElementAtOrDefault(1),
-                        Oversea = columns.ElementAtOrDefault(2)
+                        Chinese = chinese,
+                        ChineseExpression = string.IsNullOrEmpty(chinese) ? ThrowNotSupportedException : ParseExpression($"$\"{chinese}\""),
+                        Oversea = oversea,
+                        OverseaExpression = string.IsNullOrEmpty(oversea) ? ThrowNotSupportedException : ParseExpression($"$\"{oversea}\""),
                     };
 
                     endpointsBuilder.Add(metadata);
@@ -63,15 +87,14 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                 return;
             }
 
-            ImmutableArray<ApiEndpointsMetadata> endpoints = endpointsBuilder.ToImmutable();
+            ImmutableArray<EndpointsMetadata> endpoints = endpointsBuilder.ToImmutable();
 
             string interfaceName = $"I{fileName}";
             string chineseImplName = $"{fileName}ImplementationForChinese";
             string overseaImplName = $"{fileName}ImplementationForOversea";
 
-            _ = CompilationUnit()
-                .WithUsings(SingletonList(UsingDirective("Snap", "Hutao", "Web", "Hoyolab")))
-                .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap", "Hutao", "Web", "Endpoint", "Hoyolab")
+            CompilationUnitSyntax compilation = CompilationUnit()
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration((extraInfo?.Namespace ?? "Snap.Hutao.Web").Split('.'))
                     .WithMembers(
                         List<MemberDeclarationSyntax>(
                         [
@@ -81,103 +104,58 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                             ClassDeclaration(chineseImplName)
                                 .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
                                 .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
-                                .WithMembers(List<MemberDeclarationSyntax>()),
+                                .WithMembers(List(GenerateClassMethods(endpoints, true))),
                             ClassDeclaration(overseaImplName)
                                 .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
                                 .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
-                                .WithMembers(List<MemberDeclarationSyntax>())
+                                .WithMembers(List(GenerateClassMethods(endpoints, false)))
                         ]))))
                 .NormalizeWhitespace();
 
-            string source = $$"""
-                using Snap.Hutao.Web.Hoyolab;
+            context.AddSource($"{fileName}.g.cs", compilation.ToFullString());
+        }
+    }
 
-                namespace Snap.Hutao.Web.Endpoint.Hoyolab;
+    private static IEnumerable<MemberDeclarationSyntax> GenerateInterfaceMethods(ImmutableArray<EndpointsMetadata> metadataArray)
+    {
+        foreach (EndpointsMetadata metadata in metadataArray)
+        {
+            if (metadata.MethodDeclaration is not MethodDeclarationSyntax methodDeclaration)
+            {
+                continue;
+            }
 
-                internal partial interface IApiEndpoints
-                {
-                {{FillWithInterfaceMethods(endpoints)}}
-                }
+            string lead = $"""
+                /// <summary>
+                /// <code>CN: {metadata.Chinese?.Replace("&", "&amp;")}</code>
+                /// <code>OS: {metadata.Oversea?.Replace("&", "&amp;")}</code>
+                /// </summary>
 
-                internal abstract class ApiEndpointsImplementationForChinese : IApiEndpoints
-                {
-                {{FillWithChineseMethods(endpoints)}}
-                }
-
-                internal abstract class ApiEndpointsImplementationForOversea : IApiEndpoints
-                {
-                {{FillWithOverseaMethods(endpoints)}}
-                }
                 """;
 
-            context.AddSource($"{fileName}.g.cs", source);
+            yield return methodDeclaration
+                .WithLeadingTrivia(ParseLeadingTrivia(lead))
+                .WithSemicolonToken(SemicolonToken);
         }
     }
 
-    private static IEnumerable<MemberDeclarationSyntax> GenerateInterfaceMethods(ImmutableArray<ApiEndpointsMetadata> metadataArray)
+    private static IEnumerable<MemberDeclarationSyntax> GenerateClassMethods(ImmutableArray<EndpointsMetadata> metadataArray, bool isChinese)
     {
-        foreach (ApiEndpointsMetadata metadata in metadataArray)
+        foreach (EndpointsMetadata metadata in metadataArray)
         {
-            if (metadata.MethodDeclaration is MethodDeclarationSyntax methodDeclaration)
+            if (metadata.MethodDeclaration is not MethodDeclarationSyntax methodDeclaration)
             {
-                yield return methodDeclaration.WithSemicolonToken(SemicolonToken);
+                continue;
             }
+
+            MethodDeclarationSyntax result = methodDeclaration
+                .WithModifiers(TokenList(PublicKeyword))
+                .WithSemicolonToken(SemicolonToken);
+
+            yield return isChinese
+                ? result.WithExpressionBody(ArrowExpressionClause(metadata.ChineseExpression))
+                : result.WithExpressionBody(ArrowExpressionClause(metadata.OverseaExpression));
         }
-    }
-
-    private static string FillWithInterfaceMethods(ImmutableArray<ApiEndpointsMetadata> apis)
-    {
-        StringBuilder resultBuilder = new();
-
-        foreach (ApiEndpointsMetadata metadata in apis)
-        {
-            resultBuilder.AppendLine($@"    /// <summary>");
-            resultBuilder.AppendLine($@"    /// <code>CN: {metadata.Chinese?.Replace("&", "&amp;")}</code>");
-            resultBuilder.AppendLine($@"    /// <code>OS: {metadata.Oversea?.Replace("&", "&amp;")}</code>");
-            resultBuilder.AppendLine($@"    /// </summary>");
-            resultBuilder.AppendLine($@"    string {metadata.MethodDeclaration};");
-            resultBuilder.AppendLine();
-        }
-
-        return resultBuilder.ToString();
-    }
-
-    private static string FillWithChineseMethods(ImmutableArray<ApiEndpointsMetadata> apis)
-    {
-        StringBuilder resultBuilder = new();
-
-        foreach (ApiEndpointsMetadata api in apis)
-        {
-            if (string.IsNullOrWhiteSpace(api.Chinese))
-            {
-                resultBuilder.AppendLine($"""    public string {api.MethodDeclaration} => throw new NotSupportedException();""");
-            }
-            else
-            {
-                resultBuilder.AppendLine($"""    public string {api.MethodDeclaration} => $"{api.Chinese}";""");
-            }
-        }
-
-        return resultBuilder.ToString();
-    }
-
-    private static string FillWithOverseaMethods(ImmutableArray<ApiEndpointsMetadata> apis)
-    {
-        StringBuilder resultBuilder = new();
-
-        foreach (ApiEndpointsMetadata api in apis)
-        {
-            if (string.IsNullOrWhiteSpace(api.Oversea))
-            {
-                resultBuilder.AppendLine($"""    public string {api.MethodDeclaration} => throw new NotSupportedException();""");
-            }
-            else
-            {
-                resultBuilder.AppendLine($"""    public string {api.MethodDeclaration} => $"{api.Oversea}";""");
-            }
-        }
-
-        return resultBuilder.ToString();
     }
 
     private static IReadOnlyList<string> ParseCsvLine(string line)
@@ -221,12 +199,22 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         return fields;
     }
 
-    private sealed class ApiEndpointsMetadata
+    private sealed class EndpointsMetadata
     {
         public required MemberDeclarationSyntax? MethodDeclaration { get; init; }
 
         public required string? Chinese { get; init; }
 
+        public required ExpressionSyntax ChineseExpression { get; init; }
+
         public required string? Oversea { get; init; }
+
+        public required ExpressionSyntax OverseaExpression { get; init; }
+    }
+
+    private sealed class EndpointsExtraInfo
+    {
+        [DataMember]
+        public string? Namespace { get; set; }
     }
 }
