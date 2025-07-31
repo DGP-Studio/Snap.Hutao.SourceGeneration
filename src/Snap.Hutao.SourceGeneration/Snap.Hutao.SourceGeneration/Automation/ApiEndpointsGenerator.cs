@@ -46,7 +46,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
     {
         foreach (AdditionalText csvFile in texts)
         {
-            string fileName = Path.GetFileName(csvFile.Path);
+            string fileName = Path.GetFileNameWithoutExtension(csvFile.Path);
 
             EndpointsExtraInfo? extraInfo = default;
             ImmutableArray<EndpointsMetadata>.Builder endpointsBuilder = ImmutableArray.CreateBuilder<EndpointsMetadata>();
@@ -100,15 +100,15 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                         [
                             InterfaceDeclaration(interfaceName)
                                 .WithModifiers(TokenList(InternalKeyword, PartialKeyWord))
-                                .WithMembers(List(GenerateInterfaceMethods(endpoints))),
+                                .WithMembers(List(GenerateInterfaceMethods(endpoints).ToList())),
                             ClassDeclaration(chineseImplName)
                                 .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
                                 .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
-                                .WithMembers(List(GenerateClassMethods(endpoints, true))),
+                                .WithMembers(List(GenerateClassMethods(endpoints, true).ToList())),
                             ClassDeclaration(overseaImplName)
                                 .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
                                 .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
-                                .WithMembers(List(GenerateClassMethods(endpoints, false)))
+                                .WithMembers(List(GenerateClassMethods(endpoints, false).ToList()))
                         ]))))
                 .NormalizeWhitespace();
 
