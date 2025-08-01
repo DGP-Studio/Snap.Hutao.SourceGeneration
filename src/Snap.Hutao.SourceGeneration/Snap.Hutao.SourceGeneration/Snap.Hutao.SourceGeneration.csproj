@@ -19,20 +19,27 @@
 
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" PrivateAssets="all" Version="2025.2.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" PrivateAssets="all" Version="9.0.7" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" Version="4.14.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" Version="4.14.0" />
     <PackageReference Include="PolySharp" PrivateAssets="all" Version="1.15.0" />
-    <PackageReference Include="System.Text.Json" PrivateAssets="all" Version="9.0.7" GeneratePathProperty="true"/>
+    <PackageReference Include="System.Text.Encodings.Web" PrivateAssets="all" Version="9.0.7" />
+    <PackageReference Include="System.Text.Json" PrivateAssets="all" Version="9.0.7" />
   </ItemGroup>
 
+  <Target Name="AddGenerationTimeReferences" AfterTargets="ResolvePackageDependenciesForBuild">
+    <ItemGroup>
+      <None Include="@(ResolvedCompileFileDefinitions)" Pack="true" PackagePath="analyzers/dotnet/cs" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
-    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/cs" Visible="false"/>
-    <None Include="$(PKGSystem_Text_Json)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/cs" Visible="false"/>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
   </ItemGroup>
 
   <PropertyGroup>
     <PackageId>Snap.Hutao.SourceGeneration</PackageId>
-    <Version>1.2.17</Version>
+    <Version>1.2.18</Version>
     <Authors>DGP Studio</Authors>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
