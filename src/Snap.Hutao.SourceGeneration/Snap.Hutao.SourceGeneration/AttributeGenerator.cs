@@ -124,6 +124,22 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                             PropertyDeclaration(StringType, Identifier("RawDefaultValue"))
                                 .WithModifiers(TokenList(PublicKeyword))
                                 .WithAccessorList(GetAndSetAccessorList())
+                        ])),
+                    ClassDeclaration("FieldAccessAttribute")
+                        .WithAttributeLists(SingletonList(AttributeList(SingletonSeparatedList(Attribute(IdentifierName("AttributeUsage"))
+                            .WithArgumentList(AttributeArgumentList(SeparatedList(
+                            [
+                                AttributeArgument(SimpleMemberAccessExpression(IdentifierName("AttributeTargets"), IdentifierName("Property"))),
+                                AttributeArgument(FalseLiteralExpression).WithNameEquals(NameEquals(IdentifierName("AllowMultiple"))),
+                                AttributeArgument(FalseLiteralExpression).WithNameEquals(NameEquals(IdentifierName("Inherited")))
+                            ])))))))
+                        .WithModifiers(TokenList(InternalKeyword, SealedKeyword))
+                        .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName("Attribute")))))
+                        .WithMembers(List<MemberDeclarationSyntax>(
+                        [
+                            ConstructorDeclaration(Identifier("FieldAccessAttribute"))
+                                .WithModifiers(TokenList(PublicKeyword))
+                                .WithEmptyBlockBody(),
                         ]))
                 ]))))
             .NormalizeWhitespace();
