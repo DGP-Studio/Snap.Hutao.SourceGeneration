@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Text;
 using System.Text.Json;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
@@ -215,7 +214,6 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
     private sealed class EndpointsExtraInfo
     {
-        [DataMember]
-        public string? Namespace { get; set; }
+        public string? Namespace { get; init; }
     }
 }
