@@ -18,21 +18,21 @@
   </ItemDefinitionGroup>
 
   <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" Version="2025.2.0" />
+    <PackageReference Include="JetBrains.Annotations" PrivateAssets="all" Version="2025.2.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" Version="4.14.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-    <PackageReference Include="PolySharp" Version="1.15.0">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" Version="4.14.0" />
+    <PackageReference Include="PolySharp" PrivateAssets="all" Version="1.15.0" />
+    <PackageReference Include="System.Text.Json" PrivateAssets="all" Version="9.0.7" GeneratePathProperty="true"/>
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/cs" />
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/cs" Visible="false"/>
+    <None Include="$(PKGSystem_Text_Json)\lib\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/cs" Visible="false"/>
   </ItemGroup>
 
   <PropertyGroup>
     <PackageId>Snap.Hutao.SourceGeneration</PackageId>
-    <Version>1.2.14</Version>
+    <Version>1.2.15</Version>
     <Authors>DGP Studio</Authors>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>

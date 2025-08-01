@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Text.Json;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
@@ -61,7 +62,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
                     if (line.StartsWith("Extra:", StringComparison.OrdinalIgnoreCase))
                     {
-                        extraInfo = JsonParser.FromJson<EndpointsExtraInfo>(line[6..]);
+                        extraInfo = JsonSerializer.Deserialize<EndpointsExtraInfo>(line[6..]);
                         continue;
                     }
 
