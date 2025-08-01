@@ -296,7 +296,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                         .WithMembers(SingletonList<MemberDeclarationSyntax>(
                             ConstructorDeclaration(Identifier("InterceptsLocationAttribute"))
                                 .WithModifiers(TokenList(PublicKeyword))
-                                .WithParameterList(ParameterList(SeparatedList<ParameterSyntax>(
+                                .WithParameterList(ParameterList(SeparatedList(
                                 [
                                     Parameter(Identifier("version")).WithType(PredefinedType(Token(SyntaxKind.IntKeyword))),
                                     Parameter(Identifier("data")).WithType(PredefinedType(Token(SyntaxKind.StringKeyword)))
