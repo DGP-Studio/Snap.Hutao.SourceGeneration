@@ -10,45 +10,127 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using System.Threading;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class ConstructorGenerator : IIncrementalGenerator
 {
-    private const string AttributeName = "Snap.Hutao.Core.Annotation.ConstructorGeneratedAttribute";
-    private const string FromKeyedServices = "Snap.Hutao.Core.DependencyInjection.Annotation.FromKeyedServicesAttribute";
+    private static readonly TypeSyntax SystemIServiceProviderType = ParseName("System.IServiceProvider");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> injectionClasses =
-            context.SyntaxProvider.CreateSyntaxProvider(FilterAttributedClasses, ConstructorGeneratedClass)
-                .Where(AttributedGeneratorSymbolContext.NotNull)
-                .Collect();
+        IncrementalValuesProvider<GeneratorAttributeSyntaxContext> provider = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                WellKnownAttributeNames.ConstructorGeneratedAttribute,
+                SyntaxNodeHelper.Is<ClassDeclarationSyntax>,
+                SyntaxContext.Transform);
 
-        context.RegisterSourceOutput(injectionClasses, GenerateConstructorImplementations);
+        context.RegisterSourceOutput(provider, GenerateWrapper);
     }
 
-    private static bool FilterAttributedClasses(SyntaxNode node, CancellationToken token)
+    private static void GenerateWrapper(SourceProductionContext production, GeneratorAttributeSyntaxContext contexts)
     {
-        return node is ClassDeclarationSyntax classDeclarationSyntax
-            && classDeclarationSyntax.Modifiers.Count > 1
-            && classDeclarationSyntax.HasAttributeLists();
-    }
-
-    private static AttributedGeneratorSymbolContext ConstructorGeneratedClass(GeneratorSyntaxContext context, CancellationToken token)
-    {
-        if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
+        try
         {
-            ImmutableArray<AttributeData> attributes = classSymbol.GetAttributes();
-            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() is AttributeName))
-            {
-                return new(context, classSymbol, attributes);
-            }
+            Generate(production, contexts);
+        }
+        catch (Exception ex)
+        {
+            production.AddSource("Error.g.cs", ex.ToString());
+        }
+    }
+
+    private static void Generate(SourceProductionContext production, GeneratorAttributeSyntaxContext context)
+    {
+        if (context.TargetSymbol is not INamedTypeSymbol classSymbol)
+        {
+            return;
         }
 
-        return default;
+        CompilationUnitSyntax syntax = CompilationUnit()
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(context.TargetSymbol.ContainingNamespace)
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                    ClassDeclaration(classSymbol)
+                        .WithModifiers(TokenList(PartialKeyword))
+                        .WithMembers(List<MemberDeclarationSyntax>(
+                        [
+                            ConstructorDeclaration(Identifier(classSymbol.Name))
+                                .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(Identifier("serviceProvider")).WithType(SystemIServiceProviderType))))
+                                .WithBody(Block(List<StatementSyntax>(
+                                [
+                                    // Call PreConstruct
+                                    ExpressionStatement(InvocationExpression(IdentifierName("PreConstruct"))
+                                        .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                            Argument(IdentifierName("serviceProvider")))))),
+
+                                    .. GenerateStatements(),
+                                    EmptyStatement().WithTrailingTrivia(Comment("// Skipped field with initializer: ConsoleBanner")),
+                                    ExpressionStatement(SimpleAssignmentExpression(
+                                        SimpleMemberAccessExpression(ThisExpression(), IdentifierName("serviceProvider")),
+                                        IdentifierName("serviceProvider"))),
+                                    ExpressionStatement(SimpleAssignmentExpression(
+                                        SimpleMemberAccessExpression(ThisExpression(), IdentifierName("activation")),
+                                        InvocationExpression(SimpleMemberAccessExpression(IdentifierName("serviceProvider"), GenericName(Identifier("GetRequiredService"))
+                                            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(
+                                                Name("Snap", "Hutao", "Core", "LifeCycle", "IAppActivation")))))))),
+                                    ExpressionStatement(SimpleAssignmentExpression(
+                                        SimpleMemberAccessExpression(
+                                            ThisExpression(),
+                                            IdentifierName("logger")),
+                                        InvocationExpression(SimpleMemberAccessExpression(IdentifierName("serviceProvider"), GenericName(Identifier("GetRequiredService"))
+                                            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(
+                                                QualifiedName(
+                                                    Name("Microsoft", "Extensions", "Logging"),
+                                                    GenericName(Identifier("ILogger")).WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(Name("Snap", "Hutao", "App")))))))))))),
+                                    ExpressionStatement(SimpleAssignmentExpression(
+                                        IdentifierName("Options"),
+                                        InvocationExpression(SimpleMemberAccessExpression(IdentifierName("serviceProvider"), GenericName(Identifier("GetRequiredService"))
+                                            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(
+                                                Name("Snap", "Hutao", "Service", "AppOptions")))))))),
+
+                                    // Call InitializeComponent
+                                    ExpressionStatement(InvocationExpression(IdentifierName("InitializeComponent"))),
+
+                                    // Call PostConstruct
+                                    ExpressionStatement(InvocationExpression(IdentifierName("PostConstruct"))
+                                        .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                            Argument(IdentifierName("serviceProvider"))))))
+                                ]))),
+
+                            // Property declarations
+                            PropertyDeclaration(Name("Snap", "Hutao", "Service", "AppOptions"), Identifier("Options"))
+                                .WithModifiers(TokenList(InternalKeyword, PartialKeyword))
+                                .WithAccessorList(AccessorList(SingletonList(
+                                    AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                                        .WithExpressionBody(
+                                            ArrowExpressionClause(FieldExpression())).WithSemicolonToken(SemicolonToken)))),
+
+                            // PreConstruct & PostConstruct Method declarations
+                            MethodDeclaration(VoidType, Identifier("PreConstruct"))
+                                .WithModifiers(TokenList(PartialKeyword))
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(Identifier("serviceProvider")).WithType(Name("System", "IServiceProvider")))))
+                                .WithSemicolonToken(SemicolonToken),
+                            MethodDeclaration(VoidType, Identifier("PostConstruct"))
+                                .WithModifiers(TokenList(Token(SyntaxKind.PartialKeyword)))
+                                .WithParameterList(
+                                    ParameterList(SingletonSeparatedList(
+                                        Parameter(Identifier("serviceProvider")).WithType(Name("System", "IServiceProvider")))))
+                                .WithSemicolonToken(SemicolonToken)
+                        ]))))))
+            .NormalizeWhitespace();
+
+        production.AddSource(context.TargetSymbol.ToDisplayString().NormalizeSymbolName(), syntax.ToFullString());
+    }
+
+    private static IEnumerable<StatementSyntax> GenerateStatements()
+    {
+
     }
 
     private static void GenerateConstructorImplementations(SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
@@ -61,7 +143,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
     private static void GenerateConstructorImplementation(SourceProductionContext production, AttributedGeneratorSymbolContext context)
     {
-        AttributeData constructorInfo = context.SingleAttribute(AttributeName);
+        AttributeData constructorInfo = context.SingleAttribute(WellKnownAttributeNames.ConstructorGeneratedAttribute);
 
         bool resolveHttpClient = constructorInfo.HasNamedArgumentWith<bool>("ResolveHttpClient", value => value);
         bool callBaseConstructor = constructorInfo.HasNamedArgumentWith<bool>("CallBaseConstructor", value => value);
@@ -182,7 +264,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                     break;
 
                 default:
-                    if (fieldSymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is FromKeyedServices) is { } keyInfo)
+                    if (fieldSymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is WellKnownAttributeNames.FromKeyedServicesAttribute) is { } keyInfo)
                     {
                         string key = keyInfo.ConstructorArguments[0].ToCSharpString();
                         builder
@@ -259,7 +341,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                     break;
 
                 default:
-                    if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is FromKeyedServices) is { } keyInfo)
+                    if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is WellKnownAttributeNames.FromKeyedServicesAttribute) is { } keyInfo)
                     {
                         string key = keyInfo.ConstructorArguments[0].ToCSharpString();
                         builder

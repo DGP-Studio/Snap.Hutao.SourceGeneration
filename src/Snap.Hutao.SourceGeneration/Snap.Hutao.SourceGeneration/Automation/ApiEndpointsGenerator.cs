@@ -94,21 +94,21 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
             string overseaImplName = $"{fileName}ImplementationForOversea";
 
             CompilationUnitSyntax compilation = CompilationUnit()
-                .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration((extraInfo?.Namespace ?? "Snap.Hutao.Web").Split('.'))
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(extraInfo?.Namespace ?? "Snap.Hutao.Web")
                     .WithMembers(
                         List<MemberDeclarationSyntax>(
                         [
                             InterfaceDeclaration(interfaceName)
-                                .WithModifiers(TokenList(InternalKeyword, PartialKeyWord))
-                                .WithMembers(List(GenerateInterfaceMethods(endpoints).ToList())),
+                                .WithModifiers(InternalPartialTokenList)
+                                .WithMembers(List(GenerateInterfaceMethods(endpoints))),
                             ClassDeclaration(chineseImplName)
-                                .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
+                                .WithModifiers(InternalAbstractTokenList)
                                 .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
-                                .WithMembers(List(GenerateClassMethods(endpoints, true).ToList())),
+                                .WithMembers(List(GenerateClassMethods(endpoints, true))),
                             ClassDeclaration(overseaImplName)
-                                .WithModifiers(TokenList(InternalKeyword, AbstractKeyword))
+                                .WithModifiers(InternalAbstractTokenList)
                                 .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
-                                .WithMembers(List(GenerateClassMethods(endpoints, false).ToList()))
+                                .WithMembers(List(GenerateClassMethods(endpoints, false)))
                         ]))))
                 .NormalizeWhitespace();
 

@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
+using System.Collections.Immutable;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
@@ -24,11 +25,13 @@ internal static class FastSyntaxFactory
 
     public static PredefinedTypeSyntax StringType { get; } = SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword));
 
+    public static PredefinedTypeSyntax VoidType { get; } = SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword));
+
     public static SyntaxToken AbstractKeyword { get; } = SyntaxFactory.Token(SyntaxKind.AbstractKeyword);
 
     public static SyntaxToken InternalKeyword { get; } = SyntaxFactory.Token(SyntaxKind.InternalKeyword);
 
-    public static SyntaxToken PartialKeyWord { get; } = SyntaxFactory.Token(SyntaxKind.PartialKeyword);
+    public static SyntaxToken PartialKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PartialKeyword);
 
     public static SyntaxToken PublicKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PublicKeyword);
 
@@ -36,9 +39,32 @@ internal static class FastSyntaxFactory
 
     public static SyntaxToken SemicolonToken { get; } = SyntaxFactory.Token(SyntaxKind.SemicolonToken);
 
-    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(params ReadOnlySpan<string> names)
+    public static SyntaxTokenList InternalAbstractTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.AbstractKeyword));
+
+    public static SyntaxTokenList InternalPartialTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.PartialKeyword));
+
+    public static ClassDeclarationSyntax ClassDeclaration(INamedTypeSymbol classSymbol)
     {
-        return SyntaxFactory.FileScopedNamespaceDeclaration(Name(names));
+        string className = classSymbol.Name;
+
+        ClassDeclarationSyntax classDeclaration = SyntaxFactory.ClassDeclaration(className);
+        if (classSymbol.IsGenericType)
+        {
+            classDeclaration = classDeclaration.WithTypeParameterList(SyntaxFactory.TypeParameterList(SyntaxFactory.SeparatedList(
+                ImmutableArray.CreateRange(classSymbol.TypeParameters, static tParam => SyntaxFactory.TypeParameter(tParam.Name)))));
+        }
+
+        return classDeclaration;
+    }
+
+    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(string name)
+    {
+        return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(name));
+    }
+
+    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(INamespaceSymbol symbol)
+    {
+        return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(symbol.ToDisplayString()));
     }
 
     public static AccessorListSyntax GetAndSetAccessorList()
@@ -50,21 +76,9 @@ internal static class FastSyntaxFactory
         ]));
     }
 
-    public static NameSyntax Name(params ReadOnlySpan<string> names)
+    public static AssignmentExpressionSyntax SimpleAssignmentExpression(ExpressionSyntax left, ExpressionSyntax right)
     {
-        if (names.Length <= 0)
-        {
-            throw new ArgumentException("At least one name must be provided.", nameof(names));
-        }
-
-        NameSyntax name = SyntaxFactory.IdentifierName(names[0]);
-
-        for (int i = 1; i < names.Length; i++)
-        {
-            name = SyntaxFactory.QualifiedName(name, SyntaxFactory.IdentifierName(names[i]));
-        }
-
-        return name;
+        return SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression, left, right);
     }
 
     public static MemberAccessExpressionSyntax SimpleMemberAccessExpression(ExpressionSyntax expression, SimpleNameSyntax name)
@@ -72,9 +86,9 @@ internal static class FastSyntaxFactory
         return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expression, name);
     }
 
-    public static UsingDirectiveSyntax UsingDirective(params ReadOnlySpan<string> names)
+    public static UsingDirectiveSyntax UsingDirective(string name)
     {
-        return SyntaxFactory.UsingDirective(Name(names));
+        return SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(name));
     }
 
     public static ObjectCreationExpressionSyntax WithArgumentList(this ObjectCreationExpressionSyntax expression)

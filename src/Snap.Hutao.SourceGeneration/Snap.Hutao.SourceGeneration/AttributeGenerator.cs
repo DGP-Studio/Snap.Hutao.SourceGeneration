@@ -20,8 +20,8 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
     public static void GenerateAllAttributes(IncrementalGeneratorPostInitializationContext context)
     {
         CompilationUnitSyntax coreAnnotation = CompilationUnit()
-            .WithUsings(SingletonList(UsingDirective("System", "Diagnostics")))
-            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap", "Hutao", "Core", "Annotation")
+            .WithUsings(SingletonList(UsingDirective("System.Diagnostics")))
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.Annotation")
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration("CommandAttribute")
@@ -147,8 +147,8 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         context.AddSource("Snap.Hutao.Core.Annotation.Attributes.g.cs", coreAnnotation.ToFullString());
 
         CompilationUnitSyntax coreDependencyInjectionAnnotationHttpClient = CompilationUnit()
-            .WithUsings(SingletonList(UsingDirective("JetBrains", "Annotations")))
-            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap", "Hutao", "Core", "DependencyInjection", "Annotation", "HttpClient")
+            .WithUsings(SingletonList(UsingDirective("JetBrains.Annotations")))
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient")
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration("HttpClientAttribute")
@@ -204,8 +204,8 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.Attributes.g.cs", coreDependencyInjectionAnnotationHttpClient.ToFullString());
 
         CompilationUnitSyntax coreDependencyInjectionAnnotation = CompilationUnit()
-            .WithUsings(SingletonList(UsingDirective("JetBrains", "Annotations")))
-            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap", "Hutao", "Core", "DependencyInjection", "Annotation")
+            .WithUsings(SingletonList(UsingDirective("JetBrains.Annotations")))
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation")
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     EnumDeclaration("InjectAs")
@@ -268,7 +268,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.Attributes.g.cs", coreDependencyInjectionAnnotation.ToFullString());
 
         CompilationUnitSyntax resourceLocalization = CompilationUnit()
-            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap", "Hutao", "Resource", "Localization")
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Resource.Localization")
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration("LocalizationAttribute")
@@ -297,7 +297,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         context.AddSource("Snap.Hutao.Resource.Localization.Attributes.g.cs", resourceLocalization.ToFullString());
 
         CompilationUnitSyntax interceptsLocation = CompilationUnit()
-            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("System", "Runtime", "CompilerServices")
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("System.Runtime.CompilerServices")
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration("InterceptsLocationAttribute")
                         .WithAttributeLists(SingletonList(AttributeList(SingletonSeparatedList(
