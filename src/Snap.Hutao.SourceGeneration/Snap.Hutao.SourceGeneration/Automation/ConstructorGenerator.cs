@@ -341,7 +341,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 .WithModifiers(propertySymbol.DeclaredAccessibility.ToSyntaxTokenList())
                 .WithAccessorList(AccessorList(SingletonList(
                     AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
-                        .WithExpressionBody(ArrowExpressionClause(SimpleMemberAccessExpression(ThisExpression(), IdentifierName(propertySymbol.Name))))
+                        .WithExpressionBody(ArrowExpressionClause(FieldExpression()))
                         .WithSemicolonToken(SemicolonToken))));
         }
     }
