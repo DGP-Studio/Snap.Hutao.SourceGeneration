@@ -4,7 +4,6 @@
 using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
@@ -12,7 +11,28 @@ internal static class AttributeDataExtension
 {
     public static bool HasNamedArgumentWith<TValue>(this AttributeData data, string key, Func<TValue, bool> predicate)
     {
-        return data.NamedArguments.Any(a => a.Key == key && predicate((TValue)a.Value.Value!));
+        foreach ((string name, TypedConstant constant) in data.NamedArguments)
+        {
+            if (name == key && constant.Value is TValue typedValue && predicate(typedValue))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static bool HasNamedArgumentWith(this AttributeData data, string key, bool value)
+    {
+        foreach ((string name, TypedConstant constant) in data.NamedArguments)
+        {
+            if (name == key && constant.Value is bool typedValue && typedValue == value)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static bool TryGetNamedArgumentValue(this AttributeData data, string key, out TypedConstant value)

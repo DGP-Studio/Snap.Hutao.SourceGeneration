@@ -42,7 +42,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         }
     }
 
-    private static void GenerateAll(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
+    private static void GenerateAll(SourceProductionContext production, ImmutableArray<AdditionalText> texts)
     {
         foreach (AdditionalText csvFile in texts)
         {
@@ -50,7 +50,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
             EndpointsExtraInfo? extraInfo = default;
             ImmutableArray<EndpointsMetadata>.Builder endpointsBuilder = ImmutableArray.CreateBuilder<EndpointsMetadata>();
-            using (StringReader reader = new(csvFile.GetText(context.CancellationToken)!.ToString()))
+            using (StringReader reader = new(csvFile.GetText(production.CancellationToken)!.ToString()))
             {
                 while (reader.ReadLine() is { Length: > 0 } line)
                 {
@@ -90,6 +90,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
             ImmutableArray<EndpointsMetadata> endpoints = endpointsBuilder.ToImmutable();
 
             string interfaceName = $"I{fileName}";
+            IdentifierNameSyntax interfaceIdentifier = IdentifierName(interfaceName);
             string chineseImplName = $"{fileName}ImplementationForChinese";
             string overseaImplName = $"{fileName}ImplementationForOversea";
 
@@ -103,16 +104,16 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                                 .WithMembers(List(GenerateInterfaceMethods(endpoints))),
                             ClassDeclaration(chineseImplName)
                                 .WithModifiers(InternalAbstractTokenList)
-                                .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
+                                .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(interfaceIdentifier))))
                                 .WithMembers(List(GenerateClassMethods(endpoints, true))),
                             ClassDeclaration(overseaImplName)
                                 .WithModifiers(InternalAbstractTokenList)
-                                .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName(interfaceName)))))
+                                .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(interfaceIdentifier))))
                                 .WithMembers(List(GenerateClassMethods(endpoints, false)))
                         ]))))
                 .NormalizeWhitespace();
 
-            context.AddSource($"{fileName}.g.cs", compilation.ToFullString());
+            production.AddSource($"{fileName}.g.cs", compilation.ToFullString());
         }
     }
 
@@ -148,13 +149,10 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                 continue;
             }
 
-            MethodDeclarationSyntax result = methodDeclaration
-                .WithModifiers(TokenList(PublicKeyword))
+            yield return methodDeclaration
+                .WithModifiers(PublicTokenList)
+                .WithExpressionBody(ArrowExpressionClause(isChinese ? metadata.ChineseExpression : metadata.OverseaExpression))
                 .WithSemicolonToken(SemicolonToken);
-
-            yield return isChinese
-                ? result.WithExpressionBody(ArrowExpressionClause(metadata.ChineseExpression))
-                : result.WithExpressionBody(ArrowExpressionClause(metadata.OverseaExpression));
         }
     }
 

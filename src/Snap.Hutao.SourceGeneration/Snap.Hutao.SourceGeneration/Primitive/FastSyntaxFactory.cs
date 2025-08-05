@@ -9,6 +9,7 @@ using System.Collections.Immutable;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
+// Properties and methods are ordered by return type
 internal static class FastSyntaxFactory
 {
     public static ArgumentListSyntax EmptyArgumentList { get; } = SyntaxFactory.ArgumentList();
@@ -33,39 +34,29 @@ internal static class FastSyntaxFactory
 
     public static SyntaxToken PartialKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PartialKeyword);
 
+    public static SyntaxToken PrivateKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PrivateKeyword);
+
     public static SyntaxToken PublicKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PublicKeyword);
 
     public static SyntaxToken SealedKeyword { get; } = SyntaxFactory.Token(SyntaxKind.SealedKeyword);
 
     public static SyntaxToken SemicolonToken { get; } = SyntaxFactory.Token(SyntaxKind.SemicolonToken);
 
+    public static SyntaxTokenList InternalTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword));
+
     public static SyntaxTokenList InternalAbstractTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.AbstractKeyword));
 
     public static SyntaxTokenList InternalPartialTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.InternalKeyword), SyntaxFactory.Token(SyntaxKind.PartialKeyword));
 
-    public static ClassDeclarationSyntax ClassDeclaration(INamedTypeSymbol classSymbol)
-    {
-        string className = classSymbol.Name;
+    public static SyntaxTokenList PrivateTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword));
 
-        ClassDeclarationSyntax classDeclaration = SyntaxFactory.ClassDeclaration(className);
-        if (classSymbol.IsGenericType)
-        {
-            classDeclaration = classDeclaration.WithTypeParameterList(SyntaxFactory.TypeParameterList(SyntaxFactory.SeparatedList(
-                ImmutableArray.CreateRange(classSymbol.TypeParameters, static tParam => SyntaxFactory.TypeParameter(tParam.Name)))));
-        }
+    public static SyntaxTokenList PrivateProtectedTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PrivateKeyword), SyntaxFactory.Token(SyntaxKind.ProtectedKeyword));
 
-        return classDeclaration;
-    }
+    public static SyntaxTokenList ProtectedTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword));
 
-    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(string name)
-    {
-        return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(name));
-    }
+    public static SyntaxTokenList ProtectedInternalTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.ProtectedKeyword), SyntaxFactory.Token(SyntaxKind.InternalKeyword));
 
-    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(INamespaceSymbol symbol)
-    {
-        return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(symbol.ToDisplayString()));
-    }
+    public static SyntaxTokenList PublicTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(SyntaxKind.PublicKeyword));
 
     public static AccessorListSyntax GetAndSetAccessorList()
     {
@@ -81,14 +72,48 @@ internal static class FastSyntaxFactory
         return SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression, left, right);
     }
 
+    public static ClassDeclarationSyntax PartialClassDeclaration(INamedTypeSymbol classSymbol)
+    {
+        string className = classSymbol.Name;
+
+        ClassDeclarationSyntax classDeclaration = SyntaxFactory.ClassDeclaration(className);
+        if (classSymbol.IsGenericType)
+        {
+            classDeclaration = classDeclaration.WithTypeParameterList(SyntaxFactory.TypeParameterList(SyntaxFactory.SeparatedList(
+                ImmutableArray.CreateRange(classSymbol.TypeParameters, static tParam => SyntaxFactory.TypeParameter(tParam.Name)))));
+        }
+
+        return classDeclaration.WithModifiers(SyntaxFactory.TokenList(PartialKeyword));
+    }
+
+    public static ConstructorDeclarationSyntax WithEmptyBlockBody(this ConstructorDeclarationSyntax constructor)
+    {
+        return constructor.WithBody(SyntaxFactory.Block());
+    }
+
+    public static ConstructorInitializerSyntax BaseConstructorInitializer(ArgumentListSyntax? argumentList = null)
+    {
+        return SyntaxFactory.ConstructorInitializer(SyntaxKind.BaseConstructorInitializer, argumentList);
+    }
+
+    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(string name)
+    {
+        return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(name));
+    }
+
+    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(INamespaceSymbol symbol)
+    {
+        return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(symbol.ToDisplayString()));
+    }
+
+    public static InvocationExpressionSyntax NameOf(ExpressionSyntax argument)
+    {
+        return SyntaxFactory.InvocationExpression(SyntaxFactory.IdentifierName("nameof"), SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(argument))));
+    }
+
     public static MemberAccessExpressionSyntax SimpleMemberAccessExpression(ExpressionSyntax expression, SimpleNameSyntax name)
     {
         return SyntaxFactory.MemberAccessExpression(SyntaxKind.SimpleMemberAccessExpression, expression, name);
-    }
-
-    public static UsingDirectiveSyntax UsingDirective(string name)
-    {
-        return SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(name));
     }
 
     public static ObjectCreationExpressionSyntax WithArgumentList(this ObjectCreationExpressionSyntax expression)
@@ -96,8 +121,8 @@ internal static class FastSyntaxFactory
         return expression.WithArgumentList(EmptyArgumentList);
     }
 
-    public static ConstructorDeclarationSyntax WithEmptyBlockBody(this ConstructorDeclarationSyntax constructor)
+    public static UsingDirectiveSyntax UsingDirective(string name)
     {
-        return constructor.WithBody(SyntaxFactory.Block());
+        return SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(name));
     }
 }

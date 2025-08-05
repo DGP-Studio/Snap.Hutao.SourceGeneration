@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
@@ -18,7 +18,22 @@ namespace Snap.Hutao.SourceGeneration.Automation;
 [Generator(LanguageNames.CSharp)]
 internal sealed class ConstructorGenerator : IIncrementalGenerator
 {
-    private static readonly TypeSyntax SystemIServiceProviderType = ParseName("System.IServiceProvider");
+    private static readonly TypeSyntax CommunityToolkitMvvmMessagingIMessengerType = ParseTypeName("CommunityToolkit.Mvvm.Messaging.IMessenger");
+    private static readonly TypeSyntax SystemNetHttpIHttpClientFactoryType = ParseTypeName("System.Net.Http.IHttpClientFactory");
+    private static readonly TypeSyntax SystemNetHttpHttpClientType = ParseTypeName("System.Net.Http.HttpClient");
+    private static readonly TypeSyntax SystemIServiceProviderType = ParseTypeName("System.IServiceProvider");
+
+    private static readonly IdentifierNameSyntax IdentifierNameOfInitializeComponent = IdentifierName("InitializeComponent");
+    private static readonly IdentifierNameSyntax IdentifierNameOfServiceProvider = IdentifierName("serviceProvider");
+    private static readonly IdentifierNameSyntax IdentifierNameOfHttpClient = IdentifierName("httpClient");
+
+    private static readonly GenericNameSyntax GenericNameOfGetRequiredService = GenericName("GetRequiredService");
+    private static readonly GenericNameSyntax GenericNameOfGetRequiredKeyedService = GenericName("GetRequiredKeyedService");
+
+    private static readonly SyntaxToken IdentifierOfServiceProvider = Identifier("serviceProvider");
+    private static readonly SyntaxToken IdentifierOfHttpClient = Identifier("httpClient");
+    private static readonly SyntaxToken IdentifierOfPreConstruct = Identifier("PreConstruct");
+    private static readonly SyntaxToken IdentifierOfPostConstruct = Identifier("PostConstruct");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -39,7 +54,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         }
         catch (Exception ex)
         {
-            production.AddSource("Error.g.cs", ex.ToString());
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", ex.ToString());
         }
     }
 
@@ -50,77 +65,31 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             return;
         }
 
+        AttributeData attributeData = context.Attributes.Single();
+
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(context.TargetSymbol.ContainingNamespace)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                    ClassDeclaration(classSymbol)
-                        .WithModifiers(TokenList(PartialKeyword))
+                    PartialClassDeclaration(classSymbol)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
-                            ConstructorDeclaration(Identifier(classSymbol.Name))
-                                .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
-                                .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(Identifier("serviceProvider")).WithType(SystemIServiceProviderType))))
-                                .WithBody(Block(List<StatementSyntax>(
-                                [
-                                    // Call PreConstruct
-                                    ExpressionStatement(InvocationExpression(IdentifierName("PreConstruct"))
-                                        .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                                            Argument(IdentifierName("serviceProvider")))))),
-
-                                    .. GenerateStatements(),
-                                    EmptyStatement().WithTrailingTrivia(Comment("// Skipped field with initializer: ConsoleBanner")),
-                                    ExpressionStatement(SimpleAssignmentExpression(
-                                        SimpleMemberAccessExpression(ThisExpression(), IdentifierName("serviceProvider")),
-                                        IdentifierName("serviceProvider"))),
-                                    ExpressionStatement(SimpleAssignmentExpression(
-                                        SimpleMemberAccessExpression(ThisExpression(), IdentifierName("activation")),
-                                        InvocationExpression(SimpleMemberAccessExpression(IdentifierName("serviceProvider"), GenericName(Identifier("GetRequiredService"))
-                                            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(
-                                                Name("Snap", "Hutao", "Core", "LifeCycle", "IAppActivation")))))))),
-                                    ExpressionStatement(SimpleAssignmentExpression(
-                                        SimpleMemberAccessExpression(
-                                            ThisExpression(),
-                                            IdentifierName("logger")),
-                                        InvocationExpression(SimpleMemberAccessExpression(IdentifierName("serviceProvider"), GenericName(Identifier("GetRequiredService"))
-                                            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(
-                                                QualifiedName(
-                                                    Name("Microsoft", "Extensions", "Logging"),
-                                                    GenericName(Identifier("ILogger")).WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(Name("Snap", "Hutao", "App")))))))))))),
-                                    ExpressionStatement(SimpleAssignmentExpression(
-                                        IdentifierName("Options"),
-                                        InvocationExpression(SimpleMemberAccessExpression(IdentifierName("serviceProvider"), GenericName(Identifier("GetRequiredService"))
-                                            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(
-                                                Name("Snap", "Hutao", "Service", "AppOptions")))))))),
-
-                                    // Call InitializeComponent
-                                    ExpressionStatement(InvocationExpression(IdentifierName("InitializeComponent"))),
-
-                                    // Call PostConstruct
-                                    ExpressionStatement(InvocationExpression(IdentifierName("PostConstruct"))
-                                        .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                                            Argument(IdentifierName("serviceProvider"))))))
-                                ]))),
+                            GenerateConstructorDeclaration(classSymbol, attributeData)
+                                .WithParameterList(GenerateConstructorParameterList(attributeData))
+                                .WithBody(Block(List(GenerateConstructorBodyStatements(classSymbol, attributeData, production.CancellationToken)))),
 
                             // Property declarations
-                            PropertyDeclaration(Name("Snap", "Hutao", "Service", "AppOptions"), Identifier("Options"))
-                                .WithModifiers(TokenList(InternalKeyword, PartialKeyword))
-                                .WithAccessorList(AccessorList(SingletonList(
-                                    AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
-                                        .WithExpressionBody(
-                                            ArrowExpressionClause(FieldExpression())).WithSemicolonToken(SemicolonToken)))),
+                            .. GeneratePropertyDeclarations(classSymbol, production.CancellationToken),
 
                             // PreConstruct & PostConstruct Method declarations
-                            MethodDeclaration(VoidType, Identifier("PreConstruct"))
+                            MethodDeclaration(VoidType, IdentifierOfPreConstruct)
                                 .WithModifiers(TokenList(PartialKeyword))
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(Identifier("serviceProvider")).WithType(Name("System", "IServiceProvider")))))
+                                    Parameter(IdentifierOfServiceProvider).WithType(SystemIServiceProviderType))))
                                 .WithSemicolonToken(SemicolonToken),
-                            MethodDeclaration(VoidType, Identifier("PostConstruct"))
+                            MethodDeclaration(VoidType, IdentifierOfPostConstruct)
                                 .WithModifiers(TokenList(Token(SyntaxKind.PartialKeyword)))
-                                .WithParameterList(
-                                    ParameterList(SingletonSeparatedList(
-                                        Parameter(Identifier("serviceProvider")).WithType(Name("System", "IServiceProvider")))))
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(IdentifierOfServiceProvider).WithType(SystemIServiceProviderType))))
                                 .WithSemicolonToken(SemicolonToken)
                         ]))))))
             .NormalizeWhitespace();
@@ -128,84 +97,89 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         production.AddSource(context.TargetSymbol.ToDisplayString().NormalizeSymbolName(), syntax.ToFullString());
     }
 
-    private static IEnumerable<StatementSyntax> GenerateStatements()
+    private static ConstructorDeclarationSyntax GenerateConstructorDeclaration(INamedTypeSymbol classSymbol, AttributeData attributeData)
     {
+        ConstructorDeclarationSyntax constructorDeclaration = ConstructorDeclaration(Identifier(classSymbol.Name))
+            .WithModifiers(PublicTokenList);
 
-    }
-
-    private static void GenerateConstructorImplementations(SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
-    {
-        foreach (AttributedGeneratorSymbolContext context in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
+        if (attributeData.HasNamedArgumentWith("CallBaseConstructor", true))
         {
-            GenerateConstructorImplementation(production, context);
+            constructorDeclaration = constructorDeclaration.WithInitializer(
+                BaseConstructorInitializer(ArgumentList(SingletonSeparatedList(
+                    Argument(IdentifierNameOfServiceProvider)))));
         }
+
+        return constructorDeclaration;
     }
 
-    private static void GenerateConstructorImplementation(SourceProductionContext production, AttributedGeneratorSymbolContext context)
+    private static ParameterListSyntax GenerateConstructorParameterList(AttributeData attributeData)
     {
-        AttributeData constructorInfo = context.SingleAttribute(WellKnownAttributeNames.ConstructorGeneratedAttribute);
+        ImmutableArray<ParameterSyntax>.Builder parameters = ImmutableArray.CreateBuilder<ParameterSyntax>();
+        parameters.Add(Parameter(IdentifierOfServiceProvider).WithType(SystemIServiceProviderType));
 
-        bool resolveHttpClient = constructorInfo.HasNamedArgumentWith<bool>("ResolveHttpClient", value => value);
-        bool callBaseConstructor = constructorInfo.HasNamedArgumentWith<bool>("CallBaseConstructor", value => value);
-        bool initializeComponent = constructorInfo.HasNamedArgumentWith<bool>("InitializeComponent", value => value);
-        string httpclient = resolveHttpClient ? ", System.Net.Http.HttpClient httpClient" : string.Empty;
-
-        ConstructorOptions options = new(resolveHttpClient, callBaseConstructor, initializeComponent);
-
-        StringBuilder sourceBuilder = new StringBuilder().Append($$"""
-            namespace {{context.Symbol.ContainingNamespace}};
-
-            partial class {{context.Symbol.ToDisplayString(SymbolDisplayFormats.QualifiedNonNullableFormat)}}
-            {
-                public {{context.Symbol.Name}}(System.IServiceProvider serviceProvider{{httpclient}}){{(options.CallBaseConstructor ? " : base(serviceProvider)" : string.Empty)}}
-                {
-                    PreConstruct(serviceProvider);
-
-            """);
-
-        FillUpWithFieldValueAssignment(sourceBuilder, context, options);
-        StringBuilder propBuilder = FillUpWithPropertyAssignment(sourceBuilder, context, options);
-
-        foreach (INamedTypeSymbol interfaceSymbol in context.Symbol.Interfaces)
+        if (attributeData.HasNamedArgumentWith("ResolveHttpClient", true))
         {
-            if (interfaceSymbol.Name == "IRecipient")
+            parameters.Add(Parameter(IdentifierOfHttpClient).WithType(SystemNetHttpHttpClientType));
+        }
+
+        return ParameterList(SeparatedList(parameters.ToImmutable()));
+    }
+
+    private static IEnumerable<StatementSyntax> GenerateConstructorBodyStatements(INamedTypeSymbol classSymbol, AttributeData attributeData, CancellationToken token)
+    {
+        // Call PreConstruct
+        yield return ExpressionStatement(InvocationExpression(IdentifierName("PreConstruct"))
+            .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                Argument(IdentifierNameOfServiceProvider)))));
+
+        // Assign fields
+        foreach (StatementSyntax? statementSyntax in GenerateConstructorBodyFieldAssignments(classSymbol, attributeData, token))
+        {
+            yield return statementSyntax;
+        }
+
+        // Assign properties
+        foreach (StatementSyntax? statementSyntax in GenerateConstructorBodyPropertyAssignments(classSymbol, attributeData, token))
+        {
+            yield return statementSyntax;
+        }
+
+        // Call Register for IRecipient interfaces
+        foreach (INamedTypeSymbol interfaceSymbol in classSymbol.Interfaces)
+        {
+            if (interfaceSymbol.IsOrInheritsFrom("CommunityToolkit.Mvvm.Messaging.IRecipient"))
             {
-                sourceBuilder
-                    .Append("        CommunityToolkit.Mvvm.Messaging.IMessengerExtensions.Register<")
-                    .Append(interfaceSymbol.TypeArguments[0])
-                    .AppendLine(">(serviceProvider.GetRequiredService<CommunityToolkit.Mvvm.Messaging.IMessenger>(), this);");
+                TypeSyntax messageType = ParseTypeName(interfaceSymbol.TypeArguments.Single().ToDisplayString());
+
+                yield return ExpressionStatement(InvocationExpression(SimpleMemberAccessExpression(
+                        IdentifierName("CommunityToolkit.Mvvm.Messaging.IMessengerExtensions"),
+                        GenericName(Identifier("Register"))
+                            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(messageType)))))
+                    .WithArgumentList(ArgumentList(SeparatedList(
+                    [
+                        Argument(ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, CommunityToolkitMvvmMessagingIMessengerType)),
+                        Argument(ThisExpression())
+                    ]))));
             }
         }
 
-        if (options.InitializeComponent)
+        // Call InitializeComponent if specified
+        if (attributeData.HasNamedArgumentWith("InitializeComponent", true))
         {
-            sourceBuilder.AppendLine("        InitializeComponent();");
+            yield return ExpressionStatement(InvocationExpression(IdentifierNameOfInitializeComponent));
         }
 
-        sourceBuilder.AppendLine("""
-                    PostConstruct(serviceProvider);
-                }
-            """);
-        sourceBuilder.Append(propBuilder);
-        sourceBuilder.Append("""
-            
-                partial void PreConstruct(System.IServiceProvider serviceProvider);
-            
-                partial void PostConstruct(System.IServiceProvider serviceProvider);
-
-            """);
-        sourceBuilder.Append("}");
-
-        production.AddSource($"{context.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
+        // Call PostConstruct
+        yield return ExpressionStatement(InvocationExpression(IdentifierName("PostConstruct"))
+            .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                Argument(IdentifierNameOfServiceProvider)))));
     }
 
-    private static void FillUpWithFieldValueAssignment(StringBuilder builder, AttributedGeneratorSymbolContext context2, ConstructorOptions options)
+    private static IEnumerable<StatementSyntax> GenerateConstructorBodyFieldAssignments(INamedTypeSymbol classSymbol, AttributeData attributeData, CancellationToken token)
     {
-        IEnumerable<IFieldSymbol> fields = context2.Symbol.GetMembers().Where(m => m.Kind is SymbolKind.Field).OfType<IFieldSymbol>();
-
-        foreach (IFieldSymbol fieldSymbol in fields)
+        foreach (IFieldSymbol fieldSymbol in classSymbol.GetMembers().OfType<IFieldSymbol>())
         {
-            if (fieldSymbol.IsImplicitlyDeclared || fieldSymbol.Name.AsSpan()[0] is '<')
+            if (fieldSymbol.IsImplicitlyDeclared || fieldSymbol.HasConstantValue || fieldSymbol.IsStatic || !fieldSymbol.IsReadOnly)
             {
                 continue;
             }
@@ -213,15 +187,12 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             bool shouldSkip = false;
             foreach (SyntaxReference syntaxReference in fieldSymbol.DeclaringSyntaxReferences)
             {
-                if (syntaxReference.GetSyntax() is VariableDeclaratorSyntax declarator)
+                if (syntaxReference.GetSyntax() is VariableDeclaratorSyntax { Initializer: not null } declarator)
                 {
-                    if (declarator.Initializer is not null)
-                    {
-                        // Skip field with initializer
-                        builder.Append("        // Skipped field with initializer: ").AppendLine(fieldSymbol.Name);
-                        shouldSkip = true;
-                        break;
-                    }
+                    // Skip field with initializer
+                    yield return EmptyStatement().WithTrailingTrivia(Comment($"// Skipped field with initializer: {fieldSymbol.Name}"));
+                    shouldSkip = true;
+                    break;
                 }
             }
 
@@ -230,166 +201,163 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            if (!fieldSymbol.IsReadOnly || fieldSymbol.IsStatic)
-            {
-                continue;
-            }
+            string fieldTypeString = fieldSymbol.Type.ToDisplayString();
+            TypeSyntax fieldType = ParseTypeName(fieldTypeString);
+            IdentifierNameSyntax fieldIdentifier = IdentifierName(fieldSymbol.Name);
+            MemberAccessExpressionSyntax fieldAccess = SimpleMemberAccessExpression(ThisExpression(), fieldIdentifier);
 
-            switch (fieldSymbol.Type.ToDisplayString())
+            switch (fieldTypeString)
             {
+                // this.${fieldName} = serviceProvider;
                 case "System.IServiceProvider":
-                    builder
-                        .Append("        this.")
-                        .Append(fieldSymbol.Name)
-                        .AppendLine(" = serviceProvider;");
+                    yield return ExpressionStatement(SimpleAssignmentExpression(fieldAccess, IdentifierNameOfServiceProvider));
                     break;
 
+                // this.${fieldName} = httpClient;
+                // this.${fieldName} = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(${className}));
                 case "System.Net.Http.HttpClient":
-                    if (options.ResolveHttpClient)
-                    {
-                        builder
-                            .Append("        this.")
-                            .Append(fieldSymbol.Name)
-                            .AppendLine(" = httpClient;");
-                    }
-                    else
-                    {
-                        builder
-                            .Append("        this.")
-                            .Append(fieldSymbol.Name)
-                            .Append(" = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(")
-                            .Append(context2.Symbol.Name)
-                            .AppendLine("));");
-                    }
+                    yield return ExpressionStatement(SimpleAssignmentExpression(
+                        fieldAccess,
+                        attributeData.HasNamedArgumentWith("ResolveHttpClient", true)
+                            ? IdentifierNameOfHttpClient
+                            : InvocationExpression(
+                                    SimpleMemberAccessExpression(
+                                        ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, SystemNetHttpIHttpClientFactoryType),
+                                        IdentifierName("CreateClient")))
+                                .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                    Argument(NameOf(IdentifierName(classSymbol.Name))))))));
                     break;
 
+                // this.${fieldName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
+                // this.${fieldName} = serviceProvider.GetRequiredService<${fieldType}>();
                 default:
-                    if (fieldSymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is WellKnownAttributeNames.FromKeyedServicesAttribute) is { } keyInfo)
+                    if (fieldSymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass?.IsOrInheritsFrom(WellKnownAttributeNames.FromKeyedServicesAttribute) ?? false) is { } fromKeyed)
                     {
-                        string key = keyInfo.ConstructorArguments[0].ToCSharpString();
-                        builder
-                            .Append("        this.")
-                            .Append(fieldSymbol.Name)
-                            .Append(" = serviceProvider.GetRequiredKeyedService<")
-                            .Append(fieldSymbol.Type)
-                            .Append(">(")
-                            .Append(key)
-                            .AppendLine(");");
+                        ExpressionSyntax? argumentExpression = default;
+                        if (fromKeyed.ApplicationSyntaxReference is { } syntaxRef && syntaxRef.GetSyntax(token) is AttributeSyntax syntax)
+                        {
+                            argumentExpression = syntax.ArgumentList?.Arguments.Single().Expression;
+                        }
+
+                        if (argumentExpression is null)
+                        {
+                            TypedConstant key = fromKeyed.ConstructorArguments.Single();
+                            argumentExpression = ParseExpression(key.ToCSharpString());
+                        }
+
+                        yield return ExpressionStatement(SimpleAssignmentExpression(
+                            fieldAccess,
+                            ServiceProviderGetRequiredKeyedService(IdentifierNameOfServiceProvider, fieldType, argumentExpression)));
                     }
                     else
                     {
-                        builder
-                            .Append("        this.")
-                            .Append(fieldSymbol.Name)
-                            .Append(" = serviceProvider.GetRequiredService<")
-                            .Append(fieldSymbol.Type)
-                            .AppendLine(">();");
+                        yield return ExpressionStatement(SimpleAssignmentExpression(
+                            fieldAccess,
+                            ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, fieldType)));
                     }
                     break;
             }
         }
     }
 
-    private static StringBuilder FillUpWithPropertyAssignment(StringBuilder builder, AttributedGeneratorSymbolContext context2, ConstructorOptions options)
+    private static IEnumerable<StatementSyntax> GenerateConstructorBodyPropertyAssignments(INamedTypeSymbol classSymbol, AttributeData attributeData, CancellationToken token)
     {
-        IEnumerable<IPropertySymbol> fields = context2.Symbol.GetMembers().Where(m => m.Kind is SymbolKind.Property).OfType<IPropertySymbol>();
-        StringBuilder propsBuilder = new();
-
-        foreach (IPropertySymbol propertySymbol in fields)
+        foreach (IPropertySymbol propertySymbol in classSymbol.GetMembers().OfType<IPropertySymbol>())
         {
-            if (propertySymbol.IsImplicitlyDeclared)
+            if (!propertySymbol.IsPartialDefinition || propertySymbol.IsStatic || !propertySymbol.IsReadOnly)
             {
                 continue;
             }
 
-            if (!propertySymbol.IsPartialDefinition)
-            {
-                continue;
-            }
+            string propertyTypeString = propertySymbol.Type.ToDisplayString();
+            TypeSyntax propertyType = ParseTypeName(propertyTypeString);
+            IdentifierNameSyntax propertyIdentifier = IdentifierName(propertySymbol.Name);
+            MemberAccessExpressionSyntax propertyAccess = SimpleMemberAccessExpression(ThisExpression(), propertyIdentifier);
 
-            if (!propertySymbol.IsReadOnly || propertySymbol.IsStatic)
+            switch (propertyTypeString)
             {
-                continue;
-            }
-
-            switch (propertySymbol.Type.ToDisplayString())
-            {
+                // this.${fieldName} = serviceProvider;
                 case "System.IServiceProvider":
-                    builder
-                        .Append("        ")
-                        .Append(propertySymbol.Name)
-                        .AppendLine(" = serviceProvider;");
+                    yield return ExpressionStatement(SimpleAssignmentExpression(propertyAccess, IdentifierNameOfServiceProvider));
                     break;
 
+                // this.${fieldName} = httpClient;
+                // this.${fieldName} = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(${className}));
                 case "System.Net.Http.HttpClient":
-                    if (options.ResolveHttpClient)
-                    {
-                        builder
-                            .Append("        ")
-                            .Append(propertySymbol.Name)
-                            .AppendLine(" = httpClient;");
-                    }
-                    else
-                    {
-                        builder
-                            .Append("        ")
-                            .Append(propertySymbol.Name)
-                            .Append(" = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(")
-                            .Append(context2.Symbol.Name)
-                            .AppendLine("));");
-                    }
+                    yield return ExpressionStatement(SimpleAssignmentExpression(
+                        propertyAccess,
+                        attributeData.HasNamedArgumentWith("ResolveHttpClient", true)
+                            ? IdentifierNameOfHttpClient
+                            : InvocationExpression(
+                                    SimpleMemberAccessExpression(
+                                        ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, SystemNetHttpIHttpClientFactoryType),
+                                        IdentifierName("CreateClient")))
+                                .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                    Argument(NameOf(IdentifierName(classSymbol.Name))))))));
                     break;
 
+                // this.${fieldName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
+                // this.${fieldName} = serviceProvider.GetRequiredService<${fieldType}>();
                 default:
-                    if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass!.ToDisplayString() is WellKnownAttributeNames.FromKeyedServicesAttribute) is { } keyInfo)
+                    if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass?.IsOrInheritsFrom(WellKnownAttributeNames.FromKeyedServicesAttribute) ?? false) is { } fromKeyed)
                     {
-                        string key = keyInfo.ConstructorArguments[0].ToCSharpString();
-                        builder
-                            .Append("        ")
-                            .Append(propertySymbol.Name)
-                            .Append(" = serviceProvider.GetRequiredKeyedService<")
-                            .Append(propertySymbol.Type)
-                            .Append(">(")
-                            .Append(key)
-                            .AppendLine(");");
+                        ExpressionSyntax? argumentExpression = default;
+                        if (fromKeyed.ApplicationSyntaxReference is { } syntaxRef && syntaxRef.GetSyntax(token) is AttributeSyntax syntax)
+                        {
+                            argumentExpression = syntax.ArgumentList?.Arguments.Single().Expression;
+                        }
+
+                        if (argumentExpression is null)
+                        {
+                            TypedConstant key = fromKeyed.ConstructorArguments.Single();
+                            argumentExpression = ParseExpression(key.ToCSharpString());
+                        }
+
+                        yield return ExpressionStatement(SimpleAssignmentExpression(
+                            propertyAccess,
+                            ServiceProviderGetRequiredKeyedService(IdentifierNameOfServiceProvider, propertyType, argumentExpression)));
                     }
                     else
                     {
-                        builder
-                            .Append("        ")
-                            .Append(propertySymbol.Name)
-                            .Append(" = serviceProvider.GetRequiredService<")
-                            .Append(propertySymbol.Type)
-                            .AppendLine(">();");
+                        yield return ExpressionStatement(SimpleAssignmentExpression(
+                            propertyAccess,
+                            ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, propertyType)));
                     }
                     break;
             }
-
-            propsBuilder
-                .AppendLine()
-                .Append("    ")
-                .Append(propertySymbol.DeclaredAccessibility.ToCSharpString())
-                .Append(" partial ")
-                .Append(propertySymbol.Type)
-                .Append(" ")
-                .Append(propertySymbol.Name)
-                .AppendLine(" { get => field; }");
         }
-
-        return propsBuilder;
     }
 
-    private readonly struct ConstructorOptions
+    private static IEnumerable<PropertyDeclarationSyntax> GeneratePropertyDeclarations(INamedTypeSymbol classSymbol, CancellationToken token)
     {
-        public readonly bool ResolveHttpClient;
-        public readonly bool CallBaseConstructor;
-        public readonly bool InitializeComponent;
-
-        public ConstructorOptions(bool resolveHttpClient, bool callBaseConstructor, bool initializeComponent)
+        foreach (IPropertySymbol propertySymbol in classSymbol.GetMembers().OfType<IPropertySymbol>())
         {
-            ResolveHttpClient = resolveHttpClient;
-            CallBaseConstructor = callBaseConstructor;
-            InitializeComponent = initializeComponent;
+            if (propertySymbol.IsImplicitlyDeclared || propertySymbol.IsStatic || !propertySymbol.IsReadOnly)
+            {
+                continue;
+            }
+
+            yield return PropertyDeclaration(ParseTypeName(propertySymbol.Type.ToDisplayString()), Identifier(propertySymbol.Name))
+                .WithModifiers(propertySymbol.DeclaredAccessibility.ToSyntaxTokenList())
+                .WithAccessorList(AccessorList(SingletonList(
+                    AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
+                        .WithExpressionBody(ArrowExpressionClause(SimpleMemberAccessExpression(ThisExpression(), IdentifierName(propertySymbol.Name))))
+                        .WithSemicolonToken(SemicolonToken))));
         }
+    }
+
+    private static InvocationExpressionSyntax ServiceProviderGetRequiredService(ExpressionSyntax serviceProvider, TypeSyntax type)
+    {
+        return InvocationExpression(SimpleMemberAccessExpression(
+            serviceProvider,
+            GenericNameOfGetRequiredService.WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))));
+    }
+
+    private static InvocationExpressionSyntax ServiceProviderGetRequiredKeyedService(ExpressionSyntax serviceProvider, TypeSyntax type, ExpressionSyntax argument)
+    {
+        return InvocationExpression(SimpleMemberAccessExpression(
+            serviceProvider,
+            GenericNameOfGetRequiredKeyedService.WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))))
+            .WithArgumentList(ArgumentList(SingletonSeparatedList(Argument(argument))));
     }
 }

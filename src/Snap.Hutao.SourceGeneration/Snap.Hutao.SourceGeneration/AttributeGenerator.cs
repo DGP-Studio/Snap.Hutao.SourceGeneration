@@ -4,8 +4,11 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Runtime.CompilerServices;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
+
+[assembly:InternalsVisibleTo("Snap.Hutao.SourceGeneration.Test")]
 
 namespace Snap.Hutao.SourceGeneration;
 
