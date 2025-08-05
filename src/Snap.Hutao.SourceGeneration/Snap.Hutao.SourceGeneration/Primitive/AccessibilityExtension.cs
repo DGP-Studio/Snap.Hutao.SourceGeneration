@@ -26,9 +26,9 @@ internal static class AccessibilityExtension
         };
     }
 
-    public static SyntaxTokenList ToSyntaxTokenList(this Accessibility accessibility)
+    public static SyntaxTokenList ToSyntaxTokenList(this Accessibility accessibility, SyntaxToken additionalToken)
     {
-        return accessibility switch
+        SyntaxTokenList list = accessibility switch
         {
             Accessibility.NotApplicable => TokenList(),
             Accessibility.Private => PrivateTokenList,
@@ -39,5 +39,7 @@ internal static class AccessibilityExtension
             Accessibility.Public => PublicTokenList,
             _ => throw new ArgumentOutOfRangeException(nameof(accessibility), accessibility, "Unknown accessibility")
         };
+
+        return list.Add(additionalToken);
     }
 }

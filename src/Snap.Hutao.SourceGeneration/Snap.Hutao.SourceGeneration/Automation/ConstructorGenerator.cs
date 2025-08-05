@@ -233,21 +233,9 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 default:
                     if (fieldSymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass?.IsOrInheritsFrom(WellKnownAttributeNames.FromKeyedServicesAttribute) ?? false) is { } fromKeyed)
                     {
-                        ExpressionSyntax? argumentExpression = default;
-                        if (fromKeyed.ApplicationSyntaxReference is { } syntaxRef && syntaxRef.GetSyntax(token) is AttributeSyntax syntax)
-                        {
-                            argumentExpression = syntax.ArgumentList?.Arguments.Single().Expression;
-                        }
-
-                        if (argumentExpression is null)
-                        {
-                            TypedConstant key = fromKeyed.ConstructorArguments.Single();
-                            argumentExpression = ParseExpression(key.ToCSharpString());
-                        }
-
                         yield return ExpressionStatement(SimpleAssignmentExpression(
                             fieldAccess,
-                            ServiceProviderGetRequiredKeyedService(IdentifierNameOfServiceProvider, fieldType, argumentExpression)));
+                            ServiceProviderGetRequiredKeyedService(IdentifierNameOfServiceProvider, fieldType, ParseExpression(fromKeyed.ConstructorArguments.Single().ToCSharpString()))));
                     }
                     else
                     {
@@ -338,7 +326,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             }
 
             yield return PropertyDeclaration(ParseTypeName(propertySymbol.Type.ToDisplayString()), Identifier(propertySymbol.Name))
-                .WithModifiers(propertySymbol.DeclaredAccessibility.ToSyntaxTokenList())
+                .WithModifiers(propertySymbol.DeclaredAccessibility.ToSyntaxTokenList(PartialKeyword))
                 .WithAccessorList(AccessorList(SingletonList(
                     AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
                         .WithExpressionBody(ArrowExpressionClause(FieldExpression()))
