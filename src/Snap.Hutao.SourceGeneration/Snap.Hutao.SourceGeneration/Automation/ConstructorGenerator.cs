@@ -252,7 +252,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     {
         foreach (IPropertySymbol propertySymbol in classSymbol.GetMembers().OfType<IPropertySymbol>())
         {
-            if (!propertySymbol.IsPartialDefinition || propertySymbol.IsStatic || !propertySymbol.IsReadOnly)
+            if (ShouldSkipProperty(propertySymbol))
             {
                 continue;
             }
@@ -320,7 +320,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     {
         foreach (IPropertySymbol propertySymbol in classSymbol.GetMembers().OfType<IPropertySymbol>())
         {
-            if (propertySymbol.IsImplicitlyDeclared || propertySymbol.IsStatic || !propertySymbol.IsReadOnly)
+            if (ShouldSkipProperty(propertySymbol))
             {
                 continue;
             }
@@ -332,6 +332,11 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                         .WithExpressionBody(ArrowExpressionClause(FieldExpression()))
                         .WithSemicolonToken(SemicolonToken))));
         }
+    }
+
+    private static bool ShouldSkipProperty(IPropertySymbol propertySymbol)
+    {
+        return propertySymbol.IsStatic || !propertySymbol.IsPartialDefinition || !propertySymbol.IsReadOnly;
     }
 
     private static InvocationExpressionSyntax ServiceProviderGetRequiredService(ExpressionSyntax serviceProvider, TypeSyntax type)
