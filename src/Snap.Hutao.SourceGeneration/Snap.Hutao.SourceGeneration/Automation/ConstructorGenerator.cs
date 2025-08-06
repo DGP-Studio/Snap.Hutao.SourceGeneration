@@ -70,7 +70,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(context.TargetSymbol.ContainingNamespace)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                    PartialClassDeclaration(classSymbol)
+                    PartialTypeDeclaration(classSymbol)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
                             GenerateConstructorDeclaration(classSymbol, attributeData)

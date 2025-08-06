@@ -27,11 +27,6 @@ internal readonly struct AttributedGeneratorSymbolContext
         return context.HasValue;
     }
 
-    public bool HasAttributeWithName(string name)
-    {
-        return Attributes.Any(attr => attr.AttributeClass!.ToDisplayString() == name);
-    }
-
     public AttributeData SingleAttribute(string name)
     {
         return Attributes.Single(attribute => attribute.AttributeClass!.ToDisplayString() == name);

@@ -8,7 +8,7 @@ internal sealed class WellKnownAttributeNames
     public const string CommandAttribute = "Snap.Hutao.Core.Annotation.CommandAttribute";
     public const string ConstructorGeneratedAttribute = "Snap.Hutao.Core.Annotation.ConstructorGeneratedAttribute";
     public const string DependencyPropertyAttribute = "Snap.Hutao.Core.Annotation.DependencyPropertyAttribute";
-    public const string FieldAccessAttribute = "Snap.Hutao.Core.Annotation.FieldAccessAttribute";
+    public const string FieldAccessAttribute = "Snap.Hutao.Core.Annotation.FieldAccessorAttribute";
     public const string HttpClientAttribute = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientAttribute";
     public const string PrimaryHttpMessageHandlerAttribute = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.PrimaryHttpMessageHandlerAttribute";
     public const string InjectionAttribute = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectionAttribute";

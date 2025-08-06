@@ -30,15 +30,15 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         return Path.GetFileName(text.Path).EndsWith(FileName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void GenerateWrapper(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
+    private static void GenerateWrapper(SourceProductionContext production, ImmutableArray<AdditionalText> texts)
     {
         try
         {
-            GenerateAll(context, texts);
+            GenerateAll(production, texts);
         }
         catch (Exception ex)
         {
-            context.AddSource("Error.g.cs", ex.ToString());
+            production.AddSource("Error.g.cs", ex.ToString());
         }
     }
 

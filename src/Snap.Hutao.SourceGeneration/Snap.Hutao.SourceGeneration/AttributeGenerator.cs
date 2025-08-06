@@ -128,7 +128,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                                 .WithModifiers(TokenList(PublicKeyword))
                                 .WithAccessorList(GetAndSetAccessorList())
                         ])),
-                    ClassDeclaration("FieldAccessAttribute")
+                    ClassDeclaration("FieldAccessorAttribute")
                         .WithAttributeLists(SingletonList(AttributeList(SingletonSeparatedList(Attribute(IdentifierName("AttributeUsage"))
                             .WithArgumentList(AttributeArgumentList(SeparatedList(
                             [
@@ -140,7 +140,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                         .WithBaseList(BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(IdentifierName("Attribute")))))
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
-                            ConstructorDeclaration(Identifier("FieldAccessAttribute"))
+                            ConstructorDeclaration(Identifier("FieldAccessorAttribute"))
                                 .WithModifiers(TokenList(PublicKeyword))
                                 .WithEmptyBlockBody(),
                         ]))
