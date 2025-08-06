@@ -106,6 +106,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
         }
 
         CompilationUnitSyntax syntax = CompilationUnit()
+            .WithUsings(SingletonList(UsingDirective(ParseName("System.Runtime.CompilerServices"))))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(containingTypeSymbol.ContainingNamespace)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     PartialTypeDeclaration(containingTypeSymbol)
