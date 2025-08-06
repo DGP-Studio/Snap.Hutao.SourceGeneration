@@ -57,6 +57,8 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
             return;
         }
 
+        TypeSyntax containingType = ParseTypeName(containingTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+
         ImmutableDictionary<IPropertySymbol, string> propertyBackingFieldNames = GetPropertyBackingFieldNames(containingTypeSymbol, contexts);
         ImmutableArray<MethodDeclarationSyntax>.Builder accessMethodsBuilder = ImmutableArray.CreateBuilder<MethodDeclarationSyntax>(contexts.Length);
         foreach (GeneratorAttributeSyntaxContext context in contexts)
@@ -92,7 +94,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
                     GenerateUnsafeAccessorAttribute(fieldName)))))
                 .WithModifiers(PrivateStaticExternTokenList)
                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                    Parameter(Identifier("self")).WithType(type))))
+                    Parameter(Identifier("self")).WithType(containingType))))
                 .WithSemicolonToken(SemicolonToken);
 
             accessMethodsBuilder.Add(method);
@@ -107,9 +109,10 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(containingTypeSymbol.ContainingNamespace)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     PartialTypeDeclaration(containingTypeSymbol)
-                        .WithMembers(List<MemberDeclarationSyntax>(accessMethodsBuilder.ToImmutable()))))));
+                        .WithMembers(List<MemberDeclarationSyntax>(accessMethodsBuilder.ToImmutable()))))))
+            .NormalizeWhitespace();
 
-        production.AddSource($"{containingTypeSymbol.ToDisplayString().NormalizeSymbolName()}.g.cs", syntax.NormalizeWhitespace().ToFullString());
+        production.AddSource($"{containingTypeSymbol.ToDisplayString().NormalizeSymbolName()}.g.cs", syntax.ToFullString());
     }
 
     private static ImmutableDictionary<IPropertySymbol, string> GetPropertyBackingFieldNames(INamedTypeSymbol containingTypeSymbol, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
