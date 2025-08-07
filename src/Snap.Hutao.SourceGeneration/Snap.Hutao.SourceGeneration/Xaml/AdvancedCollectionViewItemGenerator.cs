@@ -65,7 +65,7 @@ internal sealed class AdvancedCollectionViewItemGenerator : IIncrementalGenerato
             namespace {{context3.Symbol.ContainingNamespace}};
             
             #nullable enable
-            partial class {{context3.Symbol.ToDisplayString(SymbolDisplayFormats.QualifiedNonNullableFormat)}}
+            partial class {{context3.Symbol.ToDisplayString(SymbolDisplayFormats.NonNullableFormat)}}
             {
                 [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(AdvancedCollectionViewItemGenerator)}}", "1.0.0.0")]
                 public object? GetPropertyValue(string propertyName)

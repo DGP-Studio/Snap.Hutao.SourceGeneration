@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Immutable;
+using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
@@ -13,6 +14,10 @@ namespace Snap.Hutao.SourceGeneration.Primitive;
 internal static class FastSyntaxFactory
 {
     public static ArgumentListSyntax EmptyArgumentList { get; } = SyntaxFactory.ArgumentList();
+
+    public static BlockSyntax EmptyBlock { get; } = SyntaxFactory.Block();
+
+    public static IdentifierNameSyntax NameOfIdentifier { get; } = SyntaxFactory.IdentifierName("nameof");
 
     public static LiteralExpressionSyntax FalseLiteralExpression { get; } = SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression);
 
@@ -28,78 +33,47 @@ internal static class FastSyntaxFactory
 
     public static PredefinedTypeSyntax VoidType { get; } = SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword));
 
-    public static SyntaxToken AbstractKeyword { get; } = SyntaxFactory.Token(SyntaxKind.AbstractKeyword);
+    public static SyntaxTokenList InternalTokenList { get; } = SyntaxFactory.TokenList(InternalKeyword);
 
-    public static SyntaxToken ClassKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ClassKeyword);
+    public static SyntaxTokenList InternalAbstractTokenList { get; } = SyntaxFactory.TokenList(InternalKeyword, AbstractKeyword);
 
-    public static SyntaxToken InternalKeyword { get; } = SyntaxFactory.Token(SyntaxKind.InternalKeyword);
+    public static SyntaxTokenList InternalSealedTokenList { get; } = SyntaxFactory.TokenList(InternalKeyword, SealedKeyword);
 
-    public static SyntaxToken PartialKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PartialKeyword);
+    public static SyntaxTokenList InternalPartialTokenList { get; } = SyntaxFactory.TokenList(InternalKeyword, PartialKeyword);
 
-    public static SyntaxToken PrivateKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PrivateKeyword);
+    public static SyntaxTokenList PartialTokenList { get; } = SyntaxFactory.TokenList(PartialKeyword);
 
-    public static SyntaxToken PublicKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PublicKeyword);
+    public static SyntaxTokenList PrivateTokenList { get; } = SyntaxFactory.TokenList(PrivateKeyword);
 
-    public static SyntaxToken ReadOnlyKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ReadOnlyKeyword);
+    public static SyntaxTokenList PrivateProtectedTokenList { get; } = SyntaxFactory.TokenList(PrivateKeyword, ProtectedKeyword);
 
-    public static SyntaxToken RecordKeyword { get; } = SyntaxFactory.Token(SyntaxKind.RecordKeyword);
+    public static SyntaxTokenList PrivateStaticExternTokenList { get; } = SyntaxFactory.TokenList(PrivateKeyword, StaticKeyword, ExternKeyword);
 
-    public static SyntaxToken SealedKeyword { get; } = SyntaxFactory.Token(SyntaxKind.SealedKeyword);
+    public static SyntaxTokenList ProtectedTokenList { get; } = SyntaxFactory.TokenList(ProtectedKeyword);
 
-    public static SyntaxToken SemicolonToken { get; } = SyntaxFactory.Token(SyntaxKind.SemicolonToken);
+    public static SyntaxTokenList ProtectedInternalTokenList { get; } = SyntaxFactory.TokenList(ProtectedKeyword, InternalKeyword);
 
-    public static SyntaxToken StructKeyword { get; } = SyntaxFactory.Token(SyntaxKind.StructKeyword);
+    public static SyntaxTokenList PublicTokenList { get; } = SyntaxFactory.TokenList(PublicKeyword);
 
-    public static SyntaxTokenList InternalTokenList { get; } = SyntaxFactory.TokenList(
-        SyntaxFactory.Token(SyntaxKind.InternalKeyword));
-
-    public static SyntaxTokenList InternalAbstractTokenList { get; } = SyntaxFactory.TokenList(
-        SyntaxFactory.Token(SyntaxKind.InternalKeyword),
-        SyntaxFactory.Token(SyntaxKind.AbstractKeyword));
-
-    public static SyntaxTokenList InternalPartialTokenList { get; } = SyntaxFactory.TokenList(
-        SyntaxFactory.Token(SyntaxKind.InternalKeyword),
-        SyntaxFactory.Token(SyntaxKind.PartialKeyword));
-
-    public static SyntaxTokenList PrivateTokenList { get; } = SyntaxFactory.TokenList(
-        SyntaxFactory.Token(SyntaxKind.PrivateKeyword));
-
-    public static SyntaxTokenList PrivateProtectedTokenList { get; } = SyntaxFactory.TokenList(
-        SyntaxFactory.Token(SyntaxKind.PrivateKeyword),
-        SyntaxFactory.Token(SyntaxKind.ProtectedKeyword));
-
-    public static SyntaxTokenList PrivateStaticExternTokenList { get; } = SyntaxFactory.TokenList(
-        SyntaxFactory.Token(SyntaxKind.PrivateKeyword),
-        SyntaxFactory.Token(SyntaxKind.StaticKeyword),
-        SyntaxFactory.Token(SyntaxKind.ExternKeyword));
-
-    public static SyntaxTokenList ProtectedTokenList { get; } = SyntaxFactory.TokenList(SyntaxFactory.Token(
-        SyntaxKind.ProtectedKeyword));
-
-    public static SyntaxTokenList ProtectedInternalTokenList { get; } = SyntaxFactory.TokenList(
-        SyntaxFactory.Token(SyntaxKind.ProtectedKeyword),
-        SyntaxFactory.Token(SyntaxKind.InternalKeyword));
-
-    public static SyntaxTokenList PublicTokenList { get; } = SyntaxFactory.TokenList(
-        SyntaxFactory.Token(SyntaxKind.PublicKeyword));
-
-    public static AccessorListSyntax GetAndSetAccessorList()
-    {
-        return SyntaxFactory.AccessorList(SyntaxFactory.List(
-        [
-            SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(SemicolonToken),
-            SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithSemicolonToken(SemicolonToken)
-        ]));
-    }
+    public static AccessorListSyntax GetAndSetAccessorList { get; } = SyntaxFactory.AccessorList(SyntaxFactory.List(
+    [
+        SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(SemicolonToken),
+        SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithSemicolonToken(SemicolonToken)
+    ]));
 
     public static AssignmentExpressionSyntax SimpleAssignmentExpression(ExpressionSyntax left, ExpressionSyntax right)
     {
         return SyntaxFactory.AssignmentExpression(SyntaxKind.SimpleAssignmentExpression, left, right);
     }
 
+    public static BinaryExpressionSyntax BitwiseOrExpression(ExpressionSyntax left, ExpressionSyntax right)
+    {
+        return SyntaxFactory.BinaryExpression(SyntaxKind.BitwiseOrExpression, left, right);
+    }
+
     public static ConstructorDeclarationSyntax WithEmptyBlockBody(this ConstructorDeclarationSyntax constructor)
     {
-        return constructor.WithBody(SyntaxFactory.Block());
+        return constructor.WithBody(EmptyBlock);
     }
 
     public static ConstructorInitializerSyntax BaseConstructorInitializer(ArgumentListSyntax? argumentList = null)
@@ -107,9 +81,9 @@ internal static class FastSyntaxFactory
         return SyntaxFactory.ConstructorInitializer(SyntaxKind.BaseConstructorInitializer, argumentList);
     }
 
-    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(string name)
+    public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(string qualifiedName)
     {
-        return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(name));
+        return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(qualifiedName));
     }
 
     public static FileScopedNamespaceDeclarationSyntax FileScopedNamespaceDeclaration(INamespaceSymbol symbol)
@@ -119,7 +93,7 @@ internal static class FastSyntaxFactory
 
     public static InvocationExpressionSyntax NameOf(ExpressionSyntax argument)
     {
-        return SyntaxFactory.InvocationExpression(SyntaxFactory.IdentifierName("nameof"), SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(argument))));
+        return SyntaxFactory.InvocationExpression(NameOfIdentifier, SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(argument))));
     }
 
     public static LiteralExpressionSyntax StringLiteralExpression(string value)
@@ -135,6 +109,11 @@ internal static class FastSyntaxFactory
     public static ObjectCreationExpressionSyntax WithArgumentList(this ObjectCreationExpressionSyntax expression)
     {
         return expression.WithArgumentList(EmptyArgumentList);
+    }
+
+    public static ParameterSyntax Parameter(TypeSyntax type, SyntaxToken name)
+    {
+        return SyntaxFactory.Parameter(name).WithType(type);
     }
 
     public static TypeDeclarationSyntax PartialTypeDeclaration(INamedTypeSymbol typeSymbol)
@@ -157,11 +136,11 @@ internal static class FastSyntaxFactory
                 ImmutableArray.CreateRange(typeSymbol.TypeParameters, static tParam => SyntaxFactory.TypeParameter(tParam.Name)))));
         }
 
-        return typeDeclaration.WithModifiers(SyntaxFactory.TokenList(PartialKeyword));
+        return typeDeclaration.WithModifiers(PartialTokenList);
     }
 
-    public static UsingDirectiveSyntax UsingDirective(string name)
+    public static UsingDirectiveSyntax UsingDirective(string qualifiedName)
     {
-        return SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(name));
+        return SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(qualifiedName));
     }
 }

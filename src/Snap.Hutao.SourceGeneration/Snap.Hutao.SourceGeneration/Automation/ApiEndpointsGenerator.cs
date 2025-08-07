@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
 

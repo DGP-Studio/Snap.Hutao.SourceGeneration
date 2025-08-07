@@ -10,12 +10,18 @@ using System.Collections.Immutable;
 using System.Linq;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncrementalGenerator
 {
+    private static readonly NameSyntax NameOfUnsafeAccessor = ParseName("global::System.Runtime.CompilerServices.UnsafeAccessor");
+    private static readonly NameSyntax NameOfUnsafeAccessorKind = ParseName("global::System.Runtime.CompilerServices.UnsafeAccessorKind");
+
+    private static readonly SyntaxToken IdentifierOfSelf = Identifier("self");
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         IncrementalValueProvider<ImmutableArray<GeneratorAttributeSyntaxContext>> provider = context.SyntaxProvider.ForAttributeWithMetadataName(
@@ -94,7 +100,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
                     GenerateUnsafeAccessorAttribute(fieldName)))))
                 .WithModifiers(PrivateStaticExternTokenList)
                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                    Parameter(Identifier("self")).WithType(containingType))))
+                    Parameter(IdentifierOfSelf).WithType(containingType))))
                 .WithSemicolonToken(SemicolonToken);
 
             accessMethodsBuilder.Add(method);
@@ -106,7 +112,6 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
         }
 
         CompilationUnitSyntax syntax = CompilationUnit()
-            .WithUsings(SingletonList(UsingDirective(ParseName("System.Runtime.CompilerServices"))))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(containingTypeSymbol.ContainingNamespace)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     PartialTypeDeclaration(containingTypeSymbol)
@@ -137,10 +142,10 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
 
     private static AttributeSyntax GenerateUnsafeAccessorAttribute(string fieldName)
     {
-        return Attribute(IdentifierName("UnsafeAccessor"))
+        return Attribute(NameOfUnsafeAccessor)
             .WithArgumentList(AttributeArgumentList(SeparatedList<AttributeArgumentSyntax>(
                 [
-                    AttributeArgument(SimpleMemberAccessExpression(IdentifierName("UnsafeAccessorKind"), IdentifierName("Field"))),
+                    AttributeArgument(SimpleMemberAccessExpression(NameOfUnsafeAccessorKind, IdentifierName("Field"))),
                     AttributeArgument(StringLiteralExpression(fieldName)).WithNameEquals(NameEquals("Name")),
                 ])));
     }

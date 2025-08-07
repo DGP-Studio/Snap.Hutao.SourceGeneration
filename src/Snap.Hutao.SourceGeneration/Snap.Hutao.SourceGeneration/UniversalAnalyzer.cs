@@ -103,7 +103,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        if (methodSymbol.ReturnType.IsOrInheritsFrom("System.Threading.Tasks.Task"))
+        if (methodSymbol.ReturnType.HasOrInheritsFromFullyQualifiedMetadataName("System.Threading.Tasks.Task"))
         {
             Location location = methodSyntax.ReturnType.GetLocation();
             Diagnostic diagnostic = Diagnostic.Create(UseValueTaskIfPossibleDescriptor, location);

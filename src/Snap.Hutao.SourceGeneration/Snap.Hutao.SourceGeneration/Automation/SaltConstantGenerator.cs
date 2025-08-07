@@ -4,7 +4,7 @@
 using Microsoft.CodeAnalysis;
 using System;
 using System.Net.Http;
-using System.Runtime.Serialization;
+using System.Text.Json;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
 
@@ -20,7 +20,7 @@ internal sealed class SaltConstantGenerator : IIncrementalGenerator
             try
             {
                 string body = new HttpClient().GetStringAsync("https://internal.snapgenshin.com/Archive/Salt/Latest").GetAwaiter().GetResult();
-                return JsonParser.FromJson<Response<SaltLatest>>(body);
+                return JsonSerializer.Deserialize<Response<SaltLatest>>(body);
             }
             catch
             {
@@ -82,22 +82,25 @@ internal sealed class SaltConstantGenerator : IIncrementalGenerator
 
     private sealed class Response<T>
     {
-        [DataMember(Name = "data")]
-        public T Data { get; set; } = default!;
+        public required T Data { get; init; }
     }
 
+    // ReSharper disable InconsistentNaming
     internal sealed class SaltLatest
     {
-        public string CNVersion { get; set; } = default!;
+        public required string CNVersion { get; init; }
 
-        public string CNK2 { get; set; } = default!;
 
-        public string CNLK2 { get; set; } = default!;
+        public required string CNK2 { get; init; }
 
-        public string OSVersion { get; set; } = default!;
 
-        public string OSK2 { get; set; } = default!;
+        public required string CNLK2 { get; init; }
 
-        public string OSLK2 { get; set; } = default!;
+        public required string OSVersion { get; init; }
+
+        public required string OSK2 { get; init; }
+
+        public required string OSLK2 { get; init; }
     }
+    // ReSharper restore InconsistentNaming
 }

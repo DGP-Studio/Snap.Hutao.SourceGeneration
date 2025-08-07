@@ -61,7 +61,7 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
             
             namespace {{context3.Symbol.ContainingNamespace}};
             
-            partial class {{context3.Symbol.ToDisplayString(SymbolDisplayFormats.QualifiedNonNullableFormat)}}
+            partial class {{context3.Symbol.ToDisplayString(SymbolDisplayFormats.NonNullableFormat)}}
             {
                 [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(XamlUnloadObjectOverrideGenerator)}}", "1.0.0.0")]
                 public override void UnloadObjectOverride(DependencyObject unloadableObject)

@@ -67,12 +67,12 @@ internal sealed class CommandGenerator : IIncrementalGenerator
             ? $", {canExecute}"
             : string.Empty;
 
-        string commandType = context2.Symbol.ReturnType.IsOrInheritsFrom("System.Threading.Tasks.Task")
+        string commandType = context2.Symbol.ReturnType.HasOrInheritsFromFullyQualifiedMetadataName("System.Threading.Tasks.Task")
             ? "AsyncRelayCommand"
             : "RelayCommand";
 
         string genericParameter = context2.Symbol.Parameters.ElementAtOrDefault(0) is IParameterSymbol parameter
-            ? $"<{parameter.Type.ToDisplayString(SymbolDisplayFormats.FullyQualifiedNonNullableFormat)}>"
+            ? $"<{parameter.Type.ToDisplayString(SymbolDisplayFormats.NonNullableQualifiedFormat)}>"
             : string.Empty;
 
         string commandFullType = $"{commandType}{genericParameter}";
