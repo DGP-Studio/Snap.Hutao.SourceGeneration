@@ -139,7 +139,7 @@ public sealed class ResxGenerator : IIncrementalGenerator
                     }
                 }
 
-                [System.ComponentModel.EditorBrowsableAttribute(System.ComponentModel.EditorBrowsableState.Advanced)]
+                [global::System.ComponentModel.EditorBrowsableAttribute(global::System.ComponentModel.EditorBrowsableState.Advanced)]
                 public static global::System.Globalization.CultureInfo? Culture { get; set; }
 
                 [return:global::System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute("defaultValue")]
@@ -309,11 +309,11 @@ public sealed class ResxGenerator : IIncrementalGenerator
                         }
 
                     """);
-                
+
                 enumBuilder.AppendLine($"""
                     /// {comment}
                     {ToCSharpNameIdentifier(entry.Name!)},
-                                             
+
                 """);
 
                 if (entry.Values.FirstOrDefault() is string value)

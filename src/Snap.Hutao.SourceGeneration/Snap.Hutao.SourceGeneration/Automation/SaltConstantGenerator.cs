@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using System;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
 
@@ -36,7 +37,17 @@ internal sealed class SaltConstantGenerator : IIncrementalGenerator
 
     private static void GenerateSaltConstants(IncrementalGeneratorPostInitializationContext context)
     {
-        Response<SaltLatest>? saltInfo = LazySaltInfo.Value;
+        Response<SaltLatest>? saltInfo;
+        try
+        {
+            string body = new HttpClient().GetStringAsync("https://internal.snapgenshin.com/Archive/Salt/Latest").GetAwaiter().GetResult();
+            saltInfo = JsonSerializer.Deserialize<Response<SaltLatest>>(body);
+        }
+        catch (Exception ex)
+        {
+            context.AddSource("Error.g.cs", ex.ToString());
+            return;
+        }
 
         string code;
         if (saltInfo is null)
@@ -82,6 +93,7 @@ internal sealed class SaltConstantGenerator : IIncrementalGenerator
 
     private sealed class Response<T>
     {
+        [JsonPropertyName("data")]
         public required T Data { get; init; }
     }
 

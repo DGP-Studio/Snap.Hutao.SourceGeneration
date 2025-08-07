@@ -165,7 +165,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         context.AddSource("Snap.Hutao.Core.Annotation.Attributes.g.cs", coreAnnotation.ToFullString());
 
         SyntaxToken identifierOfHttpClientAttribute = Identifier("HttpClientAttribute");
-        TypeSyntax typeOfHttpClientConfiguration = ParseTypeName("global::Snap.Hutao.Core.Annotation.HttpClient.HttpClientConfiguration");
+        TypeSyntax typeOfHttpClientConfiguration = ParseTypeName("global::Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientConfiguration");
         SyntaxToken identifierOfConfiguration = Identifier("configuration");
         SyntaxToken identifierOfServiceType = Identifier("serviceType");
 
