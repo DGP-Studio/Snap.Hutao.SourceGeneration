@@ -11,6 +11,8 @@ internal static class SyntaxKeywords
 
     public static SyntaxToken ClassKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ClassKeyword);
 
+    public static SyntaxToken ConstKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ConstKeyword);
+
     public static SyntaxToken ExternKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ExternKeyword);
 
     public static SyntaxToken InternalKeyword { get; } = SyntaxFactory.Token(SyntaxKind.InternalKeyword);
@@ -34,4 +36,6 @@ internal static class SyntaxKeywords
     public static SyntaxToken StaticKeyword { get; } = SyntaxFactory.Token(SyntaxKind.StaticKeyword);
 
     public static SyntaxToken StructKeyword { get; } = SyntaxFactory.Token(SyntaxKind.StructKeyword);
+
+    public static SyntaxToken ThisKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ThisKeyword);
 }

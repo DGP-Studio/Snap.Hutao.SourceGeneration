@@ -44,7 +44,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     {
         IncrementalValuesProvider<GeneratorAttributeSyntaxContext> provider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
-                WellKnownAttributeNames.ConstructorGeneratedAttribute,
+                WellKnownMetadataNames.ConstructorGeneratedAttribute,
                 SyntaxNodeHelper.Is<ClassDeclarationSyntax>,
                 SyntaxContext.Transform);
 
@@ -154,7 +154,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         {
             if (interfaceSymbol.HasFullyQualifiedMetadataName("CommunityToolkit.Mvvm.Messaging.IRecipient`1"))
             {
-                TypeSyntax messageType = ParseTypeName(interfaceSymbol.TypeArguments.Single().ToDisplayString());
+                TypeSyntax messageType = ParseTypeName(interfaceSymbol.TypeArguments.Single().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
 
                 yield return ExpressionStatement(InvocationExpression(SimpleMemberAccessExpression(
                         TypeOfCommunityToolkitMvvmMessagingIMessengerExtensions,
@@ -206,7 +206,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            string fieldTypeString = fieldSymbol.Type.ToDisplayString();
+            string fieldTypeString = fieldSymbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             TypeSyntax fieldType = ParseTypeName(fieldTypeString);
             IdentifierNameSyntax fieldIdentifier = IdentifierName(fieldSymbol.Name);
             MemberAccessExpressionSyntax fieldAccess = SimpleMemberAccessExpression(ThisExpression(), fieldIdentifier);
@@ -214,13 +214,13 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             switch (fieldTypeString)
             {
                 // this.${fieldName} = serviceProvider;
-                case "System.IServiceProvider":
+                case "global::System.IServiceProvider":
                     yield return ExpressionStatement(SimpleAssignmentExpression(fieldAccess, IdentifierNameOfServiceProvider));
                     break;
 
                 // this.${fieldName} = httpClient;
                 // this.${fieldName} = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(${className}));
-                case "System.Net.Http.HttpClient":
+                case "global::System.Net.Http.HttpClient":
                     yield return ExpressionStatement(SimpleAssignmentExpression(
                         fieldAccess,
                         attributeData.HasNamedArgumentWith("ResolveHttpClient", true)
@@ -236,7 +236,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 // this.${fieldName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
                 // this.${fieldName} = serviceProvider.GetRequiredService<${fieldType}>();
                 default:
-                    if (fieldSymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownAttributeNames.FromKeyedServicesAttribute) ?? false) is { } fromKeyed)
+                    if (fieldSymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.FromKeyedServicesAttribute) ?? false) is { } fromKeyed)
                     {
                         yield return ExpressionStatement(SimpleAssignmentExpression(
                             fieldAccess,
@@ -262,7 +262,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            string propertyTypeString = propertySymbol.Type.ToDisplayString();
+            string propertyTypeString = propertySymbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
             TypeSyntax propertyType = ParseTypeName(propertyTypeString);
             IdentifierNameSyntax propertyIdentifier = IdentifierName(propertySymbol.Name);
             MemberAccessExpressionSyntax propertyAccess = SimpleMemberAccessExpression(ThisExpression(), propertyIdentifier);
@@ -270,13 +270,13 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             switch (propertyTypeString)
             {
                 // this.${fieldName} = serviceProvider;
-                case "System.IServiceProvider":
+                case "global::System.IServiceProvider":
                     yield return ExpressionStatement(SimpleAssignmentExpression(propertyAccess, IdentifierNameOfServiceProvider));
                     break;
 
                 // this.${fieldName} = httpClient;
                 // this.${fieldName} = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(${className}));
-                case "System.Net.Http.HttpClient":
+                case "global::System.Net.Http.HttpClient":
                     yield return ExpressionStatement(SimpleAssignmentExpression(
                         propertyAccess,
                         attributeData.HasNamedArgumentWith("ResolveHttpClient", true)
@@ -292,7 +292,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 // this.${fieldName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
                 // this.${fieldName} = serviceProvider.GetRequiredService<${fieldType}>();
                 default:
-                    if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownAttributeNames.FromKeyedServicesAttribute) ?? false) is { } fromKeyed)
+                    if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.FromKeyedServicesAttribute) ?? false) is { } fromKeyed)
                     {
                         ExpressionSyntax? argumentExpression = default;
                         if (fromKeyed.ApplicationSyntaxReference is { } syntaxRef && syntaxRef.GetSyntax(token) is AttributeSyntax syntax)

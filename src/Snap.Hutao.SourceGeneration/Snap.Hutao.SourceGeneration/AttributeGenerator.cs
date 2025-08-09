@@ -170,8 +170,6 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         SyntaxToken identifierOfServiceType = Identifier("serviceType");
 
         SyntaxToken identifierOfPrimaryHttpMessageHandlerAttribute = Identifier("PrimaryHttpMessageHandlerAttribute");
-        SyntaxToken identifierOfMaxConnectionsPerServer = Identifier("MaxConnectionsPerServer");
-        SyntaxToken identifierOfUseCookies = Identifier("UseCookies");
 
         CompilationUnitSyntax coreDependencyInjectionAnnotationHttpClient = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient")
@@ -207,10 +205,52 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
-                            PropertyDeclaration(IntType, identifierOfMaxConnectionsPerServer)
+                            PropertyDeclaration(IntType, "MaxAutomaticRedirections")
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(BoolType, identifierOfUseCookies)
+                            PropertyDeclaration(IntType, "MaxConnectionsPerServer")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            PropertyDeclaration(IntType, "MaxResponseDrainSize")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            PropertyDeclaration(IntType, "MaxResponseHeadersLength")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            // Unsupported: MeterFactory, PlaintextStreamFilter, PooledConnectionIdleTimeout, PooledConnectionLifetime
+                            // Unsupported: Proxy, RequestHeaderEncodingSelector, ResponseDrainTimeout, ResponseHeaderEncodingSelector
+                            // Unsupported: SslOptions
+                            PropertyDeclaration(BoolType, "PreAuthenticate")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            // Unsupported: KeepAlivePingTimeout
+                            PropertyDeclaration(ParseTypeName("global::System.Net.Http.HttpKeepAlivePingPolicy"), "KeepAlivePingPolicy")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            // Unsupported: KeepAlivePingDelay, ActivityHeadersPropagator
+                            PropertyDeclaration(BoolType, "AllowAutoRedirect")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            PropertyDeclaration(ParseTypeName("global::System.Net.DecompressionMethods"), "AutomaticDecompression")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            // Unsupported: ConnectCallback
+                            PropertyDeclaration(BoolType, "UseCookies")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            // Unsupported: CookieContainer, ConnectTimeout, DefaultProxyCredentials
+                            PropertyDeclaration(BoolType, "EnableMultipleHttp2Connections")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            PropertyDeclaration(BoolType, "EnableMultipleHttp3Connections")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            // Unsupported: Expect100ContinueTimeout
+                            PropertyDeclaration(IntType, "InitialHttp2StreamWindowSize")
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            // Unsupported: Credentials
+                            PropertyDeclaration(BoolType, "UseProxy")
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList)
                         ]))

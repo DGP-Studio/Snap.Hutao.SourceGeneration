@@ -5,150 +5,167 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Primitive;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.DependencyInjection;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class HttpClientGenerator : IIncrementalGenerator
 {
-    private const string AttributeName = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientAttribute";
+    private static readonly DiagnosticDescriptor InjectionShouldOmitDescriptor = new("SH201", "多余的 Injection/Service 特性", "HttpClient 特性已将 {0} 注册为 Transient 服务", "Quality", DiagnosticSeverity.Warning, true);
 
-    private const string HttpClientConfiguration = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientConfiguration.";
-    private const string PrimaryHttpMessageHandlerAttributeName = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.PrimaryHttpMessageHandlerAttribute";
-    private const string CRLF = "\r\n";
-
-    private static readonly DiagnosticDescriptor injectionShouldOmitDescriptor = new("SH201", "Injection 特性可以省略", "HttpClient 特性已将 {0} 注册为 Transient 服务", "Quality", DiagnosticSeverity.Warning, true);
+    private static readonly IdentifierNameSyntax IdentifierNameOfSocketsHttpHandler = IdentifierName("SocketsHttpHandler");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> injectionClasses = context.SyntaxProvider
-            .CreateSyntaxProvider(FilterAttributedClasses, HttpClientClass)
-            .Where(AttributedGeneratorSymbolContext.NotNull)
+        IncrementalValueProvider<ImmutableArray<GeneratorAttributeSyntaxContext>> provider = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                WellKnownMetadataNames.HttpClientAttribute,
+                SyntaxNodeHelper.Is<ClassDeclarationSyntax>,
+                SyntaxContext.Transform)
             .Collect();
 
-        context.RegisterImplementationSourceOutput(injectionClasses, GenerateAddHttpClientsImplementation);
+        context.RegisterSourceOutput(provider, GenerateWrapper);
     }
 
-    private static bool FilterAttributedClasses(SyntaxNode node, CancellationToken token)
+    private static void GenerateWrapper(SourceProductionContext production, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
     {
-        return node is ClassDeclarationSyntax classDeclarationSyntax
-            && classDeclarationSyntax.HasAttributeLists();
-    }
-
-    private static AttributedGeneratorSymbolContext HttpClientClass(GeneratorSyntaxContext context, CancellationToken token)
-    {
-        if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
+        try
         {
-            ImmutableArray<AttributeData> attributes = classSymbol.GetAttributes();
-            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() is AttributeName))
-            {
-                return new(context, classSymbol, attributes);
-            }
+            Generate(production, contexts);
+        }
+        catch (Exception e)
+        {
+            production.AddSource("Error.g.cs", e.ToString());
+        }
+    }
+
+    private static void Generate(SourceProductionContext production, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
+    {
+        if (contexts.IsDefaultOrEmpty)
+        {
+            return;
         }
 
-        return default;
+        TypeSyntax typeofIServiceCollection = ParseTypeName("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
+
+        CompilationUnitSyntax syntax = CompilationUnit()
+            .WithUsings(SingletonList(
+                UsingDirective("System.Net.Http")))
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection")
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                    ClassDeclaration("ServiceCollectionExtension")
+                        .WithModifiers(InternalStaticPartialList)
+                        .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                            MethodDeclaration(typeofIServiceCollection,"AddHttpClients")
+                                .WithModifiers(PublicStaticPartialList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(typeofIServiceCollection, Identifier("services"))
+                                        .WithModifiers(ThisList))))
+                                .WithBody(Block(List(
+                                    GenerateAddHttpClients(production, contexts))))))))))
+            .NormalizeWhitespace();
+
+        production.AddSource("Snap.Hutao.Core.DependencyInjection.ServiceCollectionExtension.g.cs", syntax.ToFullString());
     }
 
-    private static void GenerateAddHttpClientsImplementation(SourceProductionContext context, ImmutableArray<AttributedGeneratorSymbolContext> context2s)
+    private static IEnumerable<StatementSyntax> GenerateAddHttpClients(SourceProductionContext production, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
     {
-        StringBuilder sourceBuilder = new StringBuilder().Append($$"""
-            // Copyright (c) DGP Studio. All rights reserved.
-            // Licensed under the MIT license.
-
-            using System.Net.Http;
-            
-            namespace Snap.Hutao.Core.DependencyInjection;
-            
-            internal static partial class IocHttpClientConfiguration
-            {
-                [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(HttpClientGenerator)}}", "1.0.0.0")]
-                public static partial IServiceCollection AddHttpClients(this IServiceCollection services)
-                {
-            """);
-
-        FillUpWithAddHttpClient(sourceBuilder, context, context2s);
-
-        sourceBuilder.Append("""
-
-                    return services;
-                }
-            }
-            """);
-
-        context.AddSource("IocHttpClientConfiguration.g.cs", sourceBuilder.ToString());
-    }
-
-    private static void FillUpWithAddHttpClient(StringBuilder sourceBuilder, SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
-    {
-        List<string> lines = [];
-        StringBuilder lineBuilder = new();
-
-        foreach (AttributedGeneratorSymbolContext context in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (GeneratorAttributeSyntaxContext context in contexts)
         {
-            if (context.SingleOrDefaultAttribute(InjectionGenerator.AttributeName) is AttributeData injectionData)
+            if (context.TargetSymbol is not INamedTypeSymbol targetSymbol)
             {
-                if (injectionData.ConstructorArguments[0].ToCSharpString() is InjectionGenerator.InjectAsTransientName)
+                continue;
+            }
+
+            if (context.Attributes.Single() is not { } httpClient)
+            {
+                continue;
+            }
+
+            AttributeData? primaryHttpMessageHandler = default;
+
+            // SH201
+            foreach (AttributeData attribute in targetSymbol.GetAttributes())
+            {
+                if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.InjectionAttribute) is true &&
+                    attribute.ConstructorArguments.Length < 2 &&
+                    attribute.ConstructorArguments[0].ToCSharpString() is WellKnownMetadataNames.InjectAsTransientName &&
+                    context.TargetNode is BaseTypeDeclarationSyntax syntaxNode1)
                 {
-                    if (injectionData.ConstructorArguments.Length < 2)
-                    {
-                        if (context.SyntaxContext.Node is BaseTypeDeclarationSyntax syntax)
-                        {
-                            production.ReportDiagnostic(Diagnostic.Create(injectionShouldOmitDescriptor, syntax.Identifier.GetLocation(), context.SyntaxContext.Node));
-                        }
-                    }
+                    production.ReportDiagnostic(Diagnostic.Create(InjectionShouldOmitDescriptor, syntaxNode1.Identifier.GetLocation(), context.TargetNode));
+                }
+
+                if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.ServiceAttribute) is true &&
+                    attribute.ConstructorArguments.Length < 2 &&
+                    attribute.ConstructorArguments[0].ToCSharpString() is WellKnownMetadataNames.ServiceLifetimeTransient &&
+                    context.TargetNode is BaseTypeDeclarationSyntax syntaxNode2)
+                {
+                    production.ReportDiagnostic(Diagnostic.Create(InjectionShouldOmitDescriptor, syntaxNode2.Identifier.GetLocation(), context.TargetNode));
+                }
+
+                if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.PrimaryHttpMessageHandlerAttribute) is true)
+                {
+                    primaryHttpMessageHandler = attribute;
                 }
             }
 
-            lineBuilder.Clear().Append(CRLF);
-            lineBuilder.Append(@"        services.AddHttpClient<");
-
-            AttributeData httpClientData = context.SingleAttribute(AttributeName);
-            ImmutableArray<TypedConstant> arguments = httpClientData.ConstructorArguments;
-
-            if (arguments.Length == 2)
+            TypeSyntax targetType = ParseTypeName(targetSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            SeparatedSyntaxList<TypeSyntax> typeArguments = SingletonSeparatedList(targetType);
+            if (httpClient.ConstructorArguments is [_, { Value: ITypeSymbol type } _]) // [HttpClient(config, typeof(T))]
             {
-                lineBuilder.Append($"{arguments[1].Value}, ");
+                typeArguments = typeArguments.Insert(0, ParseTypeName(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
             }
 
-            lineBuilder.Append($"{context.Symbol.ToDisplayString()}>(");
-            lineBuilder.Append(arguments[0].ToCSharpString().Substring(HttpClientConfiguration.Length)).Append("Configuration)");
+            string configurationName = $"{httpClient.ConstructorArguments[0].ToCSharpString()[WellKnownMetadataNames.HttpClientConfiguration.Length..]}Configuration";
 
-            if (context.SingleOrDefaultAttribute(PrimaryHttpMessageHandlerAttributeName) is AttributeData handlerData)
+            InvocationExpressionSyntax invocation = InvocationExpression(
+                    SimpleMemberAccessExpression(
+                        IdentifierName("services"),
+                        GenericName(Identifier("AddHttpClient"))
+                            .WithTypeArgumentList(TypeArgumentList(typeArguments))))
+                .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                    Argument(IdentifierName(configurationName)))));
+
+            if (primaryHttpMessageHandler is not null && !primaryHttpMessageHandler.NamedArguments.IsEmpty)
             {
-                ImmutableArray<KeyValuePair<string, TypedConstant>> properties = handlerData.NamedArguments;
-                lineBuilder.Append("""
-                    .ConfigurePrimaryHttpMessageHandler((handler, provider) =>
-                            {
-                                SocketsHttpHandler typedHandler = (SocketsHttpHandler)handler;
-
-                    """);
-
-                foreach (KeyValuePair<string, TypedConstant> property in properties)
-                {
-                    lineBuilder.Append("            typedHandler.");
-                    lineBuilder.Append(property.Key);
-                    lineBuilder.Append(" = ");
-                    lineBuilder.Append(property.Value.ToCSharpString());
-                    lineBuilder.Append(';');
-                    lineBuilder.AppendLine();
-                }
-
-                lineBuilder.Append("        })");
+                invocation = InvocationExpression(SimpleMemberAccessExpression(
+                        invocation,
+                        IdentifierName("ConfigurePrimaryHttpMessageHandler")))
+                    .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                        Argument(ParenthesizedLambdaExpression()
+                            .WithParameterList(ParameterList(SeparatedList(
+                            [
+                                Parameter(Identifier("handler")),
+                                Parameter(Identifier("serviceProvider"))
+                            ])))
+                            .WithBlock(Block(List(
+                                GenerateConfigurePrimaryHttpMessageHandlerStatements(primaryHttpMessageHandler.NamedArguments))))))));
             }
 
-            lineBuilder.Append(';');
-
-            lines.Add(lineBuilder.ToString());
+            yield return ExpressionStatement(invocation);
         }
 
-        foreach (string line in lines.OrderBy(x => x))
+        yield return ReturnStatement(IdentifierName("services"));
+    }
+
+    private static IEnumerable<StatementSyntax> GenerateConfigurePrimaryHttpMessageHandlerStatements(ImmutableArray<KeyValuePair<string, TypedConstant>> namedArguments)
+    {
+        yield return LocalDeclarationStatement(VariableDeclaration(IdentifierNameOfSocketsHttpHandler)
+            .WithVariables(SingletonSeparatedList(
+                VariableDeclarator(Identifier("typedHandler"))
+                    .WithInitializer(EqualsValueClause(CastExpression(IdentifierNameOfSocketsHttpHandler, IdentifierName("handler")))))));
+
+        foreach ((string name, TypedConstant typedConstant) in namedArguments)
         {
-            sourceBuilder.Append(line);
+            yield return ExpressionStatement(SimpleAssignmentExpression(
+                SimpleMemberAccessExpression(IdentifierName("typedHandler"), IdentifierName(name)),
+                ParseExpression(typedConstant.ToCSharpString())));
         }
     }
 }

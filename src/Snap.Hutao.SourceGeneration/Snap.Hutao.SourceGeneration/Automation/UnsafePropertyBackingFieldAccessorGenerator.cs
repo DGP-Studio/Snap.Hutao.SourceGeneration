@@ -25,7 +25,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         IncrementalValueProvider<ImmutableArray<GeneratorAttributeSyntaxContext>> provider = context.SyntaxProvider.ForAttributeWithMetadataName(
-            WellKnownAttributeNames.FieldAccessAttribute,
+            WellKnownMetadataNames.FieldAccessAttribute,
             SyntaxNodeHelper.Is<PropertyDeclarationSyntax>,
             SyntaxContext.Transform)
             .Collect();

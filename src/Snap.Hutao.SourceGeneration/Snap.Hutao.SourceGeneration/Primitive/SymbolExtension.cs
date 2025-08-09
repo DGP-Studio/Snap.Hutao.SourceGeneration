@@ -49,7 +49,7 @@ internal static class SymbolExtension
     {
         foreach (AttributeData attribute in symbol.GetAttributes())
         {
-            if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(name) == true)
+            if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(name) is true)
             {
                 return true;
             }

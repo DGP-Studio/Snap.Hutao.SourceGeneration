@@ -39,6 +39,10 @@ internal static class FastSyntaxFactory
 
     public static SyntaxTokenList InternalSealedTokenList { get; } = SyntaxFactory.TokenList(InternalKeyword, SealedKeyword);
 
+    public static SyntaxTokenList InternalStaticTokenList { get; } = SyntaxFactory.TokenList(InternalKeyword, StaticKeyword);
+
+    public static SyntaxTokenList InternalStaticPartialList { get; } = SyntaxFactory.TokenList(InternalKeyword, StaticKeyword, PartialKeyword);
+
     public static SyntaxTokenList InternalPartialTokenList { get; } = SyntaxFactory.TokenList(InternalKeyword, PartialKeyword);
 
     public static SyntaxTokenList PartialTokenList { get; } = SyntaxFactory.TokenList(PartialKeyword);
@@ -54,6 +58,12 @@ internal static class FastSyntaxFactory
     public static SyntaxTokenList ProtectedInternalTokenList { get; } = SyntaxFactory.TokenList(ProtectedKeyword, InternalKeyword);
 
     public static SyntaxTokenList PublicTokenList { get; } = SyntaxFactory.TokenList(PublicKeyword);
+
+    public static SyntaxTokenList PublicConstList { get; } = SyntaxFactory.TokenList(PublicKeyword, ConstKeyword);
+
+    public static SyntaxTokenList PublicStaticPartialList { get; } = SyntaxFactory.TokenList(PublicKeyword, StaticKeyword, PartialKeyword);
+
+    public static SyntaxTokenList ThisList { get; } = SyntaxFactory.TokenList(ThisKeyword);
 
     public static AccessorListSyntax GetAndSetAccessorList { get; } = SyntaxFactory.AccessorList(SyntaxFactory.List(
     [
