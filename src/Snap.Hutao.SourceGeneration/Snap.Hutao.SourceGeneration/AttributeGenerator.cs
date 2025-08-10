@@ -68,6 +68,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreAnnotation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.Annotation")
+                .WithLeadingTrivia(NullableEnableList())
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfCommandAttribute)
@@ -173,6 +174,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreDependencyInjectionAnnotationHttpClient = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient")
+                .WithLeadingTrivia(NullableEnableList())
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfHttpClientAttribute)
@@ -272,6 +274,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreDependencyInjectionAnnotation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation")
+                .WithLeadingTrivia(NullableEnableList())
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     EnumDeclaration(enumIdentifierOfInjectAs)
@@ -352,6 +355,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax resourceLocalization = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Resource.Localization")
+                .WithLeadingTrivia(NullableEnableList())
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfLocalizationAttribute)
@@ -379,6 +383,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax interceptsLocation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("System.Runtime.CompilerServices")
+                .WithLeadingTrivia(NullableEnableList())
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration(identifierOfInterceptsLocationAttribute)
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsMethod, allowMultiple: true)))
@@ -405,6 +410,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         {
             arguments = arguments.Add(AllowMultipleTrue);
         }
+
         if (!inherited)
         {
             arguments = arguments.Add(InheritedFalse);

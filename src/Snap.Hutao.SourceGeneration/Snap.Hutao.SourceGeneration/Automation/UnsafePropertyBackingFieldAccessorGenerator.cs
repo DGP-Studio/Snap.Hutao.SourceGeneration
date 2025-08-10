@@ -20,8 +20,6 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
     private static readonly NameSyntax NameOfUnsafeAccessor = ParseName("global::System.Runtime.CompilerServices.UnsafeAccessor");
     private static readonly NameSyntax NameOfUnsafeAccessorKind = ParseName("global::System.Runtime.CompilerServices.UnsafeAccessorKind");
 
-    private static readonly SyntaxToken IdentifierOfSelf = Identifier("self");
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         IncrementalValueProvider<ImmutableArray<GeneratorAttributeSyntaxContext>> provider = context.SyntaxProvider.ForAttributeWithMetadataName(
@@ -63,7 +61,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
             return;
         }
 
-        TypeSyntax containingType = ParseTypeName(containingTypeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+        TypeSyntax containingType = ParseTypeName(containingTypeSymbol.GetFullyQualifiedNameWithNullabilityAnnotations());
 
         ImmutableDictionary<IPropertySymbol, string> propertyBackingFieldNames = GetPropertyBackingFieldNames(containingTypeSymbol, contexts);
         ImmutableArray<MethodDeclarationSyntax>.Builder accessMethodsBuilder = ImmutableArray.CreateBuilder<MethodDeclarationSyntax>(contexts.Length);
@@ -88,7 +86,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
             // { get; set; } or { set; } => ref
             bool readOnly = propertySymbol.SetMethod is null || propertySymbol.SetMethod.IsInitOnly;
 
-            TypeSyntax type = ParseTypeName(propertySymbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            TypeSyntax type = ParseTypeName(propertySymbol.Type.GetFullyQualifiedName());
             RefTypeSyntax refType = RefType(type);
             if (readOnly)
             {
@@ -100,7 +98,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
                     GenerateUnsafeAccessorAttribute(fieldName)))))
                 .WithModifiers(PrivateStaticExternTokenList)
                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                    Parameter(IdentifierOfSelf).WithType(containingType))))
+                    Parameter(Identifier("self")).WithType(containingType))))
                 .WithSemicolonToken(SemicolonToken);
 
             accessMethodsBuilder.Add(method);
@@ -113,6 +111,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
 
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(containingTypeSymbol.ContainingNamespace)
+                .WithLeadingTrivia(NullableEnableList())
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     PartialTypeDeclaration(containingTypeSymbol)
                         .WithMembers(List<MemberDeclarationSyntax>(accessMethodsBuilder.ToImmutable()))))))

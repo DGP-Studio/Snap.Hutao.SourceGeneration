@@ -19,26 +19,16 @@ namespace Snap.Hutao.SourceGeneration.Automation;
 [Generator(LanguageNames.CSharp)]
 internal sealed class ConstructorGenerator : IIncrementalGenerator
 {
-    private static readonly TypeSyntax TypeOfCommunityToolkitMvvmMessagingIMessenger = ParseTypeName("global::CommunityToolkit.Mvvm.Messaging.IMessenger");
-    private static readonly TypeSyntax TypeOfSystemNetHttpIHttpClientFactory = ParseTypeName("global::System.Net.Http.IHttpClientFactory");
-    private static readonly TypeSyntax TypeOfSystemNetHttpHttpClient = ParseTypeName("global::System.Net.Http.HttpClient");
-    private static readonly TypeSyntax TypeOfSystemIServiceProvider = ParseTypeName("global::System.IServiceProvider");
-    private static readonly TypeSyntax TypeOfCommunityToolkitMvvmMessagingIMessengerExtensions = ParseTypeName("global::CommunityToolkit.Mvvm.Messaging.IMessengerExtensions");
-
-    private static readonly IdentifierNameSyntax IdentifierNameOfInitializeComponent = IdentifierName("InitializeComponent");
-    private static readonly IdentifierNameSyntax IdentifierNameOfServiceProvider = IdentifierName("serviceProvider");
-    private static readonly IdentifierNameSyntax IdentifierNameOfHttpClient = IdentifierName("httpClient");
-    private static readonly IdentifierNameSyntax IdentifierNameOfPreConstruct = IdentifierName("PreConstruct");
-    private static readonly IdentifierNameSyntax IdentifierNameOfPostConstruct = IdentifierName("PostConstruct");
-    private static readonly IdentifierNameSyntax IdentifierNameOfCreateClient = IdentifierName("CreateClient");
-
-    private static readonly GenericNameSyntax GenericNameOfGetRequiredService = GenericName("GetRequiredService");
-    private static readonly GenericNameSyntax GenericNameOfGetRequiredKeyedService = GenericName("GetRequiredKeyedService");
-
-    private static readonly SyntaxToken IdentifierOfServiceProvider = Identifier("serviceProvider");
-    private static readonly SyntaxToken IdentifierOfHttpClient = Identifier("httpClient");
-    private static readonly SyntaxToken IdentifierOfPreConstruct = Identifier("PreConstruct");
-    private static readonly SyntaxToken IdentifierOfPostConstruct = Identifier("PostConstruct");
+    private static readonly TypeSyntax TypeOfCommunityToolkitMvvmMessagingIMessenger =
+        ParseTypeName("global::CommunityToolkit.Mvvm.Messaging.IMessenger");
+    private static readonly TypeSyntax TypeOfCommunityToolkitMvvmMessagingIMessengerExtensions =
+        ParseTypeName("global::CommunityToolkit.Mvvm.Messaging.IMessengerExtensions");
+    private static readonly TypeSyntax TypeOfSystemNetHttpIHttpClientFactory =
+        ParseTypeName("global::System.Net.Http.IHttpClientFactory");
+    private static readonly TypeSyntax TypeOfSystemNetHttpHttpClient =
+        ParseTypeName("global::System.Net.Http.HttpClient");
+    private static readonly TypeSyntax TypeOfSystemIServiceProvider =
+        ParseTypeName("global::System.IServiceProvider");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -74,6 +64,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(context.TargetSymbol.ContainingNamespace)
+                .WithLeadingTrivia(NullableEnableList())
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     PartialTypeDeclaration(classSymbol)
                         .WithMembers(List<MemberDeclarationSyntax>(
@@ -86,15 +77,15 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                             .. GeneratePropertyDeclarations(classSymbol, production.CancellationToken),
 
                             // PreConstruct & PostConstruct Method declarations
-                            MethodDeclaration(VoidType, IdentifierOfPreConstruct)
+                            MethodDeclaration(VoidType, Identifier("PreConstruct"))
                                 .WithModifiers(TokenList(PartialKeyword))
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(TypeOfSystemIServiceProvider, IdentifierOfServiceProvider))))
+                                    Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")))))
                                 .WithSemicolonToken(SemicolonToken),
-                            MethodDeclaration(VoidType, IdentifierOfPostConstruct)
+                            MethodDeclaration(VoidType, Identifier("PostConstruct"))
                                 .WithModifiers(TokenList(Token(SyntaxKind.PartialKeyword)))
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(TypeOfSystemIServiceProvider, IdentifierOfServiceProvider))))
+                                    Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")))))
                                 .WithSemicolonToken(SemicolonToken)
                         ]))))))
             .NormalizeWhitespace();
@@ -107,11 +98,11 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         ConstructorDeclarationSyntax constructorDeclaration = ConstructorDeclaration(Identifier(classSymbol.Name))
             .WithModifiers(PublicTokenList);
 
-        if (attributeData.HasNamedArgumentWith("CallBaseConstructor", true))
+        if (attributeData.HasNamedArgument("CallBaseConstructor", true))
         {
             constructorDeclaration = constructorDeclaration.WithInitializer(
                 BaseConstructorInitializer(ArgumentList(SingletonSeparatedList(
-                    Argument(IdentifierNameOfServiceProvider)))));
+                    Argument(IdentifierName("serviceProvider"))))));
         }
 
         return constructorDeclaration;
@@ -120,11 +111,11 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     private static ParameterListSyntax GenerateConstructorParameterList(AttributeData attributeData)
     {
         ImmutableArray<ParameterSyntax>.Builder parameters = ImmutableArray.CreateBuilder<ParameterSyntax>();
-        parameters.Add(Parameter(TypeOfSystemIServiceProvider, IdentifierOfServiceProvider));
+        parameters.Add(Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")));
 
-        if (attributeData.HasNamedArgumentWith("ResolveHttpClient", true))
+        if (attributeData.HasNamedArgument("ResolveHttpClient", true))
         {
-            parameters.Add(Parameter(TypeOfSystemNetHttpHttpClient, IdentifierOfHttpClient));
+            parameters.Add(Parameter(TypeOfSystemNetHttpHttpClient, Identifier("httpClient")));
         }
 
         return ParameterList(SeparatedList(parameters.ToImmutable()));
@@ -133,9 +124,9 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     private static IEnumerable<StatementSyntax> GenerateConstructorBodyStatements(INamedTypeSymbol classSymbol, AttributeData attributeData, CancellationToken token)
     {
         // Call PreConstruct
-        yield return ExpressionStatement(InvocationExpression(IdentifierNameOfPreConstruct)
+        yield return ExpressionStatement(InvocationExpression(IdentifierName("PreConstruct"))
             .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                Argument(IdentifierNameOfServiceProvider)))));
+                Argument(IdentifierName("serviceProvider"))))));
 
         // Assign fields
         foreach (StatementSyntax? statementSyntax in GenerateConstructorBodyFieldAssignments(classSymbol, attributeData, token))
@@ -154,7 +145,8 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         {
             if (interfaceSymbol.HasFullyQualifiedMetadataName("CommunityToolkit.Mvvm.Messaging.IRecipient`1"))
             {
-                TypeSyntax messageType = ParseTypeName(interfaceSymbol.TypeArguments.Single().ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+                string messageTypeString = interfaceSymbol.TypeArguments.Single().GetFullyQualifiedNameWithNullabilityAnnotations();
+                TypeSyntax messageType = ParseTypeName(messageTypeString);
 
                 yield return ExpressionStatement(InvocationExpression(SimpleMemberAccessExpression(
                         TypeOfCommunityToolkitMvvmMessagingIMessengerExtensions,
@@ -162,22 +154,22 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                             .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(messageType)))))
                     .WithArgumentList(ArgumentList(SeparatedList(
                     [
-                        Argument(ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, TypeOfCommunityToolkitMvvmMessagingIMessenger)),
+                        Argument(ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), TypeOfCommunityToolkitMvvmMessagingIMessenger)),
                         Argument(ThisExpression())
                     ]))));
             }
         }
 
         // Call InitializeComponent if specified
-        if (attributeData.HasNamedArgumentWith("InitializeComponent", true))
+        if (attributeData.HasNamedArgument("InitializeComponent", true))
         {
-            yield return ExpressionStatement(InvocationExpression(IdentifierNameOfInitializeComponent));
+            yield return ExpressionStatement(InvocationExpression(IdentifierName("InitializeComponent")));
         }
 
         // Call PostConstruct
-        yield return ExpressionStatement(InvocationExpression(IdentifierNameOfPostConstruct)
+        yield return ExpressionStatement(InvocationExpression(IdentifierName("PostConstruct"))
             .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                Argument(IdentifierNameOfServiceProvider)))));
+                Argument(IdentifierName("serviceProvider"))))));
     }
 
     private static IEnumerable<StatementSyntax> GenerateConstructorBodyFieldAssignments(INamedTypeSymbol classSymbol, AttributeData attributeData, CancellationToken token)
@@ -206,7 +198,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            string fieldTypeString = fieldSymbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            string fieldTypeString = fieldSymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations();
             TypeSyntax fieldType = ParseTypeName(fieldTypeString);
             IdentifierNameSyntax fieldIdentifier = IdentifierName(fieldSymbol.Name);
             MemberAccessExpressionSyntax fieldAccess = SimpleMemberAccessExpression(ThisExpression(), fieldIdentifier);
@@ -215,7 +207,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
             {
                 // this.${fieldName} = serviceProvider;
                 case "global::System.IServiceProvider":
-                    yield return ExpressionStatement(SimpleAssignmentExpression(fieldAccess, IdentifierNameOfServiceProvider));
+                    yield return ExpressionStatement(SimpleAssignmentExpression(fieldAccess, IdentifierName("serviceProvider")));
                     break;
 
                 // this.${fieldName} = httpClient;
@@ -223,12 +215,12 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 case "global::System.Net.Http.HttpClient":
                     yield return ExpressionStatement(SimpleAssignmentExpression(
                         fieldAccess,
-                        attributeData.HasNamedArgumentWith("ResolveHttpClient", true)
-                            ? IdentifierNameOfHttpClient
+                        attributeData.HasNamedArgument("ResolveHttpClient", true)
+                            ? IdentifierName("httpClient")
                             : InvocationExpression(
                                     SimpleMemberAccessExpression(
-                                        ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, TypeOfSystemNetHttpIHttpClientFactory),
-                                        IdentifierNameOfCreateClient))
+                                        ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), TypeOfSystemNetHttpIHttpClientFactory),
+                                        IdentifierName("CreateClient")))
                                 .WithArgumentList(ArgumentList(SingletonSeparatedList(
                                     Argument(NameOf(IdentifierName(classSymbol.Name))))))));
                     break;
@@ -240,13 +232,13 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                     {
                         yield return ExpressionStatement(SimpleAssignmentExpression(
                             fieldAccess,
-                            ServiceProviderGetRequiredKeyedService(IdentifierNameOfServiceProvider, fieldType, ParseExpression(fromKeyed.ConstructorArguments.Single().ToCSharpString()))));
+                            ServiceProviderGetRequiredKeyedService(IdentifierName("serviceProvider"), fieldType, TypedConstantInfo.Create(fromKeyed.ConstructorArguments.Single()).GetSyntax())));
                     }
                     else
                     {
                         yield return ExpressionStatement(SimpleAssignmentExpression(
                             fieldAccess,
-                            ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, fieldType)));
+                            ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), fieldType)));
                     }
                     break;
             }
@@ -262,59 +254,47 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            string propertyTypeString = propertySymbol.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+            string propertyTypeString = propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations();
             TypeSyntax propertyType = ParseTypeName(propertyTypeString);
             IdentifierNameSyntax propertyIdentifier = IdentifierName(propertySymbol.Name);
             MemberAccessExpressionSyntax propertyAccess = SimpleMemberAccessExpression(ThisExpression(), propertyIdentifier);
 
             switch (propertyTypeString)
             {
-                // this.${fieldName} = serviceProvider;
+                // this.${propertyName} = serviceProvider;
                 case "global::System.IServiceProvider":
-                    yield return ExpressionStatement(SimpleAssignmentExpression(propertyAccess, IdentifierNameOfServiceProvider));
+                    yield return ExpressionStatement(SimpleAssignmentExpression(propertyAccess, IdentifierName("serviceProvider")));
                     break;
 
-                // this.${fieldName} = httpClient;
-                // this.${fieldName} = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(${className}));
+                // this.${propertyName} = httpClient;
+                // this.${propertyName} = serviceProvider.GetRequiredService<System.Net.Http.IHttpClientFactory>().CreateClient(nameof(${className}));
                 case "global::System.Net.Http.HttpClient":
                     yield return ExpressionStatement(SimpleAssignmentExpression(
                         propertyAccess,
-                        attributeData.HasNamedArgumentWith("ResolveHttpClient", true)
-                            ? IdentifierNameOfHttpClient
+                        attributeData.HasNamedArgument("ResolveHttpClient", true)
+                            ? IdentifierName("httpClient")
                             : InvocationExpression(
                                     SimpleMemberAccessExpression(
-                                        ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, TypeOfSystemNetHttpIHttpClientFactory),
-                                        IdentifierNameOfCreateClient))
+                                        ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), TypeOfSystemNetHttpIHttpClientFactory),
+                                        IdentifierName("CreateClient")))
                                 .WithArgumentList(ArgumentList(SingletonSeparatedList(
                                     Argument(NameOf(IdentifierName(classSymbol.Name))))))));
                     break;
 
-                // this.${fieldName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
-                // this.${fieldName} = serviceProvider.GetRequiredService<${fieldType}>();
+                // this.${propertyName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
+                // this.${propertyName} = serviceProvider.GetRequiredService<${fieldType}>();
                 default:
                     if (propertySymbol.GetAttributes().SingleOrDefault(data => data.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.FromKeyedServicesAttribute) ?? false) is { } fromKeyed)
                     {
-                        ExpressionSyntax? argumentExpression = default;
-                        if (fromKeyed.ApplicationSyntaxReference is { } syntaxRef && syntaxRef.GetSyntax(token) is AttributeSyntax syntax)
-                        {
-                            argumentExpression = syntax.ArgumentList?.Arguments.Single().Expression;
-                        }
-
-                        if (argumentExpression is null)
-                        {
-                            TypedConstant key = fromKeyed.ConstructorArguments.Single();
-                            argumentExpression = ParseExpression(key.ToCSharpString());
-                        }
-
                         yield return ExpressionStatement(SimpleAssignmentExpression(
                             propertyAccess,
-                            ServiceProviderGetRequiredKeyedService(IdentifierNameOfServiceProvider, propertyType, argumentExpression)));
+                            ServiceProviderGetRequiredKeyedService(IdentifierName("serviceProvider"), propertyType, TypedConstantInfo.Create(fromKeyed.ConstructorArguments.Single()).GetSyntax())));
                     }
                     else
                     {
                         yield return ExpressionStatement(SimpleAssignmentExpression(
                             propertyAccess,
-                            ServiceProviderGetRequiredService(IdentifierNameOfServiceProvider, propertyType)));
+                            ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), propertyType)));
                     }
                     break;
             }
@@ -330,7 +310,8 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 continue;
             }
 
-            yield return PropertyDeclaration(ParseTypeName(propertySymbol.Type.ToDisplayString()), Identifier(propertySymbol.Name))
+            TypeSyntax propertyType = ParseTypeName(propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations());
+            yield return PropertyDeclaration(propertyType, Identifier(propertySymbol.Name))
                 .WithModifiers(propertySymbol.DeclaredAccessibility.ToSyntaxTokenList(PartialKeyword))
                 .WithAccessorList(AccessorList(SingletonList(
                     AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
@@ -348,14 +329,14 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     {
         return InvocationExpression(SimpleMemberAccessExpression(
             serviceProvider,
-            GenericNameOfGetRequiredService.WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))));
+            GenericName("GetRequiredService").WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))));
     }
 
     private static InvocationExpressionSyntax ServiceProviderGetRequiredKeyedService(ExpressionSyntax serviceProvider, TypeSyntax type, ExpressionSyntax argument)
     {
         return InvocationExpression(SimpleMemberAccessExpression(
                 serviceProvider,
-                GenericNameOfGetRequiredKeyedService.WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))))
+                GenericName("GetRequiredKeyedService").WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))))
             .WithArgumentList(ArgumentList(SingletonSeparatedList(Argument(argument))));
     }
 }

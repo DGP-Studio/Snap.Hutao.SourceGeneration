@@ -1,4 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
+﻿// Copyright (c) DGP Studio. All rights reserved.
+// Licensed under the MIT license.
+
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
@@ -97,6 +100,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
             CompilationUnitSyntax compilation = CompilationUnit()
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(extraInfo?.Namespace ?? "Snap.Hutao.Web")
+                    .WithLeadingTrivia(NullableEnableList())
                     .WithMembers(
                         List<MemberDeclarationSyntax>(
                         [

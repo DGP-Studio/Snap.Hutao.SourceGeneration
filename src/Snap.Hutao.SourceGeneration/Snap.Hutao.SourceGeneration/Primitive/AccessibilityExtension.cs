@@ -10,9 +10,9 @@ namespace Snap.Hutao.SourceGeneration.Primitive;
 
 internal static class AccessibilityExtension
 {
-    public static SyntaxTokenList ToSyntaxTokenList(this Accessibility accessibility, SyntaxToken additionalToken)
+    public static SyntaxTokenList ToSyntaxTokenList(this Accessibility accessibility)
     {
-        SyntaxTokenList list = accessibility switch
+        return accessibility switch
         {
             Accessibility.NotApplicable => TokenList(),
             Accessibility.Private => PrivateTokenList,
@@ -21,9 +21,12 @@ internal static class AccessibilityExtension
             Accessibility.Internal => InternalTokenList,
             Accessibility.ProtectedOrInternal => ProtectedInternalTokenList,
             Accessibility.Public => PublicTokenList,
-            _ => throw new ArgumentOutOfRangeException(nameof(accessibility), accessibility, "Unknown accessibility")
+            _ => TokenList()
         };
+    }
 
-        return list.Add(additionalToken);
+    public static SyntaxTokenList ToSyntaxTokenList(this Accessibility accessibility, SyntaxToken additionalToken)
+    {
+        return ToSyntaxTokenList(accessibility).Add(additionalToken);
     }
 }

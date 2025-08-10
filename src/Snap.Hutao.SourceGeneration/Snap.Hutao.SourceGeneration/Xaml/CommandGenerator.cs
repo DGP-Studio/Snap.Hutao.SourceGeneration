@@ -77,7 +77,7 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
         string commandFullType = $"{commandType}{genericParameter}";
 
-        string concurrentExecution = commandInfo.HasNamedArgumentWith<bool>("AllowConcurrentExecutions", value => value)
+        string concurrentExecution = commandInfo.HasNamedArgument<bool>("AllowConcurrentExecutions", value => value)
             ? ", AsyncRelayCommandOptions.AllowConcurrentExecutions"
             : string.Empty;
 

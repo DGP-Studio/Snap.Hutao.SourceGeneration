@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
-internal static class IGroupingExtension
+internal static class GroupingExtension
 {
     public static void Deconstruct<TKey, TElement>(this IGrouping<TKey, TElement> grouping, out TKey key, out IEnumerable<TElement> elements)
     {

@@ -14,7 +14,7 @@ using System.Threading;
 namespace Snap.Hutao.SourceGeneration.DependencyInjection;
 
 [Generator(LanguageNames.CSharp)]
-internal sealed class InjectionGenerator : IIncrementalGenerator
+internal sealed class ServiceGenerator : IIncrementalGenerator
 {
     public const string AttributeName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectionAttribute";
     public const string InjectAsSingletonName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.Singleton";
@@ -64,7 +64,7 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
             
             internal static partial class ServiceCollectionExtension
             {
-                [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(InjectionGenerator)}}", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(ServiceGenerator)}}", "1.0.0.0")]
                 public static partial IServiceCollection AddInjections(this IServiceCollection services)
                 {
             """);
@@ -94,7 +94,7 @@ internal sealed class InjectionGenerator : IIncrementalGenerator
 
             string injectAsName = arguments[0].ToCSharpString();
 
-            bool hasKey = injectionInfo.TryGetNamedArgumentValue("Key", out TypedConstant key);
+            bool hasKey = injectionInfo.TryGetNamedArgument("Key", out TypedConstant key);
 
             switch (injectAsName, hasKey)
             {

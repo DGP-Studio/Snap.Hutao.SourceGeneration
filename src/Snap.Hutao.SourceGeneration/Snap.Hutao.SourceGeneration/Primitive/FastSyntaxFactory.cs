@@ -126,6 +126,11 @@ internal static class FastSyntaxFactory
         return SyntaxFactory.Parameter(name).WithType(type);
     }
 
+    public static SyntaxTriviaList NullableEnableList()
+    {
+        return SyntaxFactory.TriviaList(SyntaxFactory.Trivia(SyntaxFactory.NullableDirectiveTrivia(SyntaxFactory.Token(SyntaxKind.EnableKeyword), true)));
+    }
+
     public static TypeDeclarationSyntax PartialTypeDeclaration(INamedTypeSymbol typeSymbol)
     {
         string typeName = typeSymbol.Name;

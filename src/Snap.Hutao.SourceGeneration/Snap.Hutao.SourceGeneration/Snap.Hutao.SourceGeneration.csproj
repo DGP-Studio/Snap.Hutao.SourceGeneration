@@ -20,6 +20,7 @@
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" PrivateAssets="all" Version="2025.2.0" />
     <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" PrivateAssets="all" Version="9.0.7" />
+    <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" Version="4.14.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" Version="4.14.0" />
     <PackageReference Include="PolySharp" PrivateAssets="all" Version="1.15.0" />

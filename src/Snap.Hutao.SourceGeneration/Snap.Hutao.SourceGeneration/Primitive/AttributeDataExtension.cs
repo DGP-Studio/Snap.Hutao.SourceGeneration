@@ -4,44 +4,58 @@
 using Microsoft.CodeAnalysis;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
 internal static class AttributeDataExtension
 {
-    public static bool HasNamedArgumentWith<TValue>(this AttributeData data, string key, Func<TValue, bool> predicate)
+    public static bool HasNamedArgument<T>(this AttributeData attributeData, string name, T? value)
     {
-        foreach ((string name, TypedConstant constant) in data.NamedArguments)
+        foreach ((string propertyName, TypedConstant constant) in attributeData.NamedArguments)
         {
-            if (name == key && constant.Value is TValue typedValue && predicate(typedValue))
+            if (propertyName == name)
             {
-                return true;
+                return constant.Value is T argumentValue && EqualityComparer<T?>.Default.Equals(argumentValue, value);
             }
         }
 
         return false;
     }
 
-    public static bool HasNamedArgumentWith(this AttributeData data, string key, bool value)
+    public static bool HasNamedArgument<TValue>(this AttributeData attributeData, string name, Func<TValue, bool> predicate)
     {
-        foreach ((string name, TypedConstant constant) in data.NamedArguments)
+        foreach ((string propertyName, TypedConstant constant) in attributeData.NamedArguments)
         {
-            if (name == key && constant.Value is bool typedValue && typedValue == value)
+            if (propertyName == name)
             {
-                return true;
+                return constant.Value is TValue argumentValue && predicate(argumentValue);
             }
         }
 
         return false;
     }
 
-    public static bool TryGetNamedArgumentValue(this AttributeData data, string key, out TypedConstant value)
+    public static bool TryGetConstructorArgument<T>(this AttributeData attributeData, int index, [NotNullWhen(true)] out T? result)
     {
-        foreach (KeyValuePair<string, TypedConstant> pair in data.NamedArguments)
+        if (attributeData.ConstructorArguments.Length > index &&
+            attributeData.ConstructorArguments[index].Value is T argument)
         {
-            if (pair.Key == key)
+            result = argument;
+            return true;
+        }
+
+        result = default;
+        return false;
+    }
+
+    public static bool TryGetNamedArgument(this AttributeData data, string key, out TypedConstant value)
+    {
+        foreach ((string propertyName, TypedConstant constant) in data.NamedArguments)
+        {
+            if (propertyName == key)
             {
-                value = pair.Value;
+                value = constant;
                 return true;
             }
         }

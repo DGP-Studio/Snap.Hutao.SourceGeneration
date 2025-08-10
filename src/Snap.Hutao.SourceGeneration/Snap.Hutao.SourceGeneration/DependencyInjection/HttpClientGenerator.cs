@@ -19,7 +19,8 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
 {
     private static readonly DiagnosticDescriptor InjectionShouldOmitDescriptor = new("SH201", "多余的 Injection/Service 特性", "HttpClient 特性已将 {0} 注册为 Transient 服务", "Quality", DiagnosticSeverity.Warning, true);
 
-    private static readonly IdentifierNameSyntax IdentifierNameOfSocketsHttpHandler = IdentifierName("SocketsHttpHandler");
+    private static readonly TypeSyntax TypeOfSystemNetHttpSocketsHttpHandler = ParseTypeName("global::System.Net.Http.SocketsHttpHandler");
+    private static readonly TypeSyntax TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection = ParseTypeName("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -52,20 +53,18 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
             return;
         }
 
-        TypeSyntax typeofIServiceCollection = ParseTypeName("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
-
         CompilationUnitSyntax syntax = CompilationUnit()
-            .WithUsings(SingletonList(
-                UsingDirective("System.Net.Http")))
+            .WithUsings(SingletonList(UsingDirective("System.Net.Http")))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection")
+                .WithLeadingTrivia(NullableEnableList())
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration("ServiceCollectionExtension")
                         .WithModifiers(InternalStaticPartialList)
                         .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                            MethodDeclaration(typeofIServiceCollection,"AddHttpClients")
+                            MethodDeclaration(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection,"AddHttpClients")
                                 .WithModifiers(PublicStaticPartialList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(typeofIServiceCollection, Identifier("services"))
+                                    Parameter(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection, Identifier("services"))
                                         .WithModifiers(ThisList))))
                                 .WithBody(Block(List(
                                     GenerateAddHttpClients(production, contexts))))))))))
@@ -115,11 +114,11 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
                 }
             }
 
-            TypeSyntax targetType = ParseTypeName(targetSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
+            TypeSyntax targetType = ParseTypeName(targetSymbol.GetFullyQualifiedName());
             SeparatedSyntaxList<TypeSyntax> typeArguments = SingletonSeparatedList(targetType);
             if (httpClient.ConstructorArguments is [_, { Value: ITypeSymbol type } _]) // [HttpClient(config, typeof(T))]
             {
-                typeArguments = typeArguments.Insert(0, ParseTypeName(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+                typeArguments = typeArguments.Insert(0, ParseTypeName(type.GetFullyQualifiedName()));
             }
 
             string configurationName = $"{httpClient.ConstructorArguments[0].ToCSharpString()[WellKnownMetadataNames.HttpClientConfiguration.Length..]}Configuration";
@@ -156,16 +155,16 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
 
     private static IEnumerable<StatementSyntax> GenerateConfigurePrimaryHttpMessageHandlerStatements(ImmutableArray<KeyValuePair<string, TypedConstant>> namedArguments)
     {
-        yield return LocalDeclarationStatement(VariableDeclaration(IdentifierNameOfSocketsHttpHandler)
+        yield return LocalDeclarationStatement(VariableDeclaration(TypeOfSystemNetHttpSocketsHttpHandler)
             .WithVariables(SingletonSeparatedList(
                 VariableDeclarator(Identifier("typedHandler"))
-                    .WithInitializer(EqualsValueClause(CastExpression(IdentifierNameOfSocketsHttpHandler, IdentifierName("handler")))))));
+                    .WithInitializer(EqualsValueClause(CastExpression(TypeOfSystemNetHttpSocketsHttpHandler, IdentifierName("handler")))))));
 
         foreach ((string name, TypedConstant typedConstant) in namedArguments)
         {
             yield return ExpressionStatement(SimpleAssignmentExpression(
                 SimpleMemberAccessExpression(IdentifierName("typedHandler"), IdentifierName(name)),
-                ParseExpression(typedConstant.ToCSharpString())));
+                TypedConstantInfo.Create(typedConstant).GetSyntax()));
         }
     }
 }
