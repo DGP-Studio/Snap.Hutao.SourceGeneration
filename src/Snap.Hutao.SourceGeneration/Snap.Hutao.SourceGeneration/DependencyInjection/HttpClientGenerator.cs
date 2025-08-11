@@ -31,7 +31,7 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
                 SyntaxContext.Transform)
             .Collect();
 
-        context.RegisterSourceOutput(provider, GenerateWrapper);
+        context.RegisterImplementationSourceOutput(provider, GenerateWrapper);
     }
 
     private static void GenerateWrapper(SourceProductionContext production, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
@@ -42,7 +42,7 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
         }
         catch (Exception e)
         {
-            production.AddSource("Error.g.cs", e.ToString());
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", e.ToString());
         }
     }
 
@@ -56,7 +56,7 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithUsings(SingletonList(UsingDirective("System.Net.Http")))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection")
-                .WithLeadingTrivia(NullableEnableList())
+                .WithLeadingTrivia(NullableEnableList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration("ServiceCollectionExtension")
                         .WithModifiers(InternalStaticPartialList)
@@ -66,11 +66,10 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
                                     Parameter(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection, Identifier("services"))
                                         .WithModifiers(ThisList))))
-                                .WithBody(Block(List(
-                                    GenerateAddHttpClients(production, contexts))))))))))
+                                .WithBody(Block(List(GenerateAddHttpClients(production, contexts))))))))))
             .NormalizeWhitespace();
 
-        production.AddSource("Snap.Hutao.Core.DependencyInjection.ServiceCollectionExtension.g.cs", syntax.ToFullString());
+        production.AddSource("ServiceCollectionExtension.g.cs", syntax.ToFullString());
     }
 
     private static IEnumerable<StatementSyntax> GenerateAddHttpClients(SourceProductionContext production, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
@@ -92,14 +91,6 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
             // SH201
             foreach (AttributeData attribute in targetSymbol.GetAttributes())
             {
-                if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.InjectionAttribute) is true &&
-                    attribute.ConstructorArguments.Length < 2 &&
-                    attribute.ConstructorArguments[0].ToCSharpString() is WellKnownMetadataNames.InjectAsTransientName &&
-                    context.TargetNode is BaseTypeDeclarationSyntax syntaxNode1)
-                {
-                    production.ReportDiagnostic(Diagnostic.Create(InjectionShouldOmitDescriptor, syntaxNode1.Identifier.GetLocation(), context.TargetNode));
-                }
-
                 if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.ServiceAttribute) is true &&
                     attribute.ConstructorArguments.Length < 2 &&
                     attribute.ConstructorArguments[0].ToCSharpString() is WellKnownMetadataNames.ServiceLifetimeTransient &&
@@ -116,7 +107,7 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
 
             TypeSyntax targetType = ParseTypeName(targetSymbol.GetFullyQualifiedName());
             SeparatedSyntaxList<TypeSyntax> typeArguments = SingletonSeparatedList(targetType);
-            if (httpClient.ConstructorArguments is [_, { Value: ITypeSymbol type } _]) // [HttpClient(config, typeof(T))]
+            if (httpClient.TryGetConstructorArgument(1, out ITypeSymbol? type)) // [HttpClient(config, typeof(T))]
             {
                 typeArguments = typeArguments.Insert(0, ParseTypeName(type.GetFullyQualifiedName()));
             }

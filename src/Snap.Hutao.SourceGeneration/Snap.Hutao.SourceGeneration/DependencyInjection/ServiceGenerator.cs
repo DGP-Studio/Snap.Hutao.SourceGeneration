@@ -5,145 +5,124 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Primitive;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.DependencyInjection;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class ServiceGenerator : IIncrementalGenerator
 {
-    public const string AttributeName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectionAttribute";
-    public const string InjectAsSingletonName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.Singleton";
-    public const string InjectAsTransientName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.Transient";
-    public const string InjectAsScopedName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.Scoped";
-    public const string InjectAsHostedServiceName = "Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs.HostedService";
+    private static readonly DiagnosticDescriptor InvalidServiceLifetimeDescriptor = new("SH101", "不支持的 ServiceLifetime 枚举值", "不支持生成 {0} 服务", "Quality", DiagnosticSeverity.Error, true);
 
-    private static readonly DiagnosticDescriptor invalidInjectionDescriptor = new("SH101", "无效的 InjectAs 枚举值", "不支持生成 {0} 配置", "Quality", DiagnosticSeverity.Error, true);
+    private static readonly TypeSyntax TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection = ParseTypeName("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> injectionClasses = context.SyntaxProvider
-            .CreateSyntaxProvider(FilterAttributedClasses, InjectionClass)
-            .Where(AttributedGeneratorSymbolContext.NotNull)
+        IncrementalValueProvider<ImmutableArray<GeneratorAttributeSyntaxContext>> provider = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                WellKnownMetadataNames.ServiceAttribute,
+                SyntaxNodeHelper.Is<ClassDeclarationSyntax>,
+                SyntaxContext.Transform)
             .Collect();
 
-        context.RegisterImplementationSourceOutput(injectionClasses, GenerateAddInjectionsImplementation);
+        context.RegisterImplementationSourceOutput(provider, GenerateWrapper);
     }
 
-    private static bool FilterAttributedClasses(SyntaxNode node, CancellationToken token)
+    private static void GenerateWrapper(SourceProductionContext production, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
     {
-        return node is ClassDeclarationSyntax classDeclarationSyntax
-            && classDeclarationSyntax.HasAttributeLists();
-    }
-
-    private static AttributedGeneratorSymbolContext InjectionClass(GeneratorSyntaxContext context, CancellationToken token)
-    {
-        if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
+        try
         {
-            ImmutableArray<AttributeData> attributes = classSymbol.GetAttributes();
-            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() == AttributeName))
-            {
-                return new(context, classSymbol, attributes);
-            }
+            Generate(production, contexts);
+        }
+        catch (Exception e)
+        {
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", e.ToString());
+        }
+    }
+
+    private static void Generate(SourceProductionContext production, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
+    {
+        if (contexts.IsDefaultOrEmpty)
+        {
+            return;
         }
 
-        return default;
+        CompilationUnitSyntax syntax = CompilationUnit()
+            .WithUsings(SingletonList(UsingDirective("Microsoft.Extensions.DependencyInjection")))
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection")
+                .WithLeadingTrivia(NullableEnableList)
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                    ClassDeclaration("ServiceCollectionExtension")
+                        .WithModifiers(InternalStaticPartialList)
+                        .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                            MethodDeclaration(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection, "AddServices")
+                                .WithModifiers(PublicStaticPartialList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection, Identifier("services"))
+                                        .WithModifiers(ThisList))))
+                                .WithBody(Block(List(GenerateAddServices(production, contexts))))))))))
+            .NormalizeWhitespace();
+
+        production.AddSource("ServiceCollectionExtension.g.cs", syntax.ToFullString());
     }
 
-    private static void GenerateAddInjectionsImplementation(SourceProductionContext context, ImmutableArray<AttributedGeneratorSymbolContext> context2s)
+    private static IEnumerable<StatementSyntax> GenerateAddServices(SourceProductionContext production, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
     {
-        StringBuilder sourceBuilder = new StringBuilder().Append($$"""
-            // Copyright (c) DGP Studio. All rights reserved.
-            // Licensed under the MIT license.
-
-            namespace Snap.Hutao.Core.DependencyInjection;
-            
-            internal static partial class ServiceCollectionExtension
-            {
-                [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(ServiceGenerator)}}", "1.0.0.0")]
-                public static partial IServiceCollection AddInjections(this IServiceCollection services)
-                {
-            """);
-
-        FillUpWithAddServices(sourceBuilder, context, context2s);
-        sourceBuilder.Append("""
-
-                    return services;
-                }
-            }
-            """);
-
-        context.AddSource("ServiceCollectionExtension.g.cs", sourceBuilder.ToString());
-    }
-
-    private static void FillUpWithAddServices(StringBuilder sourceBuilder, SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
-    {
-        List<string> lines = [];
-        StringBuilder lineBuilder = new();
-
-        foreach (AttributedGeneratorSymbolContext context in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
+        foreach (GeneratorAttributeSyntaxContext context in contexts)
         {
-            lineBuilder.Clear().AppendLine();
-
-            AttributeData injectionInfo = context.SingleAttribute(AttributeName);
-            ImmutableArray<TypedConstant> arguments = injectionInfo.ConstructorArguments;
-
-            string injectAsName = arguments[0].ToCSharpString();
-
-            bool hasKey = injectionInfo.TryGetNamedArgument("Key", out TypedConstant key);
-
-            switch (injectAsName, hasKey)
+            if (context.TargetSymbol is not INamedTypeSymbol targetSymbol)
             {
-                case (InjectAsSingletonName, false):
-                    lineBuilder.Append("        services.AddSingleton<");
-                    break;
-                case (InjectAsSingletonName, true):
-                    lineBuilder.Append("        services.AddKeyedSingleton<");
-                    break;
-                case (InjectAsTransientName, false):
-                    lineBuilder.Append("        services.AddTransient<");
-                    break;
-                case (InjectAsTransientName, true):
-                    lineBuilder.Append("        services.AddKeyedTransient<");
-                    break;
-                case (InjectAsScopedName, false):
-                    lineBuilder.Append("        services.AddScoped<");
-                    break;
-                case (InjectAsScopedName, true):
-                    lineBuilder.Append("        services.AddKeyedScoped<");
-                    break;
-                case (InjectAsHostedServiceName, _):
-                    lineBuilder.Append("        services.AddHostedService<");
-                    break;
-                default:
-                    production.ReportDiagnostic(Diagnostic.Create(invalidInjectionDescriptor, context.SyntaxContext.Node.GetLocation(), injectAsName));
-                    break;
+                continue;
             }
 
-            if (arguments.Length == 2)
+            if (context.Attributes.Single() is not { } service)
             {
-                lineBuilder.Append($"{arguments[1].Value}, ");
+                continue;
             }
 
-            if (hasKey)
+            TypeSyntax targetType = ParseTypeName(targetSymbol.GetFullyQualifiedName());
+            SeparatedSyntaxList<TypeSyntax> typeArguments = SingletonSeparatedList(targetType);
+            if (service.TryGetConstructorArgument(1, out ITypeSymbol? type)) // [Service(serviceLifetime, typeof(T))]
             {
-                lineBuilder.Append($"{context.Symbol.ToDisplayString()}>({key.ToCSharpString()});");
-            }
-            else
-            {
-                lineBuilder.Append($"{context.Symbol.ToDisplayString()}>();");
+                typeArguments = typeArguments.Insert(0, ParseTypeName(type.GetFullyQualifiedName()));
             }
 
-            lines.Add(lineBuilder.ToString());
+            string? serviceLifetime = service.ConstructorArguments[0].ToCSharpString() switch
+            {
+                WellKnownMetadataNames.ServiceLifetimeSingleton => "Singleton",
+                WellKnownMetadataNames.ServiceLifetimeScoped => "Scoped",
+                WellKnownMetadataNames.ServiceLifetimeTransient => "Transient",
+                _ => default
+            };
+
+            if (string.IsNullOrEmpty(serviceLifetime))
+            {
+                production.ReportDiagnostic(Diagnostic.Create(InvalidServiceLifetimeDescriptor, context.TargetNode.GetLocation(), service.ConstructorArguments[0].ToCSharpString()));
+                continue;
+            }
+
+            bool hasKey = service.TryGetNamedArgument("Key", out TypedConstant key);
+
+            ArgumentListSyntax argumentList = hasKey
+                ? ArgumentList(SingletonSeparatedList(
+                    Argument(TypedConstantInfo.Create(key).GetSyntax())))
+                : EmptyArgumentList;
+
+            InvocationExpressionSyntax invocation = InvocationExpression(
+                    SimpleMemberAccessExpression(
+                        IdentifierName("services"),
+                        GenericName($"Add{(hasKey ? "Keyed" : string.Empty)}{serviceLifetime}")
+                            .WithTypeArgumentList(TypeArgumentList(typeArguments))))
+                .WithArgumentList(argumentList);
+
+            yield return ExpressionStatement(invocation);
         }
 
-        foreach (string line in lines.OrderBy(x => x))
-        {
-            sourceBuilder.Append(line);
-        }
+        yield return ReturnStatement(IdentifierName("services"));
     }
 }

@@ -7,7 +7,6 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Runtime.CompilerServices;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
-using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
 
 [assembly:InternalsVisibleTo("Snap.Hutao.SourceGeneration.Test")]
 
@@ -68,7 +67,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreAnnotation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.Annotation")
-                .WithLeadingTrivia(NullableEnableList())
+                .WithLeadingTrivia(NullableEnableList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfCommandAttribute)
@@ -174,7 +173,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreDependencyInjectionAnnotationHttpClient = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient")
-                .WithLeadingTrivia(NullableEnableList())
+                .WithLeadingTrivia(NullableEnableList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfHttpClientAttribute)
@@ -261,9 +260,6 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.Attributes.g.cs", coreDependencyInjectionAnnotationHttpClient.ToFullString());
 
-        SyntaxToken enumIdentifierOfInjectAs = Identifier("InjectAs");
-        SyntaxToken identifierOfInjectionAttribute = Identifier("InjectionAttribute");
-        TypeSyntax typeOfInjectAs = ParseTypeName("global::Snap.Hutao.Core.DependencyInjection.Annotation.InjectAs");
         SyntaxToken identifierOfServiceLifetime = Identifier("serviceLifetime");
         SyntaxToken identifierOfNamedArgKey = Identifier("Key");
 
@@ -274,47 +270,11 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreDependencyInjectionAnnotation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation")
-                .WithLeadingTrivia(NullableEnableList())
+                .WithLeadingTrivia(NullableEnableList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
-                    EnumDeclaration(enumIdentifierOfInjectAs)
-                        .WithModifiers(TokenList(InternalKeyword))
-                        .WithMembers(SeparatedList(
-                        [
-                            EnumMemberDeclaration(Identifier("Singleton")),
-                            EnumMemberDeclaration(Identifier("Transient")),
-                            EnumMemberDeclaration(Identifier("Scoped")),
-                            EnumMemberDeclaration(Identifier("HostedService"))
-                        ])),
-                    ClassDeclaration(identifierOfInjectionAttribute)
-                        .WithAttributeLists(List(
-                        [
-                            JetBrainsAnnotationsMeansImplicitUseAttributeList,
-                            SystemAttributeUsageList(AttributeTargetsClass, allowMultiple: true, inherited: false),
-                        ]))
-                        .WithModifiers(InternalSealedTokenList)
-                        .WithBaseList(SystemAttributeBaseList)
-                        .WithMembers(List<MemberDeclarationSyntax>(
-                        [
-                            ConstructorDeclaration(identifierOfInjectionAttribute)
-                                .WithModifiers(PublicTokenList)
-                                .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(typeOfInjectAs, identifierOfServiceLifetime))))
-                                .WithEmptyBlockBody(),
-                            ConstructorDeclaration(identifierOfInjectionAttribute)
-                                .WithModifiers(PublicTokenList)
-                                .WithParameterList(ParameterList(SeparatedList(
-                                [
-                                    Parameter(typeOfInjectAs, identifierOfServiceLifetime),
-                                    Parameter(TypeOfSystemType, identifierOfServiceType)
-                                ])))
-                                .WithEmptyBlockBody(),
-                            PropertyDeclaration(ObjectType, identifierOfNamedArgKey)
-                                .WithModifiers(PublicTokenList)
-                                .WithAccessorList(GetAndSetAccessorList)
-                        ])),
                     ClassDeclaration(identifierOfServiceAttribute)
-                        .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsProperty, inherited: false)))
+                        .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList).WithMembers(List<MemberDeclarationSyntax>(
                         [
@@ -350,15 +310,15 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.Attributes.g.cs", coreDependencyInjectionAnnotation.ToFullString());
 
-        SyntaxToken identifierOfLocalizationAttribute = Identifier("LocalizationAttribute");
+        SyntaxToken identifierOfExtendedEnumAttribute = Identifier("ExtendedEnumAttribute");
         SyntaxToken identifierOfLocalizationKeyAttribute = Identifier("LocalizationKeyAttribute");
 
         CompilationUnitSyntax resourceLocalization = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Resource.Localization")
-                .WithLeadingTrivia(NullableEnableList())
+                .WithLeadingTrivia(NullableEnableList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
-                    ClassDeclaration(identifierOfLocalizationAttribute)
+                    ClassDeclaration(identifierOfExtendedEnumAttribute)
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsEnum)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList),
@@ -383,7 +343,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax interceptsLocation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("System.Runtime.CompilerServices")
-                .WithLeadingTrivia(NullableEnableList())
+                .WithLeadingTrivia(NullableEnableList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration(identifierOfInterceptsLocationAttribute)
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsMethod, allowMultiple: true)))

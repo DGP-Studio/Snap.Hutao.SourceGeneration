@@ -45,7 +45,7 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
 
     public override int GetHashCode()
     {
-        if (this.array is not T[] array)
+        if (this.array is not { } array)
         {
             return 0;
         }

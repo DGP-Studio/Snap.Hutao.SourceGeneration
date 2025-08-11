@@ -4,13 +4,10 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Operations;
 using System;
 using System.Collections.Immutable;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
-using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
@@ -55,101 +52,6 @@ internal abstract record TypedConstantInfo
             (TypedConstantKind.Enum, object value) => new Enum(arg.Type!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), value),
             _ => throw new ArgumentException("Invalid typed constant type"),
         };
-    }
-
-    public static bool TryCreate(
-        IOperation operation,
-        SemanticModel semanticModel,
-        ExpressionSyntax expression,
-        CancellationToken token,
-        [NotNullWhen(true)] out TypedConstantInfo? info)
-    {
-        if (operation.ConstantValue.HasValue)
-        {
-            // Enum values are constant but need to be checked explicitly in this case
-            if (operation.Type?.TypeKind is TypeKind.Enum)
-            {
-                info = new Enum(operation.Type!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), operation.ConstantValue.Value!);
-
-                return true;
-            }
-
-            // Handle all other constant literals normally
-            info = operation.ConstantValue.Value switch
-            {
-                null => new Null(),
-                string text => new Primitive.String(text),
-                bool flag => new Primitive.Boolean(flag),
-                byte b => new Primitive.Of<byte>(b),
-                char c => new Primitive.Of<char>(c),
-                double d => new Primitive.Of<double>(d),
-                float f => new Primitive.Of<float>(f),
-                int i => new Primitive.Of<int>(i),
-                long l => new Primitive.Of<long>(l),
-                sbyte sb => new Primitive.Of<sbyte>(sb),
-                short sh => new Primitive.Of<short>(sh),
-                uint ui => new Primitive.Of<uint>(ui),
-                ulong ul => new Primitive.Of<ulong>(ul),
-                ushort ush => new Primitive.Of<ushort>(ush),
-                _ => throw new ArgumentException("Invalid primitive type")
-            };
-
-            return true;
-        }
-
-        if (operation is ITypeOfOperation typeOfOperation)
-        {
-            info = new Type(typeOfOperation.TypeOperand.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
-
-            return true;
-        }
-
-        if (operation is IArrayCreationOperation)
-        {
-            string? elementTypeName = ((IArrayTypeSymbol?)operation.Type)?.ElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-
-            // If the element type is not available (since the attribute wasn't checked), just default to object
-            elementTypeName ??= "object";
-
-            InitializerExpressionSyntax? initializerExpression =
-                (expression as ImplicitArrayCreationExpressionSyntax)?.Initializer
-                ?? (expression as ArrayCreationExpressionSyntax)?.Initializer;
-
-            // No initializer found, just return an empty array
-            if (initializerExpression is null)
-            {
-                info = new Array(elementTypeName, ImmutableArray<TypedConstantInfo>.Empty);
-
-                return true;
-            }
-
-            using ImmutableArrayBuilder<TypedConstantInfo> items = ImmutableArrayBuilder<TypedConstantInfo>.Rent();
-
-            // Enumerate all array elements and extract serialized info for them
-            foreach (ExpressionSyntax initializationExpression in initializerExpression.Expressions)
-            {
-                if (semanticModel.GetOperation(initializationExpression, token) is not IOperation initializationOperation)
-                {
-                    goto Failure;
-                }
-
-                if (!TryCreate(initializationOperation, semanticModel, initializationExpression, token, out TypedConstantInfo? elementInfo))
-                {
-                    goto Failure;
-                }
-
-                items.Add(elementInfo);
-            }
-
-            info = new Array(elementTypeName, items.ToImmutable());
-
-            return true;
-        }
-
-        Failure:
-        info = null;
-
-        return false;
     }
 
     public abstract ExpressionSyntax GetSyntax();

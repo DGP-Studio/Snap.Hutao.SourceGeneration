@@ -42,7 +42,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         }
         catch (Exception ex)
         {
-            production.AddSource("Error.g.cs", ex.ToString());
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", ex.ToString());
         }
     }
 
@@ -100,7 +100,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
             CompilationUnitSyntax compilation = CompilationUnit()
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(extraInfo?.Namespace ?? "Snap.Hutao.Web")
-                    .WithLeadingTrivia(NullableEnableList())
+                    .WithLeadingTrivia(NullableEnableList)
                     .WithMembers(
                         List<MemberDeclarationSyntax>(
                         [

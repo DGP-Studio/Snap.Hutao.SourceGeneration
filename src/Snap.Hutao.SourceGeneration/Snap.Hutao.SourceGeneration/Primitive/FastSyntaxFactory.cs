@@ -23,6 +23,8 @@ internal static class FastSyntaxFactory
 
     public static LiteralExpressionSyntax TrueLiteralExpression { get; } = SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression);
 
+    public static NullableTypeSyntax NullableStringType { get; } = SyntaxFactory.NullableType(SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)));
+
     public static PredefinedTypeSyntax BoolType { get; } = SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.BoolKeyword));
 
     public static PredefinedTypeSyntax IntType { get; } = SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.IntKeyword));
@@ -61,9 +63,13 @@ internal static class FastSyntaxFactory
 
     public static SyntaxTokenList PublicConstList { get; } = SyntaxFactory.TokenList(PublicKeyword, ConstKeyword);
 
+    public static SyntaxTokenList PublicStaticList { get; } = SyntaxFactory.TokenList(PublicKeyword, StaticKeyword);
+
     public static SyntaxTokenList PublicStaticPartialList { get; } = SyntaxFactory.TokenList(PublicKeyword, StaticKeyword, PartialKeyword);
 
     public static SyntaxTokenList ThisList { get; } = SyntaxFactory.TokenList(ThisKeyword);
+
+    public static SyntaxTriviaList NullableEnableList { get; } = SyntaxFactory.TriviaList(SyntaxFactory.Trivia(SyntaxFactory.NullableDirectiveTrivia(SyntaxFactory.Token(SyntaxKind.EnableKeyword), true)));
 
     public static AccessorListSyntax GetAndSetAccessorList { get; } = SyntaxFactory.AccessorList(SyntaxFactory.List(
     [
@@ -79,6 +85,11 @@ internal static class FastSyntaxFactory
     public static BinaryExpressionSyntax BitwiseOrExpression(ExpressionSyntax left, ExpressionSyntax right)
     {
         return SyntaxFactory.BinaryExpression(SyntaxKind.BitwiseOrExpression, left, right);
+    }
+
+    public static BinaryExpressionSyntax CoalesceExpression(ExpressionSyntax left, ExpressionSyntax right)
+    {
+        return SyntaxFactory.BinaryExpression(SyntaxKind.CoalesceExpression, left, right);
     }
 
     public static ConstructorDeclarationSyntax WithEmptyBlockBody(this ConstructorDeclarationSyntax constructor)
@@ -124,11 +135,6 @@ internal static class FastSyntaxFactory
     public static ParameterSyntax Parameter(TypeSyntax type, SyntaxToken name)
     {
         return SyntaxFactory.Parameter(name).WithType(type);
-    }
-
-    public static SyntaxTriviaList NullableEnableList()
-    {
-        return SyntaxFactory.TriviaList(SyntaxFactory.Trivia(SyntaxFactory.NullableDirectiveTrivia(SyntaxFactory.Token(SyntaxKind.EnableKeyword), true)));
     }
 
     public static TypeDeclarationSyntax PartialTypeDeclaration(INamedTypeSymbol typeSymbol)

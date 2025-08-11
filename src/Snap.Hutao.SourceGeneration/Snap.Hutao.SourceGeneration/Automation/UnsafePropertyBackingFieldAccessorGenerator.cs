@@ -22,10 +22,11 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorAttributeSyntaxContext>> provider = context.SyntaxProvider.ForAttributeWithMetadataName(
-            WellKnownMetadataNames.FieldAccessAttribute,
-            SyntaxNodeHelper.Is<PropertyDeclarationSyntax>,
-            SyntaxContext.Transform)
+        IncrementalValueProvider<ImmutableArray<GeneratorAttributeSyntaxContext>> provider = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                WellKnownMetadataNames.FieldAccessAttribute,
+                SyntaxNodeHelper.Is<PropertyDeclarationSyntax>,
+                SyntaxContext.Transform)
             .Collect();
 
         context.RegisterSourceOutput(provider, GenerateWrapper);
@@ -39,7 +40,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
         }
         catch (Exception e)
         {
-            production.AddSource("Error.g.cs", e.ToString());
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", e.ToString());
         }
     }
 
@@ -111,7 +112,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
 
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(containingTypeSymbol.ContainingNamespace)
-                .WithLeadingTrivia(NullableEnableList())
+                .WithLeadingTrivia(NullableEnableList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     PartialTypeDeclaration(containingTypeSymbol)
                         .WithMembers(List<MemberDeclarationSyntax>(accessMethodsBuilder.ToImmutable()))))))
