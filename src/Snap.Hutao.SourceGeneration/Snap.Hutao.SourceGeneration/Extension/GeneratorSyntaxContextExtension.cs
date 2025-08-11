@@ -2,11 +2,10 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
-namespace Snap.Hutao.SourceGeneration.Primitive;
+namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class GeneratorSyntaxContextExtension
 {

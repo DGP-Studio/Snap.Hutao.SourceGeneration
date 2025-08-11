@@ -3,6 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Immutable;
 using System.Linq;
@@ -79,7 +80,7 @@ internal sealed class AdvancedCollectionViewItemGenerator : IIncrementalGenerato
             """);
 
 
-        production.AddSource($"{context3.Symbol.ToDisplayString().NormalizeSymbolName()}.g.cs", sourceBuilder.ToString());
+        production.AddSource($"{context3.Symbol.NormalizedFullyQualifiedName()}.g.cs", sourceBuilder.ToString());
     }
 
     private static string FillProperties(INamedTypeSymbol classSymbol)

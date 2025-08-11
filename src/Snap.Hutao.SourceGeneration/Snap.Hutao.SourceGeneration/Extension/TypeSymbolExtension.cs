@@ -2,10 +2,11 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using Snap.Hutao.SourceGeneration.Model;
 using System;
 using System.Linq;
 
-namespace Snap.Hutao.SourceGeneration.Primitive;
+namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class TypeSymbolExtension
 {

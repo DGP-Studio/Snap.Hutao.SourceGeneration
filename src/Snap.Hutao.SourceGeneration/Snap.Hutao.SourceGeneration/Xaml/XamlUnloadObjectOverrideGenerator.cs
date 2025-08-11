@@ -1,5 +1,6 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -71,6 +72,6 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
             }
             """);
 
-        production.AddSource($"{context3.Symbol.ToDisplayString().NormalizeSymbolName()}.ctor.g.cs", sourceBuilder.ToString());
+        production.AddSource($"{context3.Symbol.NormalizedFullyQualifiedName()}.ctor.g.cs", sourceBuilder.ToString());
     }
 }

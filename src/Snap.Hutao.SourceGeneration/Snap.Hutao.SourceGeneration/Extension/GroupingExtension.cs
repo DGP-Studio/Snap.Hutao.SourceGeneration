@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Snap.Hutao.SourceGeneration.Primitive;
+namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class GroupingExtension
 {

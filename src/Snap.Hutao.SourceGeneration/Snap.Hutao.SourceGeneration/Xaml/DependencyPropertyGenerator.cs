@@ -4,6 +4,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -147,7 +148,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                     """;
             }
 
-            production.AddSource($"{context.Symbol.ToDisplayString().NormalizeSymbolName()}.{propertyName}.g.cs", code);
+            production.AddSource($"{context.Symbol.NormalizedFullyQualifiedName()}.{propertyName}.g.cs", code);
         }
     }
 }

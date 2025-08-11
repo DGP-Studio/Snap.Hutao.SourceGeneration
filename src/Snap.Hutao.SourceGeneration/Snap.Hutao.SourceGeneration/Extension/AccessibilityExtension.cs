@@ -1,12 +1,11 @@
 ﻿// Copyright (c) DGP Studio. All rights reserved.
 // Licensed under the MIT license.
 
-using System;
 using Microsoft.CodeAnalysis;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
-namespace Snap.Hutao.SourceGeneration.Primitive;
+namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class AccessibilityExtension
 {

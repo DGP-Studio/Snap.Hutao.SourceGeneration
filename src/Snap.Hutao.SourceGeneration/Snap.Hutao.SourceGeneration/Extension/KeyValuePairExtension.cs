@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 
-namespace Snap.Hutao.SourceGeneration.Primitive;
+namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class KeyValuePairExtension
 {

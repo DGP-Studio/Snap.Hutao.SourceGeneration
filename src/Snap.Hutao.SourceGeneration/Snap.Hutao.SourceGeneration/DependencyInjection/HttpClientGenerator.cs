@@ -4,6 +4,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Model;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
@@ -94,9 +96,9 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
                 if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.ServiceAttribute) is true &&
                     attribute.ConstructorArguments.Length < 2 &&
                     attribute.ConstructorArguments[0].ToCSharpString() is WellKnownMetadataNames.ServiceLifetimeTransient &&
-                    context.TargetNode is BaseTypeDeclarationSyntax syntaxNode2)
+                    context.TargetNode is BaseTypeDeclarationSyntax syntaxNode)
                 {
-                    production.ReportDiagnostic(Diagnostic.Create(InjectionShouldOmitDescriptor, syntaxNode2.Identifier.GetLocation(), context.TargetNode));
+                    production.ReportDiagnostic(Diagnostic.Create(InjectionShouldOmitDescriptor, syntaxNode.Identifier.GetLocation(), context.TargetNode));
                 }
 
                 if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.PrimaryHttpMessageHandlerAttribute) is true)

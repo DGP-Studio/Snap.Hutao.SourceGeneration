@@ -2,11 +2,12 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Snap.Hutao.SourceGeneration.Primitive;
+namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class AttributeDataExtension
 {

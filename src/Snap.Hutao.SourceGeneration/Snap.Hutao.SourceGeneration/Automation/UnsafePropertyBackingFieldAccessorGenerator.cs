@@ -3,11 +3,13 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
@@ -62,9 +64,53 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
             return;
         }
 
-        TypeSyntax containingType = ParseTypeName(containingTypeSymbol.GetFullyQualifiedNameWithNullabilityAnnotations());
+        ImmutableDictionary<IPropertySymbol, string> propertyBackingFieldNames = GetPropertyBackingFieldNames(containingTypeSymbol, contexts, production.CancellationToken);
+        ImmutableArray<MethodDeclarationSyntax> accessMethods = GenerateAccessMethods(contexts, propertyBackingFieldNames, containingTypeSymbol, production.CancellationToken);
 
-        ImmutableDictionary<IPropertySymbol, string> propertyBackingFieldNames = GetPropertyBackingFieldNames(containingTypeSymbol, contexts);
+        if (accessMethods.Length <= 0)
+        {
+            return;
+        }
+
+        CompilationUnitSyntax syntax = CompilationUnit()
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(containingTypeSymbol.ContainingNamespace)
+                .WithLeadingTrivia(NullableEnableList)
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                    PartialTypeDeclaration(containingTypeSymbol)
+                        .WithMembers(List<MemberDeclarationSyntax>(accessMethods))))))
+            .NormalizeWhitespace();
+
+        production.AddSource($"{containingTypeSymbol.NormalizedFullyQualifiedName()}.g.cs", syntax.ToFullString());
+    }
+
+    private static ImmutableDictionary<IPropertySymbol, string> GetPropertyBackingFieldNames(INamedTypeSymbol containingTypeSymbol, ImmutableArray<GeneratorAttributeSyntaxContext> contexts, CancellationToken token)
+    {
+        ImmutableHashSet<IPropertySymbol> properties = contexts
+            .Select(context => context.TargetSymbol)
+            .OfType<IPropertySymbol>()
+            .ToImmutableHashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
+
+        token.ThrowIfCancellationRequested();
+        ImmutableDictionary<IPropertySymbol, string>.Builder builder = ImmutableDictionary.CreateBuilder<IPropertySymbol, string>(SymbolEqualityComparer.Default);
+        foreach (IFieldSymbol fieldSymbol in containingTypeSymbol.GetMembers().OfType<IFieldSymbol>())
+        {
+            token.ThrowIfCancellationRequested();
+            if (fieldSymbol.AssociatedSymbol is IPropertySymbol associatedProperty && properties.Contains(associatedProperty))
+            {
+                builder[associatedProperty] = fieldSymbol.Name;
+            }
+        }
+
+        token.ThrowIfCancellationRequested();
+        return builder.ToImmutable();
+    }
+
+    private static ImmutableArray<MethodDeclarationSyntax> GenerateAccessMethods(
+        ImmutableArray<GeneratorAttributeSyntaxContext> contexts,
+        ImmutableDictionary<IPropertySymbol, string> propertyBackingFieldNames,
+        INamedTypeSymbol containingTypeSymbol,
+        CancellationToken token)
+    {
         ImmutableArray<MethodDeclarationSyntax>.Builder accessMethodsBuilder = ImmutableArray.CreateBuilder<MethodDeclarationSyntax>(contexts.Length);
         foreach (GeneratorAttributeSyntaxContext context in contexts)
         {
@@ -87,57 +133,27 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
             // { get; set; } or { set; } => ref
             bool readOnly = propertySymbol.SetMethod is null || propertySymbol.SetMethod.IsInitOnly;
 
-            TypeSyntax type = ParseTypeName(propertySymbol.Type.GetFullyQualifiedName());
-            RefTypeSyntax refType = RefType(type);
+            TypeSyntax propertyType = ParseTypeName(propertySymbol.Type.GetFullyQualifiedName());
+            RefTypeSyntax refPropertyType = RefType(propertyType);
             if (readOnly)
             {
-                refType = refType.WithReadOnlyKeyword(ReadOnlyKeyword);
+                refPropertyType = refPropertyType.WithReadOnlyKeyword(ReadOnlyKeyword);
             }
 
-            MethodDeclarationSyntax method = MethodDeclaration(refType, Identifier($"FieldRefOf{propertySymbol.Name}"))
+            MethodDeclarationSyntax method = MethodDeclaration(refPropertyType, Identifier($"FieldRefOf{propertySymbol.Name}"))
                 .WithAttributeLists(SingletonList(AttributeList(SingletonSeparatedList(
                     GenerateUnsafeAccessorAttribute(fieldName)))))
                 .WithModifiers(PrivateStaticExternTokenList)
                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                    Parameter(Identifier("self")).WithType(containingType))))
+                    Parameter(ParseTypeName(containingTypeSymbol.GetFullyQualifiedNameWithNullabilityAnnotations()), Identifier("self")))))
                 .WithSemicolonToken(SemicolonToken);
 
+            token.ThrowIfCancellationRequested();
             accessMethodsBuilder.Add(method);
         }
 
-        if (accessMethodsBuilder.Count <= 0)
-        {
-            return;
-        }
-
-        CompilationUnitSyntax syntax = CompilationUnit()
-            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(containingTypeSymbol.ContainingNamespace)
-                .WithLeadingTrivia(NullableEnableList)
-                .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                    PartialTypeDeclaration(containingTypeSymbol)
-                        .WithMembers(List<MemberDeclarationSyntax>(accessMethodsBuilder.ToImmutable()))))))
-            .NormalizeWhitespace();
-
-        production.AddSource($"{containingTypeSymbol.ToDisplayString().NormalizeSymbolName()}.g.cs", syntax.ToFullString());
-    }
-
-    private static ImmutableDictionary<IPropertySymbol, string> GetPropertyBackingFieldNames(INamedTypeSymbol containingTypeSymbol, ImmutableArray<GeneratorAttributeSyntaxContext> contexts)
-    {
-        ImmutableHashSet<IPropertySymbol> properties = contexts
-            .Select(context => context.TargetSymbol)
-            .OfType<IPropertySymbol>()
-            .ToImmutableHashSet<IPropertySymbol>(SymbolEqualityComparer.Default);
-
-        ImmutableDictionary<IPropertySymbol, string>.Builder builder = ImmutableDictionary.CreateBuilder<IPropertySymbol, string>(SymbolEqualityComparer.Default);
-        foreach (IFieldSymbol fieldSymbol in containingTypeSymbol.GetMembers().OfType<IFieldSymbol>())
-        {
-            if (fieldSymbol.AssociatedSymbol is IPropertySymbol associatedProperty && properties.Contains(associatedProperty))
-            {
-                builder[associatedProperty] = fieldSymbol.Name;
-            }
-        }
-
-        return builder.ToImmutable();
+        token.ThrowIfCancellationRequested();
+        return accessMethodsBuilder.ToImmutable();
     }
 
     private static AttributeSyntax GenerateUnsafeAccessorAttribute(string fieldName)

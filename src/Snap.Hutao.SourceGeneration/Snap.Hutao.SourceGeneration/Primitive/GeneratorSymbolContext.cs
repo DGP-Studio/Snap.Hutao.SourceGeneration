@@ -2,9 +2,11 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using System;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
+[Obsolete]
 internal readonly struct GeneratorSymbolContext
 {
     public readonly GeneratorSyntaxContext SyntaxContext;

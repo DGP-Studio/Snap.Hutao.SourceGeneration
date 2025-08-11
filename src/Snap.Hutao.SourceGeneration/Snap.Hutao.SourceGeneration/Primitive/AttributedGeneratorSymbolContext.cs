@@ -2,11 +2,13 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 
 namespace Snap.Hutao.SourceGeneration.Primitive;
 
+[Obsolete]
 internal readonly struct AttributedGeneratorSymbolContext
 {
     public readonly GeneratorSyntaxContext SyntaxContext;
@@ -38,6 +40,7 @@ internal readonly struct AttributedGeneratorSymbolContext
     }
 }
 
+[Obsolete]
 internal readonly struct AttributedGeneratorSymbolContext<TSymbol>
     where TSymbol : ISymbol
 {

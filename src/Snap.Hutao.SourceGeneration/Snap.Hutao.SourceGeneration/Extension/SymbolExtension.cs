@@ -2,12 +2,30 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using Snap.Hutao.SourceGeneration.Primitive;
+using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Text;
 
-namespace Snap.Hutao.SourceGeneration.Primitive;
+namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class SymbolExtension
 {
+    private static readonly FrozenSet<char> InvalidFileNameChars = Path.GetInvalidFileNameChars().ToFrozenSet();
+
+    public static string NormalizedFullyQualifiedName(this ISymbol symbol)
+    {
+        string fullyQualifiedName = symbol.GetFullyQualifiedName();
+        StringBuilder sb = new StringBuilder(fullyQualifiedName.Length);
+        foreach (char c in fullyQualifiedName)
+        {
+            sb.Append(InvalidFileNameChars.Contains(c) ? '_' : c);
+        }
+
+        return sb.ToString();
+    }
+
     public static string GetFullyQualifiedName(this ISymbol symbol)
     {
         return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
@@ -48,13 +66,26 @@ internal static class SymbolExtension
             if (SymbolEqualityComparer.Default.Equals(attribute.AttributeClass, typeSymbol))
             {
                 attributeData = attribute;
-
                 return true;
             }
         }
 
         attributeData = null;
+        return false;
+    }
 
+    public static bool TryGetAttributeWithFullyQualifiedMetadataName(this ISymbol symbol, string name, [NotNullWhen(true)] out AttributeData? attributeData)
+    {
+        foreach (AttributeData attribute in symbol.GetAttributes())
+        {
+            if (attribute.AttributeClass?.HasFullyQualifiedMetadataName(name) is true)
+            {
+                attributeData = attribute;
+                return true;
+            }
+        }
+
+        attributeData = null;
         return false;
     }
 

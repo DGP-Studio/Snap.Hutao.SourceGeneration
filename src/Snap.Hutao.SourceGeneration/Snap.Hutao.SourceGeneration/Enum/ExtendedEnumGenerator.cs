@@ -1,6 +1,7 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
@@ -154,7 +155,7 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
                         ]))))))
             .NormalizeWhitespace();
 
-        production.AddSource($"{enumSymbol.ToDisplayString().NormalizeSymbolName()}Extension.g.cs", syntax.ToFullString());
+        production.AddSource($"{enumSymbol.NormalizedFullyQualifiedName()}Extension.g.cs", syntax.ToFullString());
     }
 
     private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetNameSwitchArms(INamedTypeSymbol enumSymbol, ExpressionSyntax typeExpression)

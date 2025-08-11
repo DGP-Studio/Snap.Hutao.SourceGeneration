@@ -3,6 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Immutable;
 using System.Linq;
@@ -98,6 +99,6 @@ internal sealed class CommandGenerator : IIncrementalGenerator
             }
             """;
 
-        production.AddSource($"{classSymbol.ToDisplayString().NormalizeSymbolName()}.{commandName}.g.cs", code);
+        production.AddSource($"{classSymbol.NormalizedFullyQualifiedName()}.{commandName}.g.cs", code);
     }
 }

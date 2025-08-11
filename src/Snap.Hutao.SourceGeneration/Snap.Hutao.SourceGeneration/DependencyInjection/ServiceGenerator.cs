@@ -4,6 +4,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Model;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;

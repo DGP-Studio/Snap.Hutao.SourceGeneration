@@ -9,9 +9,9 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Snap.Hutao.SourceGeneration.Primitive;
+namespace Snap.Hutao.SourceGeneration.Model;
 
-internal ref struct ImmutableArrayBuilder<T>
+internal ref struct ImmutableArrayBuilder<T> : IDisposable
 {
     private Writer? writer;
 
@@ -28,46 +28,46 @@ internal ref struct ImmutableArrayBuilder<T>
     public readonly int Count
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => this.writer!.Count;
+        get => writer!.Count;
     }
 
     [UnscopedRef]
     public readonly ReadOnlySpan<T> WrittenSpan
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get => this.writer!.WrittenSpan;
+        get => writer!.WrittenSpan;
     }
 
     public readonly void Add(T item)
     {
-        this.writer!.Add(item);
+        writer!.Add(item);
     }
 
     public readonly void AddRange(scoped ReadOnlySpan<T> items)
     {
-        this.writer!.AddRange(items);
+        writer!.AddRange(items);
     }
 
     public readonly ImmutableArray<T> ToImmutable()
     {
-        T[] array = this.writer!.WrittenSpan.ToArray();
+        T[] array = writer!.WrittenSpan.ToArray();
 
         return Unsafe.As<T[], ImmutableArray<T>>(ref array);
     }
 
     public readonly T[] ToArray()
     {
-        return this.writer!.WrittenSpan.ToArray();
+        return writer!.WrittenSpan.ToArray();
     }
 
     public readonly IEnumerable<T> AsEnumerable()
     {
-        return this.writer!;
+        return writer!;
     }
 
     public override readonly string ToString()
     {
-        return this.writer!.WrittenSpan.ToString();
+        return writer!.WrittenSpan.ToString();
     }
 
     public void Dispose()
