@@ -6,16 +6,14 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Snap.Hutao.SourceGeneration.Extension;
-using Snap.Hutao.SourceGeneration.Xaml;
 using System.Collections.Immutable;
-using System.Linq;
 
 namespace Snap.Hutao.SourceGeneration;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 {
-    private static readonly DiagnosticDescriptor TypeInternalDescriptor = new("SH001", "Type should be internal", "Type [{0}] should be internal", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor TypeInternalDescriptor = new("SH001", "Type should be internal", "Type [{0}] should be internal or private", "Quality", DiagnosticSeverity.Info, true);
     private static readonly DiagnosticDescriptor UseValueTaskIfPossibleDescriptor = new("SH003", "Use ValueTask instead of Task whenever possible", "Use ValueTask instead of Task", "Quality", DiagnosticSeverity.Info, true);
     private static readonly DiagnosticDescriptor UseArgumentNullExceptionThrowIfNullDescriptor = new("SH007", "Use \"ArgumentNullException.ThrowIfNull()\" instead of \"!\"", "Use \"ArgumentNullException.ThrowIfNull()\"", "Quality", DiagnosticSeverity.Info, true);
 
@@ -44,6 +42,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         context.RegisterSyntaxNodeAction(HandleArgumentNullExceptionThrowIfNull, SyntaxKind.SuppressNullableWarningExpression);
     }
 
+    // SH001
     private static void HandleTypeShouldBeInternal(SyntaxNodeAnalysisContext context)
     {
         BaseTypeDeclarationSyntax syntax = (BaseTypeDeclarationSyntax)context.Node;
@@ -57,16 +56,19 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
             if (token.IsKind(SyntaxKind.PrivateKeyword))
             {
                 privateExists = true;
+                break;
             }
 
             if (token.IsKind(SyntaxKind.InternalKeyword))
             {
                 internalExists = true;
+                break;
             }
 
             if (token.IsKind(SyntaxKind.FileKeyword))
             {
                 fileExists = true;
+                break;
             }
         }
 
@@ -78,19 +80,20 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         }
     }
 
+    // SH003
     private static void HandleMethodReturnTypeShouldUseValueTaskInsteadOfTask(SyntaxNodeAnalysisContext context)
     {
         MethodDeclarationSyntax methodSyntax = (MethodDeclarationSyntax)context.Node;
         IMethodSymbol methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodSyntax)!;
 
         // 跳过重载方法
-        if (methodSyntax.Modifiers.Any(token => token.IsKind(SyntaxKind.OverrideKeyword)))
+        if (methodSymbol.IsOverride)
         {
             return;
         }
 
-        // ICommand can only use Task or Task<T>
-        if (methodSymbol.GetAttributes().Any(attr => attr.AttributeClass!.ToDisplayString() == CommandGenerator.AttributeName))
+        // AsyncRelayCommand backing method can only use Task or Task<T>
+        if (methodSymbol.HasAttributeWithFullyQualifiedMetadataName(WellKnownMetadataNames.CommandAttribute))
         {
             return;
         }
@@ -103,22 +106,18 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         }
     }
 
+    // SH007
     private static void HandleArgumentNullExceptionThrowIfNull(SyntaxNodeAnalysisContext context)
     {
-        PostfixUnaryExpressionSyntax syntax = (PostfixUnaryExpressionSyntax)context.Node;
-
-        if (syntax.Kind() is not SyntaxKind.SuppressNullableWarningExpression)
+        if (context.Node is not PostfixUnaryExpressionSyntax syntax || syntax.Kind() is not SyntaxKind.SuppressNullableWarningExpression)
         {
             return;
         }
 
         // default!
-        if (syntax.Operand is LiteralExpressionSyntax literal)
+        if (syntax.Operand is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.DefaultLiteralExpression))
         {
-            if (literal.IsKind(SyntaxKind.DefaultLiteralExpression))
-            {
-                return;
-            }
+            return;
         }
 
         // default(?)!
