@@ -74,7 +74,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
 
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(containingTypeSymbol.ContainingNamespace)
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     PartialTypeDeclaration(containingTypeSymbol)
                         .WithMembers(List<MemberDeclarationSyntax>(accessMethods))))))

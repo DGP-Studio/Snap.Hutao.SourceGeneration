@@ -1,11 +1,8 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
-using System;
-using System.Collections.Generic;
 using System.Text;
 using System.Threading;
-using System.Linq;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Immutable;
 

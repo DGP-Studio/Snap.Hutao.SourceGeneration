@@ -6,7 +6,6 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Snap.Hutao.SourceGeneration.Extension;
-using Snap.Hutao.SourceGeneration.Primitive;
 using Snap.Hutao.SourceGeneration.Xaml;
 using System.Collections.Immutable;
 using System.Linq;

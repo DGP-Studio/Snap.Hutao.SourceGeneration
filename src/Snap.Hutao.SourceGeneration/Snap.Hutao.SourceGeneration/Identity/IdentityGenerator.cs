@@ -1,10 +1,16 @@
-﻿using Microsoft.CodeAnalysis;
+﻿// Copyright (c) DGP Studio. All rights reserved.
+// Licensed under the MIT license.
+
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
-using System.Linq;
-using System.Text;
+using System.Text.Json;
+using System.Threading;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.Identity;
 
@@ -13,265 +19,356 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
 {
     private const string FileName = "IdentityStructs.json";
 
+    private static readonly NameSyntax NameOfSystemTextJsonSerializationJsonConverter = ParseName("global::System.Text.Json.Serialization.JsonConverter");
+    private static readonly NameSyntax NameOfSnapHutaoModelPrimitiveConverter = ParseName("Snap.Hutao.Model.Primitive.Converter");
+    private static readonly NameSyntax NameOfSystem = ParseName("global::System");
+    private static readonly NameSyntax NameOfSystemNumerics = ParseName("global::System.Numerics");
+
+    private static readonly TypeSyntax TypeOfSystemIComparable = ParseTypeName("global::System.IComparable");
+    private static readonly TypeSyntax TypeOfSystemArgumentException = ParseTypeName("global::System.ArgumentException");
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<AdditionalText>> provider = context.AdditionalTextsProvider.Where(MatchFileName).Collect();
-
-        context.RegisterImplementationSourceOutput(provider, GenerateIdentityStructs);
+        IncrementalValuesProvider<IdentityStructMetadata> provider = context.AdditionalTextsProvider
+            .Where(Match)
+            .SelectMany(ToMetadata);
+        context.RegisterImplementationSourceOutput(provider, GenerateWrapper);
     }
 
-    private static bool MatchFileName(AdditionalText text)
+    private static bool Match(AdditionalText text)
     {
-        return string.Equals(Path.GetFileName(text.Path), FileName, StringComparison.OrdinalIgnoreCase);
+        return Path.GetFileName(text.Path).EndsWith(FileName, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static void GenerateIdentityStructs(SourceProductionContext context, ImmutableArray<AdditionalText> texts)
+    private static IEnumerable<IdentityStructMetadata> ToMetadata(AdditionalText text, CancellationToken token)
     {
-        AdditionalText jsonFile = texts.Single();
+        string identityJson = text.GetText(token)!.ToString();
+        return JsonSerializer.Deserialize<ImmutableArray<IdentityStructMetadata>>(identityJson)!;
+    }
 
-        string identityJson = jsonFile.GetText(context.CancellationToken)!.ToString();
-        List<IdentityStructMetadata> identities = JsonParser.FromJson<List<IdentityStructMetadata>>(identityJson)!;
-
-        if (identities.Any())
+    private static void GenerateWrapper(SourceProductionContext production, IdentityStructMetadata metadata)
+    {
+        try
         {
-            foreach (IdentityStructMetadata identityStruct in identities)
-            {
-                GenerateIdentityStruct(context, identityStruct);
-            }
+            Generate(production, metadata);
+        }
+        catch (Exception ex)
+        {
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", ex.ToString());
         }
     }
 
-    private static void GenerateIdentityStruct(SourceProductionContext context, IdentityStructMetadata metadata)
+    private static void Generate(SourceProductionContext context, IdentityStructMetadata metadata)
     {
-        string name = metadata.Name;
-
-        StringBuilder sourceBuilder = new StringBuilder().AppendLine($$"""
-            // Copyright (c) DGP Studio. All rights reserved.
-            // Licensed under the MIT license.
-
-            #nullable enable
-            
-            using Snap.Hutao.Model.Primitive.Converter;
-            using System.Numerics;
-
-            namespace Snap.Hutao.Model.Primitive;
-
+        string metadataName = metadata.Name;
+        SyntaxTriviaList trivia = ParseLeadingTrivia($"""
             /// <summary>
-            /// {{metadata.Documentation}}
+            /// {metadata.Documentation}
             /// </summary>
-            [JsonConverter(typeof(IdentityConverter<{{name}}>))]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(IdentityGenerator)}}","1.0.0.0")]
-            internal readonly partial struct {{name}}
-            {
-                /// <summary>
-                /// 值
-                /// </summary>
-                public readonly uint Value;
 
-                /// <summary>
-                /// Initializes a new instance of the <see cref="{{name}}"/> struct.
-                /// </summary>
-                /// <param name="value">value</param>
-                public {{name}}(uint value)
-                {
-                    Value = value;
-                }
-
-                public static implicit operator uint({{name}} value)
-                {
-                    return value.Value;
-                }
-
-                public static implicit operator {{name}}(uint value)
-                {
-                    return new(value);
-                }
-
-                /// <inheritdoc/>
-                public override int GetHashCode()
-                {
-                    return Value.GetHashCode();
-                }
-
-                /// <inheritdoc/>
-                public override string ToString()
-                {
-                    return Value.ToString();
-                }
-            }
             """);
 
-        sourceBuilder.AppendLine($$"""
+        IdentifierNameSyntax typeName = IdentifierName(metadataName);
+        SyntaxToken typeToken = Identifier(metadataName);
 
-            internal readonly partial struct {{name}} : IComparable
-            {
-                /// <inheritdoc/>
-                public int CompareTo(object? obj)
-                {
-                    if (obj is null)
-                    {
-                        return 1;
-                    }
-                    
-                    if (obj is not {{name}} other)
-                    {
-                        throw new ArgumentException("Object must be of type {{name}}.");
-                    }
-                    
-                    return Value.CompareTo(other.Value);
-                }
-            }
-            """);
+        CompilationUnitSyntax syntax = CompilationUnit()
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Model.Primitive")
+                .WithLeadingTrivia(NullableEnableTriviaList)
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                    StructDeclaration(metadataName)
+                        .WithAttributeLists(SingletonList(
+                            AttributeList(SingletonSeparatedList(
+                                    Attribute(NameOfSystemTextJsonSerializationJsonConverter)
+                                        .WithArgumentList(AttributeArgumentList(SingletonSeparatedList(
+                                            AttributeArgument(GenerateTypeOfIdentityConverterGenericExpression(metadataName)))))))
+                                .WithLeadingTrivia(trivia)))
+                        .WithModifiers(InternalReadOnlyPartialTokenList)
+                        .WithBaseList(BaseList(SeparatedList<BaseTypeSyntax>(
+                        [
+                            SimpleBaseType(TypeOfSystemIComparable),                                                                            // System.IComparable
+                            SimpleBaseType(GenerateGenericType(NameOfSystem, "IComparable", typeName)),                                         // System.IComparable<T>
+                            SimpleBaseType(GenerateGenericType(NameOfSystem, "IEquatable", typeName)),                                          // System.IEquatable<T>
+                            SimpleBaseType(GenerateGenericType(NameOfSystemNumerics, "IEqualityOperators", typeName, typeName, BoolType)),      // System.Numerics.IEqualityOperators<T, T, bool>
+                            SimpleBaseType(GenerateGenericType(NameOfSystemNumerics, "IEqualityOperators", typeName, UIntType, BoolType)),      // System.Numerics.IEqualityOperators<T, uint, bool>
+                            SimpleBaseType(GenerateGenericType(NameOfSystemNumerics, "IAdditionOperators", typeName, typeName, typeName)),      // System.Numerics.IAdditionOperators<T, T, T>
+                            SimpleBaseType(GenerateGenericType(NameOfSystemNumerics, "IAdditionOperators", typeName, UIntType, typeName)),      // System.Numerics.IAdditionOperators<T, uint, T>
+                            SimpleBaseType(GenerateGenericType(NameOfSystemNumerics, "ISubtractionOperators", typeName, typeName, typeName)),   // System.Numerics.ISubtractionOperators<T, T, T>
+                            SimpleBaseType(GenerateGenericType(NameOfSystemNumerics, "ISubtractionOperators", typeName, UIntType, typeName)),   // System.Numerics.ISubtractionOperators<T, uint, T>
+                            SimpleBaseType(GenerateGenericType(NameOfSystemNumerics, "IIncrementOperators", typeName)),                         // System.Numerics.IIncrementOperators<T>
+                            SimpleBaseType(GenerateGenericType(NameOfSystemNumerics, "IDecrementOperators", typeName))                          // System.Numerics.IDecrementOperators<T>
+                        ])))
+                        .WithMembers(List<MemberDeclarationSyntax>(
+                        [
+                            // public readonly uint Value;
+                            FieldDeclaration(VariableDeclaration(UIntType)
+                                    .WithVariables(SingletonSeparatedList(
+                                        VariableDeclarator(Identifier("Value")))))
+                                .WithModifiers(PublicReadOnlyTokenList),
 
-        sourceBuilder.AppendLine($$"""
+                            // public T(uint value)
+                            ConstructorDeclaration(typeToken)
+                                .WithModifiers(PublicTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(UIntType, Identifier("value")))))
+                                .WithBody(Block(SingletonList(
+                                    ExpressionStatement(
+                                        SimpleAssignmentExpression(
+                                            IdentifierName("Value"),
+                                            IdentifierName("value")))))),
 
-            internal readonly partial struct {{name}} : IComparable<{{name}}>
-            {
-                /// <inheritdoc/>
-                public int CompareTo({{name}} other)
-                {
-                    return Value.CompareTo(other.Value);
-                }
-            }
-            """);
+                            // public static implicit operator uint(T value)
+                            ImplicitConversionOperatorDeclaration(UIntType)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(typeName, Identifier("value")))))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(SimpleMemberAccessExpression(
+                                        IdentifierName("value"),
+                                        IdentifierName("Value")))))),
 
-        if (metadata.Equatable)
-        {
-            sourceBuilder.AppendLine($$"""
+                            // public static implicit operator T(uint value)
+                            ImplicitConversionOperatorDeclaration(typeName)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(UIntType, Identifier("value")))))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(ImplicitObjectCreationExpression()
+                                        .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                            Argument(IdentifierName("value"))))))))),
 
-                internal readonly partial struct {{name}} : IEquatable<{{name}}>
-                {
-                    /// <inheritdoc/>
-                    public override bool Equals(object? obj)
-                    {
-                        return obj is {{name}} other && Equals(other);
-                    }
+                            // public override bool Equals(object? obj) -> System.Object
+                            MethodDeclaration(BoolType, "Equals")
+                                .WithModifiers(PublicOverrideTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(NullableObjectType, Identifier("obj")))))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(LogicalAndExpression(
+                                        IsPatternExpression(
+                                            IdentifierName("obj"),
+                                            DeclarationPattern(typeName, SingleVariableDesignation(Identifier("other")))),
+                                        InvocationExpression(IdentifierName("Equals"))
+                                            .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                                Argument(IdentifierName("other")))))))))),
 
-                    /// <inheritdoc/>
-                    public bool Equals({{name}} other)
-                    {
-                        return Value == other.Value;
-                    }
-                }
-                """);
-        }
+                            // public override int GetHashCode() -> System.Object
+                            MethodDeclaration(IntType, "GetHashCode")
+                                .WithModifiers(PublicOverrideTokenList)
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(InvocationExpression(SimpleMemberAccessExpression(
+                                        IdentifierName("Value"),
+                                        IdentifierName("GetHashCode"))))))),
 
-        if (metadata.EqualityOperators)
-        {
-            sourceBuilder.AppendLine($$"""
+                            // public override string ToString() -> System.Object
+                            MethodDeclaration(StringType, "ToString")
+                                .WithModifiers(PublicOverrideTokenList)
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(InvocationExpression(SimpleMemberAccessExpression(
+                                        IdentifierName("Value"),
+                                        IdentifierName("ToString"))))))),
 
-                internal readonly partial struct {{name}} : IEqualityOperators<{{name}}, {{name}}, bool>, IEqualityOperators<{{name}}, uint, bool>
-                {
-                    public static bool operator ==({{name}} left, {{name}} right)
-                    {
-                        return left.Value == right.Value;
-                    }
-                
-                    public static bool operator ==({{name}} left, uint right)
-                    {
-                        return left.Value == right;
-                    }
+                            // public int CompareTo(object? obj) -> System.IComparable
+                            MethodDeclaration(IntType, "CompareTo")
+                                .WithModifiers(PublicTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(NullableObjectType, Identifier("obj")))))
+                                .WithBody(Block(List<StatementSyntax>(
+                                [
+                                    IfStatement(
+                                        IsPatternExpression(IdentifierName("obj"), ConstantPattern(NullLiteralExpression)),
+                                        Block(SingletonList(ReturnStatement(NumericLiteralExpression(1))))),
+                                    IfStatement(
+                                        IsPatternExpression(IdentifierName("obj"), UnaryPattern(DeclarationPattern(typeName, SingleVariableDesignation(Identifier("other"))))),
+                                        Block(SingletonList(ThrowStatement(ObjectCreationExpression(TypeOfSystemArgumentException)
+                                            .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                                Argument(StringLiteralExpression($"Object must be of type {metadataName}."))))))))),
+                                    ReturnStatement(InvocationExpression(SimpleMemberAccessExpression(
+                                            IdentifierName("Value"),
+                                            IdentifierName("CompareTo")))
+                                        .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                            Argument(SimpleMemberAccessExpression(
+                                                IdentifierName("other"),
+                                                IdentifierName("Value"))))))),
+                                ]))),
 
-                    public static bool operator !=({{name}} left, {{name}} right)
-                    {
-                        return !(left == right);
-                    }
+                            // public int CompareTo(T other) -> System.IComparable<T>
+                            MethodDeclaration(IntType, "CompareTo")
+                                .WithModifiers(PublicTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(typeName, Identifier("other")))))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(InvocationExpression(SimpleMemberAccessExpression(
+                                        IdentifierName("Value"),
+                                        IdentifierName("CompareTo")))
+                                        .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                            Argument(SimpleMemberAccessExpression(
+                                                IdentifierName("other"),
+                                                IdentifierName("Value")))))))))),
 
-                    public static bool operator !=({{name}} left, uint right)
-                    {
-                        return !(left == right);
-                    }
-                }
-                """);
-        }
+                            // public bool Equals(T other) -> System.IEquatable<T>
+                            MethodDeclaration(BoolType, "Equals")
+                                .WithModifiers(PublicTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(typeName, Identifier("other")))))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(EqualsExpression(
+                                        IdentifierName("Value"),
+                                        SimpleMemberAccessExpression(IdentifierName("other"), IdentifierName("Value"))))))),
 
-        if (metadata.AdditionOperators)
-        {
-            sourceBuilder.AppendLine($$"""
+                            // public static bool operator ==(T left, T right) -> System.Numerics.IEqualityOperators<T, T, bool>
+                            EqualsEqualsOperatorDeclaration(BoolType)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SeparatedList(
+                                [
+                                    Parameter(typeName, Identifier("left")),
+                                    Parameter(typeName, Identifier("right"))
+                                ])))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(EqualsExpression(
+                                        SimpleMemberAccessExpression(IdentifierName("left"), IdentifierName("Value")),
+                                        SimpleMemberAccessExpression(IdentifierName("right"), IdentifierName("Value"))))))),
 
-                internal readonly partial struct {{name}} : IAdditionOperators<{{name}}, {{name}}, {{name}}>, IAdditionOperators<{{name}}, uint, {{name}}>
-                {
-                    public static {{name}} operator +({{name}} left, {{name}} right)
-                    {
-                        return left.Value + right.Value;
-                    }
+                            // public static bool operator !=(T left, T right) -> System.Numerics.IEqualityOperators<T, T, bool>
+                            ExclamationEqualsOperatorDeclaration(BoolType)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SeparatedList(
+                                [
+                                    Parameter(typeName, Identifier("left")),
+                                    Parameter(typeName, Identifier("right"))
+                                ])))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(LogicalNotExpression(ParenthesizedExpression(EqualsExpression(
+                                        SimpleMemberAccessExpression(IdentifierName("left"), IdentifierName("Value")),
+                                        SimpleMemberAccessExpression(IdentifierName("right"), IdentifierName("Value"))))))))),
 
-                    public static {{name}} operator +({{name}} left, uint right)
-                    {
-                        return left.Value + right;
-                    }
-                }
-                """);
-        }
+                            // public static bool operator ==(T left, uint right) -> System.Numerics.IEqualityOperators<T, uint, bool>
+                            EqualsEqualsOperatorDeclaration(BoolType)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SeparatedList(
+                                [
+                                    Parameter(typeName, Identifier("left")),
+                                    Parameter(UIntType, Identifier("right"))
+                                ])))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(EqualsExpression(
+                                        SimpleMemberAccessExpression(IdentifierName("left"), IdentifierName("Value")),
+                                        IdentifierName("right")))))),
 
-        if (metadata.SubtractionOperators)
-        {
-            sourceBuilder.AppendLine($$"""
-                
-                internal readonly partial struct {{name}} : ISubtractionOperators<{{name}}, {{name}}, {{name}}>, ISubtractionOperators<{{name}}, uint, {{name}}>
-                {
-                    public static {{name}} operator -({{name}} left, {{name}} right)
-                    {
-                        return left.Value - right.Value;
-                    }
+                            // public static bool operator !=(T left, uint right) -> System.Numerics.IEqualityOperators<T, uint, bool>
+                            ExclamationEqualsOperatorDeclaration(BoolType)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SeparatedList(
+                                [
+                                    Parameter(typeName, Identifier("left")),
+                                    Parameter(UIntType, Identifier("right"))
+                                ])))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(LogicalNotExpression(ParenthesizedExpression(EqualsExpression(
+                                        IdentifierName("left"),
+                                        IdentifierName("right")))))))),
 
-                    public static {{name}} operator -({{name}} left, uint right)
-                    {
-                        return left.Value - right;
-                    }
-                }
-            """);
-        }
+                            // public static T operator +(T left, T right) -> System.Numerics.IAdditionOperators<T, T, T>
+                            PlusOperatorDeclaration(typeName)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SeparatedList(
+                                [
+                                    Parameter(typeName, Identifier("left")),
+                                    Parameter(typeName, Identifier("right"))
+                                ])))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(AddExpression(
+                                        SimpleMemberAccessExpression(IdentifierName("left"), IdentifierName("Value")),
+                                        SimpleMemberAccessExpression(IdentifierName("right"), IdentifierName("Value"))))))),
 
-        if (metadata.IncrementOperators)
-        {
-            sourceBuilder.AppendLine($$"""
+                            // public static T operator +(T left, uint right) -> System.Numerics.IAdditionOperators<T, uint, T>
+                            PlusOperatorDeclaration(typeName)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SeparatedList(
+                                [
+                                    Parameter(typeName, Identifier("left")),
+                                    Parameter(UIntType, Identifier("right"))
+                                ])))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(AddExpression(
+                                        SimpleMemberAccessExpression(IdentifierName("left"), IdentifierName("Value")),
+                                        IdentifierName("right")))))),
 
-                internal readonly partial struct {{name}} : IIncrementOperators<{{name}}>
-                {
-                    public static unsafe {{name}} operator ++({{name}} value)
-                    {
-                        ++*(uint*)&value;
-                        return value;
-                    }
-                }
-                """);
-        }
+                            // public static T operator -(T left, T right) -> System.Numerics.ISubtractionOperators<T, T, T>
+                            MinusOperatorDeclaration(typeName)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SeparatedList(
+                                [
+                                    Parameter(typeName, Identifier("left")),
+                                    Parameter(typeName, Identifier("right"))
+                                ])))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(SubtractExpression(
+                                        SimpleMemberAccessExpression(IdentifierName("left"), IdentifierName("Value")),
+                                        SimpleMemberAccessExpression(IdentifierName("right"), IdentifierName("Value"))))))),
 
-        if (metadata.DecrementOperators)
-        {
-            sourceBuilder.AppendLine($$"""
+                            // public static T operator -(T left, uint right) -> System.Numerics.ISubtractionOperators<T, uint, T>
+                            MinusOperatorDeclaration(typeName)
+                                .WithModifiers(PublicStaticTokenList)
+                                .WithParameterList(ParameterList(SeparatedList(
+                                [
+                                    Parameter(typeName, Identifier("left")),
+                                    Parameter(UIntType, Identifier("right"))
+                                ])))
+                                .WithBody(Block(SingletonList(
+                                    ReturnStatement(SubtractExpression(
+                                        SimpleMemberAccessExpression(IdentifierName("left"), IdentifierName("Value")),
+                                        IdentifierName("right")))))),
 
-                internal readonly partial struct {{name}} : IDecrementOperators<{{name}}>
-                {
-                    public static unsafe {{name}} operator --({{name}} value)
-                    {
-                        --*(uint*)&value;
-                        return value;
-                    }
-                }
-                """);
-        }
+                            // public static unsafe T operator ++(T value) -> System.Numerics.IIncrementOperators<T>
+                            PlusPlusOperatorDeclaration(typeName)
+                                .WithModifiers(PublicStaticUnsafeTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(typeName, Identifier("value")))))
+                                .WithBody(Block(List<StatementSyntax>(
+                                [
+                                    ExpressionStatement(
+                                        PreIncrementExpression(PointerIndirectionExpression(CastExpression(PointerType(UIntType), AddressOfExpression(IdentifierName("value")))))),
+                                    ReturnStatement(IdentifierName("value"))
+                                ]))),
 
-        context.AddSource($"{name}.g.cs", sourceBuilder.ToString());
+                            // public static unsafe T operator --(T value) -> System.Numerics.IDecrementOperators<T>
+                            MinusMinusOperatorDeclaration(typeName)
+                                .WithModifiers(PublicStaticUnsafeTokenList)
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(typeName, Identifier("value")))))
+                                .WithBody(Block(List<StatementSyntax>(
+                                [
+                                    ExpressionStatement(
+                                        PreDecrementExpression(PointerIndirectionExpression(CastExpression(PointerType(UIntType), AddressOfExpression(IdentifierName("value")))))),
+                                    ReturnStatement(IdentifierName("value"))
+                                ]))),
+                        ]))))))
+            .NormalizeWhitespace();
+
+        context.AddSource($"{metadataName}.g.cs", syntax.ToFullString());
     }
 
-    private sealed class IdentityStructMetadata
+    private static TypeOfExpressionSyntax GenerateTypeOfIdentityConverterGenericExpression(string typeName)
+    {
+        return TypeOfExpression(QualifiedName(NameOfSnapHutaoModelPrimitiveConverter, GenericName("IdentityConverter")
+            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(IdentifierName(typeName))))));
+    }
+
+    private static TypeSyntax GenerateGenericType(NameSyntax left, string genericName, TypeSyntax type)
+    {
+        return QualifiedName(left, GenericName(genericName)
+            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(type))));
+    }
+
+    private static TypeSyntax GenerateGenericType(NameSyntax left, string genericName, TypeSyntax type1, TypeSyntax type2, TypeSyntax type3)
+    {
+        return QualifiedName(left, GenericName(genericName)
+            .WithTypeArgumentList(TypeArgumentList(SeparatedList<TypeSyntax>([type1, type2, type3]))));
+    }
+
+    private sealed record IdentityStructMetadata
     {
         public string Name { get; set; } = default!;
 
         public string? Documentation { get; set; }
-
-        public bool Equatable { get; set; }
-
-        public bool EqualityOperators { get; set; }
-
-        public bool AdditionOperators { get; set; }
-
-        public bool SubtractionOperators { get; set; }
-
-        public bool IncrementOperators { get; set; }
-
-        public bool DecrementOperators { get; set; }
     }
 }

@@ -67,7 +67,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreAnnotation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.Annotation")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfCommandAttribute)
@@ -173,7 +173,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreDependencyInjectionAnnotationHttpClient = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfHttpClientAttribute)
@@ -270,7 +270,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax coreDependencyInjectionAnnotation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfServiceAttribute)
@@ -315,7 +315,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax resourceLocalization = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Resource.Localization")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
                     ClassDeclaration(identifierOfExtendedEnumAttribute)
@@ -343,7 +343,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax interceptsLocation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("System.Runtime.CompilerServices")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration(identifierOfInterceptsLocationAttribute)
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsMethod, allowMultiple: true)))

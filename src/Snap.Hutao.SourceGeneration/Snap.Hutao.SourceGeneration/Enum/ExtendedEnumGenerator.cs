@@ -1,5 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
+// Copyright (c) DGP Studio. All rights reserved.
+// Licensed under the MIT license.
+
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Primitive;
@@ -54,27 +56,27 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithUsings(SingletonList(UsingDirective("System.Globalization")))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Resource.Localization")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration($"{enumSymbol.Name}Extension")
-                        .WithModifiers(InternalStaticPartialList)
+                        .WithModifiers(InternalStaticPartialTokenList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
                             // public static string? GetName(this T value)
                             MethodDeclaration(NullableStringType, "GetName")
-                                .WithModifiers(PublicStaticList)
+                                .WithModifiers(PublicStaticTokenList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisList))))
+                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisTokenList))))
                                 .WithBody(Block(SingletonList<StatementSyntax>(
                                     ReturnStatement(SwitchExpression(IdentifierName("value"))
                                         .WithArms(SeparatedList(GenerateGetNameSwitchArms(enumSymbol, typeExpression))))))),
 
                             // public static string? GetLocalizedDescriptionOrDefault(this T value, ResourceManager resourceManager, CultureInfo cultureInfo)
                             MethodDeclaration(NullableStringType, "GetLocalizedDescriptionOrDefault")
-                                .WithModifiers(PublicStaticList)
+                                .WithModifiers(PublicStaticTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisList),
+                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisTokenList),
                                     Parameter(TypeOfSystemResourcesResourceManager, Identifier("resourceManager")),
                                     Parameter(TypeOfSystemGlobalizationCultureInfo, Identifier("cultureInfo"))
                                 ])))
@@ -97,10 +99,10 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
 
                             // public static string? GetLocalizedDescriptionOrDefault(this T value, ResourceManager resourceManager)
                             MethodDeclaration(NullableStringType, "GetLocalizedDescriptionOrDefault")
-                                .WithModifiers(PublicStaticList)
+                                .WithModifiers(PublicStaticTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisList),
+                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisTokenList),
                                     Parameter(TypeOfSystemResourcesResourceManager, Identifier("resourceManager"))
                                 ])))
                                 .WithBody(Block(SingletonList<StatementSyntax>(
@@ -114,10 +116,10 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
 
                             // public static string GetLocalizedDescription(this T value, ResourceManager resourceManager, CultureInfo cultureInfo)
                             MethodDeclaration(NullableStringType, "GetLocalizedDescription")
-                                .WithModifiers(PublicStaticList)
+                                .WithModifiers(PublicStaticTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisList),
+                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisTokenList),
                                     Parameter(TypeOfSystemResourcesResourceManager, Identifier("resourceManager")),
                                     Parameter(TypeOfSystemGlobalizationCultureInfo, Identifier("cultureInfo"))
                                 ])))
@@ -138,10 +140,10 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
 
                             // public static string GetLocalizedDescription(this T value, ResourceManager resourceManager)
                             MethodDeclaration(NullableStringType, "GetLocalizedDescription")
-                                .WithModifiers(PublicStaticList)
+                                .WithModifiers(PublicStaticTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisList),
+                                    Parameter(enumType, Identifier("value")).WithModifiers(ThisTokenList),
                                     Parameter(TypeOfSystemResourcesResourceManager, Identifier("resourceManager"))
                                 ])))
                                 .WithBody(Block(SingletonList<StatementSyntax>(

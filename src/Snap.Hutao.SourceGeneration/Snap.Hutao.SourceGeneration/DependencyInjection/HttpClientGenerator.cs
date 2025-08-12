@@ -58,16 +58,16 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithUsings(SingletonList(UsingDirective("System.Net.Http")))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration("ServiceCollectionExtension")
-                        .WithModifiers(InternalStaticPartialList)
+                        .WithModifiers(InternalStaticPartialTokenList)
                         .WithMembers(SingletonList<MemberDeclarationSyntax>(
                             MethodDeclaration(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection,"AddHttpClients")
-                                .WithModifiers(PublicStaticPartialList)
+                                .WithModifiers(PublicStaticPartialTokenList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
                                     Parameter(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection, Identifier("services"))
-                                        .WithModifiers(ThisList))))
+                                        .WithModifiers(ThisTokenList))))
                                 .WithBody(Block(List(GenerateAddHttpClients(production, contexts))))))))))
             .NormalizeWhitespace();
 

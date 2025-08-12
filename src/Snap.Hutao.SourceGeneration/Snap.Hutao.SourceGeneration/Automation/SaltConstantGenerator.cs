@@ -42,7 +42,7 @@ internal sealed class SaltConstantGenerator : IIncrementalGenerator
 
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Web.Hoyolab")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration("SaltConstants")
                         .WithModifiers(InternalStaticTokenList)
@@ -66,7 +66,7 @@ internal sealed class SaltConstantGenerator : IIncrementalGenerator
             .WithVariables(SingletonSeparatedList(
                 VariableDeclarator(fieldName)
                     .WithInitializer(EqualsValueClause(StringLiteralExpression(fieldValue))))))
-            .WithModifiers(PublicConstList);
+            .WithModifiers(PublicConstTokenList);
     }
 
     private sealed class Response<[MeansImplicitUse] T>

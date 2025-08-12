@@ -57,16 +57,16 @@ internal sealed class ServiceGenerator : IIncrementalGenerator
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithUsings(SingletonList(UsingDirective("Microsoft.Extensions.DependencyInjection")))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection")
-                .WithLeadingTrivia(NullableEnableList)
+                .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration("ServiceCollectionExtension")
-                        .WithModifiers(InternalStaticPartialList)
+                        .WithModifiers(InternalStaticPartialTokenList)
                         .WithMembers(SingletonList<MemberDeclarationSyntax>(
                             MethodDeclaration(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection, "AddServices")
-                                .WithModifiers(PublicStaticPartialList)
+                                .WithModifiers(PublicStaticPartialTokenList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
                                     Parameter(TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection, Identifier("services"))
-                                        .WithModifiers(ThisList))))
+                                        .WithModifiers(ThisTokenList))))
                                 .WithBody(Block(List(GenerateAddServices(production, contexts))))))))))
             .NormalizeWhitespace();
 

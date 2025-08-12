@@ -116,12 +116,3 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
         return !left.Equals(right);
     }
 }
-
-internal static class EquatableArray
-{
-    public static EquatableArray<T> AsEquatableArray<T>(this ImmutableArray<T> array)
-        where T : IEquatable<T>
-    {
-        return new(array);
-    }
-}
