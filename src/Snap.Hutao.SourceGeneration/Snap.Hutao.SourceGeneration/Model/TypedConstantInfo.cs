@@ -4,11 +4,12 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using System;
 using System.Collections.Immutable;
 using System.Globalization;
-using System.Linq;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.Model;
 
@@ -23,9 +24,8 @@ internal abstract record TypedConstantInfo
 
         if (arg.Kind == TypedConstantKind.Array)
         {
-            string elementTypeName = ((IArrayTypeSymbol)arg.Type!).ElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-            ImmutableArray<TypedConstantInfo> items = [.. arg.Values.Select(Create)];
-
+            string elementTypeName = ((IArrayTypeSymbol)arg.Type!).ElementType.GetFullyQualifiedName();
+            ImmutableArray<TypedConstantInfo> items = ImmutableArray.CreateRange(arg.Values, Create);
             return new Array(elementTypeName, items);
         }
 
@@ -33,7 +33,7 @@ internal abstract record TypedConstantInfo
         {
             (TypedConstantKind.Primitive, string text) => new Primitive.String(text),
             (TypedConstantKind.Primitive, bool flag) => new Primitive.Boolean(flag),
-            (TypedConstantKind.Primitive, object value) => value switch
+            (TypedConstantKind.Primitive, { } value) => value switch
             {
                 byte b => new Primitive.Of<byte>(b),
                 char c => new Primitive.Of<char>(c),
@@ -48,54 +48,78 @@ internal abstract record TypedConstantInfo
                 ushort ush => new Primitive.Of<ushort>(ush),
                 _ => throw new ArgumentException("Invalid primitive type")
             },
-            (TypedConstantKind.Type, ITypeSymbol type) => new Type(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)),
-            (TypedConstantKind.Enum, object value) => new Enum(arg.Type!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), value),
+            (TypedConstantKind.Type, ITypeSymbol type) => new Type(type.GetFullyQualifiedName()),
+            (TypedConstantKind.Enum, { } value) => new Enum(arg.Type!.GetFullyQualifiedName(), value),
             _ => throw new ArgumentException("Invalid typed constant type"),
         };
     }
 
     public abstract ExpressionSyntax GetSyntax();
 
-    public sealed record Array(string ElementTypeName, EquatableArray<TypedConstantInfo> Items) : TypedConstantInfo
+    public sealed record Array : TypedConstantInfo
     {
+        public Array(string fullyQualifiedElementTypeName, EquatableArray<TypedConstantInfo> items)
+        {
+            FullyQualifiedElementTypeName = fullyQualifiedElementTypeName;
+            Items = items;
+        }
+
+        public string FullyQualifiedElementTypeName { get; }
+
+        public EquatableArray<TypedConstantInfo> Items { get; }
+
         public override ExpressionSyntax GetSyntax()
         {
-            return
-                ArrayCreationExpression(
-                        ArrayType(IdentifierName(ElementTypeName))
-                            .AddRankSpecifiers(ArrayRankSpecifier(SingletonSeparatedList<ExpressionSyntax>(OmittedArraySizeExpression()))))
-                    .WithInitializer(InitializerExpression(SyntaxKind.ArrayInitializerExpression)
-                        .AddExpressions(Items.Select(static c => c.GetSyntax()).ToArray()));
+            return CollectionExpression(SeparatedList<CollectionElementSyntax>(
+                Items.SelectAsArray(static c => ExpressionElement(c.GetSyntax()))));
         }
     }
 
     public abstract record Primitive : TypedConstantInfo
     {
-        public sealed record String(string Value) : TypedConstantInfo
+        public sealed record String : TypedConstantInfo
         {
-            /// <inheritdoc/>
+            public String(string Value)
+            {
+                this.Value = Value;
+            }
+
+            public string Value { get; }
+
             public override ExpressionSyntax GetSyntax()
             {
-                return LiteralExpression(SyntaxKind.StringLiteralExpression, Literal(Value));
+                return StringLiteralExpression(Value);
             }
         }
 
-        public sealed record Boolean(bool Value) : TypedConstantInfo
+        public sealed record Boolean : TypedConstantInfo
         {
-            /// <inheritdoc/>
+            public Boolean(bool value)
+            {
+                Value = value;
+            }
+
+            public bool Value { get; }
+
             public override ExpressionSyntax GetSyntax()
             {
-                return LiteralExpression(Value ? SyntaxKind.TrueLiteralExpression : SyntaxKind.FalseLiteralExpression);
+                return Value ? TrueLiteralExpression : FalseLiteralExpression;
             }
         }
 
-        public sealed record Of<T>(T Value) : TypedConstantInfo
+        public sealed record Of<T> : TypedConstantInfo
             where T : unmanaged, IEquatable<T>
         {
-            /// <inheritdoc/>
+            public Of(T value)
+            {
+                Value = value;
+            }
+
+            public T Value { get; }
+
             public override ExpressionSyntax GetSyntax()
             {
-                return LiteralExpression(SyntaxKind.NumericLiteralExpression, Value switch
+                return NumericLiteralExpression(Value switch
                 {
                     byte b => Literal(b),
                     char c => Literal(c),
@@ -103,7 +127,7 @@ internal abstract record TypedConstantInfo
                     // For doubles, we need to manually format it and always add the trailing "D" suffix.
                     // This ensures that the correct type is produced if the expression was assigned to
                     // an object (eg. the literal was used in an attribute object parameter/property).
-                    double d => Literal(d.ToString("R", CultureInfo.InvariantCulture) + "D", d),
+                    double d => Literal($"{d.ToString("R", CultureInfo.InvariantCulture)}D", d),
 
                     // For floats, Roslyn will automatically add the "F" suffix, so no extra work is needed
                     float f => Literal(f),
@@ -120,16 +144,33 @@ internal abstract record TypedConstantInfo
         }
     }
 
-    public sealed record Type(string TypeName) : TypedConstantInfo
+    public sealed record Type : TypedConstantInfo
     {
+        public Type(string fullyQualifiedTypeName)
+        {
+            FullyQualifiedTypeName = fullyQualifiedTypeName;
+        }
+
+        public string FullyQualifiedTypeName { get; }
+
         public override ExpressionSyntax GetSyntax()
         {
-            return TypeOfExpression(IdentifierName(TypeName));
+            return TypeOfExpression(IdentifierName(FullyQualifiedTypeName));
         }
     }
 
-    public sealed record Enum(string TypeName, object Value) : TypedConstantInfo
+    public sealed record Enum : TypedConstantInfo
     {
+        public Enum(string fullyQualifiedTypeName, object value)
+        {
+            FullyQualifiedTypeName = fullyQualifiedTypeName;
+            Value = value;
+        }
+
+        public string FullyQualifiedTypeName { get; }
+
+        public object Value { get; }
+
         public override ExpressionSyntax GetSyntax()
         {
             // We let Roslyn parse the value expression, so that it can automatically handle both positive and negative values. This
@@ -143,16 +184,15 @@ internal abstract record TypedConstantInfo
             }
 
             // Now we can safely return the cast expression for the target enum type (with optional parentheses if needed)
-            return CastExpression(IdentifierName(TypeName), valueExpression);
+            return CastExpression(IdentifierName(FullyQualifiedTypeName), valueExpression);
         }
     }
 
     public sealed record Null : TypedConstantInfo
     {
-        /// <inheritdoc/>
         public override ExpressionSyntax GetSyntax()
         {
-            return LiteralExpression(SyntaxKind.NullLiteralExpression);
+            return NullLiteralExpression;
         }
     }
 }

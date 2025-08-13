@@ -82,9 +82,14 @@ internal static partial class FastSyntaxFactory
         TypeDeclarationSyntax typeDeclaration = (typeSymbol.TypeKind, typeSymbol.IsRecord) switch
         {
             (TypeKind.Class, false) => SyntaxFactory.ClassDeclaration(typeName),
-            (TypeKind.Class, true) => SyntaxFactory.RecordDeclaration(SyntaxKind.RecordDeclaration, RecordKeyword, typeName).WithClassOrStructKeyword(ClassKeyword),
+            (TypeKind.Class, true) => SyntaxFactory.RecordDeclaration(SyntaxKind.RecordDeclaration, RecordKeyword, typeName)
+                .WithOpenBraceToken(SyntaxFactory.Token(SyntaxKind.OpenBraceToken))
+                .WithCloseBraceToken(SyntaxFactory.Token(SyntaxKind.CloseBraceToken)),
             (TypeKind.Struct, false) => SyntaxFactory.StructDeclaration(typeName),
-            (TypeKind.Struct, true) => SyntaxFactory.RecordDeclaration(SyntaxKind.RecordStructDeclaration, RecordKeyword, typeName).WithClassOrStructKeyword(StructKeyword),
+            (TypeKind.Struct, true) => SyntaxFactory.RecordDeclaration(SyntaxKind.RecordStructDeclaration, RecordKeyword, typeName)
+                .WithClassOrStructKeyword(StructKeyword)
+                .WithOpenBraceToken(SyntaxFactory.Token(SyntaxKind.OpenBraceToken))
+                .WithCloseBraceToken(SyntaxFactory.Token(SyntaxKind.CloseBraceToken)),
             (TypeKind.Interface, _) => SyntaxFactory.InterfaceDeclaration(typeName),
             _ => throw new InvalidOperationException("Unsupported type kind for partial declaration: " + typeSymbol.TypeKind)
         };

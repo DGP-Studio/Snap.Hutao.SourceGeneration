@@ -29,7 +29,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         IncrementalValuesProvider<EndpointsMetadataContext> provider = context.AdditionalTextsProvider
             .Where(Match)
             .Select(EndpointsMetadataContext.Create)
-            .Where(static context => !context.Endpoints.IsEmpty);
+            .Where(EndpointsMetadataContextNotEmpty);
         context.RegisterImplementationSourceOutput(provider, GenerateWrapper);
     }
 
@@ -37,6 +37,11 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
     {
         // Match '*Endpoints.csv' files
         return Path.GetFileName(text.Path).EndsWith(FileName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool EndpointsMetadataContextNotEmpty(EndpointsMetadataContext context)
+    {
+        return !context.Endpoints.IsEmpty;
     }
 
     private static void GenerateWrapper(SourceProductionContext production, EndpointsMetadataContext context)
@@ -212,7 +217,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
         }
     }
 
-    private sealed class EndpointsMetadata : IEquatable<EndpointsMetadata>
+    private sealed class EndpointsMetadata : IEquatable<EndpointsMetadata?>
     {
         public required string? MethodString { get; init; }
 

@@ -96,6 +96,11 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
         return ((IEnumerable)AsImmutableArray()).GetEnumerator();
     }
 
+    public ImmutableArray<TResult> SelectAsArray<TResult>(Func<T,TResult> selector)
+    {
+        return ImmutableArray.CreateRange(AsImmutableArray(), selector);
+    }
+
     public static implicit operator EquatableArray<T>(ImmutableArray<T> array)
     {
         return FromImmutableArray(array);

@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Snap.Hutao.SourceGeneration.Extension;
+using System;
 using System.Collections.Immutable;
 
 namespace Snap.Hutao.SourceGeneration;
@@ -14,8 +15,15 @@ namespace Snap.Hutao.SourceGeneration;
 internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 {
     private static readonly DiagnosticDescriptor TypeInternalDescriptor = new("SH001", "Type should be internal", "Type [{0}] should be internal or private", "Quality", DiagnosticSeverity.Info, true);
+    // SH002: ReadOnly struct should be passed with ref-like key word
     private static readonly DiagnosticDescriptor UseValueTaskIfPossibleDescriptor = new("SH003", "Use ValueTask instead of Task whenever possible", "Use ValueTask instead of Task", "Quality", DiagnosticSeverity.Info, true);
+    // SH004: Use "is not null" instead of "!= null" whenever possible
+    // SH005: Use "is null" instead of "== null" whenever possible
+    // SH006: Use "is { } obj" whenever possible
     private static readonly DiagnosticDescriptor UseArgumentNullExceptionThrowIfNullDescriptor = new("SH007", "Use \"ArgumentNullException.ThrowIfNull()\" instead of \"!\"", "Use \"ArgumentNullException.ThrowIfNull()\"", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor EquatableInterfaceTypeShouldBeNullableDescriptor = new("SH008", "The type parameter of IEquatable<T> interface should be nullable", "The type parameter of IEquatable<T> interface should be nullable", "Quality", DiagnosticSeverity.Info, true);
+    // SH020: File header mismatch
+    // SH100: Use "IContentDialogFactory.EnqueueAndShowAsync" instead
 
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics
     {

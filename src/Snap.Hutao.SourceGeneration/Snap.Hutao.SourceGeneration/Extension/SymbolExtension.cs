@@ -36,6 +36,11 @@ internal static class SymbolExtension
         return symbol.ToDisplayString(SymbolDisplayFormats.NullableFullyQualifiedFormat);
     }
 
+    public static string GetMinimallyQualifiedName(this ISymbol symbol)
+    {
+        return symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
+    }
+
     public static bool HasFullyQualifiedName(this ISymbol symbol, string name)
     {
         return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) == name;

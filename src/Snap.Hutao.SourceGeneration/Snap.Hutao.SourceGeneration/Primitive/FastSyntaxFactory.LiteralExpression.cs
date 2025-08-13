@@ -1,6 +1,7 @@
 ﻿// Copyright (c) DGP Studio. All rights reserved.
 // Licensed under the MIT license.
 
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -17,6 +18,11 @@ internal static partial class FastSyntaxFactory
     public static LiteralExpressionSyntax NumericLiteralExpression(int value)
     {
         return SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(value));
+    }
+
+    public static LiteralExpressionSyntax NumericLiteralExpression(SyntaxToken literal)
+    {
+        return SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, literal);
     }
 
     public static LiteralExpressionSyntax StringLiteralExpression(string value)
