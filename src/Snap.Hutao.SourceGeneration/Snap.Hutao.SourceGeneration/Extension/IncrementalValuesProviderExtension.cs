@@ -11,7 +11,7 @@ namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class IncrementalValuesProviderExtension
 {
-    public static IncrementalValuesProvider<(TKey Key, EquatableArray<TElement> Right)> GroupBy<TLeft, TRight, TKey, TElement>(
+    public static IncrementalValuesProvider<(TKey Left, EquatableArray<TElement> Right)> GroupBy<TLeft, TRight, TKey, TElement>(
         this IncrementalValuesProvider<(TLeft Left, TRight Right)> source,
         Func<(TLeft Left, TRight Right), TKey> keySelector,
         Func<(TLeft Left, TRight Right), TElement> elementSelector)

@@ -20,6 +20,8 @@ internal static class SyntaxKeywords
 
     public static SyntaxToken ExternKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ExternKeyword);
 
+    public static SyntaxToken FieldKeyword { get; } = SyntaxFactory.Token(SyntaxKind.FieldKeyword);
+
     public static SyntaxToken ImplicitKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ImplicitKeyword);
 
     public static SyntaxToken IntKeyword { get; } = SyntaxFactory.Token(SyntaxKind.IntKeyword);

@@ -102,7 +102,7 @@ internal sealed class PropertyValuesProviderGenerator : IIncrementalGenerator
         {
             return new()
             {
-                Hierarchy = HierarchyInfo.From(typeSymbol),
+                Hierarchy = HierarchyInfo.Create(typeSymbol),
                 Properties = typeSymbol
                     .GetMembers()
                     .OfType<IPropertySymbol>()

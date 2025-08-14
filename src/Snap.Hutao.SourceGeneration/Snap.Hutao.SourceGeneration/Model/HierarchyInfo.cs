@@ -4,6 +4,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Immutable;
 using System.Linq;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
@@ -14,7 +15,7 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record HierarchyInfo
 {
-    public HierarchyInfo(string fileNameHint, string metadataName, string @namespace, EquatableArray<TypeInfo> hierarchy)
+    private HierarchyInfo(string fileNameHint, string metadataName, string @namespace, EquatableArray<TypeInfo> hierarchy)
     {
         FileNameHint = fileNameHint;
         MetadataName = metadataName;
@@ -30,7 +31,7 @@ internal sealed record HierarchyInfo
 
     public EquatableArray<TypeInfo> Hierarchy { get; }
 
-    public static HierarchyInfo From(INamedTypeSymbol typeSymbol)
+    public static HierarchyInfo Create(INamedTypeSymbol typeSymbol)
     {
         using ImmutableArrayBuilder<TypeInfo> hierarchy = ImmutableArrayBuilder<TypeInfo>.Rent();
 

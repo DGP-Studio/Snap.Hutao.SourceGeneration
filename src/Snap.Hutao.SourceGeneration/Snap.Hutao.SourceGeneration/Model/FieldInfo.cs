@@ -5,13 +5,16 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record FieldInfo
 {
-    public FieldInfo(string minimallyQualifiedName, TypeInfo typeInfo)
+    private FieldInfo(string minimallyQualifiedName, string fullyQualifiedTypeName, string fullyQualifiedTypeNameWithNullabilityAnnotation)
     {
         MinimallyQualifiedName = minimallyQualifiedName;
-        TypeInfo = typeInfo;
+        FullyQualifiedTypeName = fullyQualifiedTypeName;
+        FullyQualifiedTypeNameWithNullabilityAnnotation = fullyQualifiedTypeNameWithNullabilityAnnotation;
     }
 
     public string MinimallyQualifiedName { get; }
 
-    public TypeInfo TypeInfo { get; }
+    public string FullyQualifiedTypeName { get; }
+
+    public string FullyQualifiedTypeNameWithNullabilityAnnotation { get; }
 }

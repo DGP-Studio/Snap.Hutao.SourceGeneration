@@ -21,9 +21,24 @@ internal static partial class FastSyntaxFactory
 
     public static AccessorListSyntax GetAndSetAccessorList { get; } = SyntaxFactory.AccessorList(SyntaxFactory.List(
     [
-        SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(SemicolonToken),
-        SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithSemicolonToken(SemicolonToken)
+        GetAccessorDeclaration(),
+        SetAccessorDeclaration()
     ]));
+
+    public static AccessorDeclarationSyntax GetAccessorDeclaration()
+    {
+        return SyntaxFactory.AccessorDeclaration(SyntaxKind.GetAccessorDeclaration).WithSemicolonToken(SemicolonToken);
+    }
+
+    public static AccessorDeclarationSyntax SetAccessorDeclaration()
+    {
+        return SyntaxFactory.AccessorDeclaration(SyntaxKind.SetAccessorDeclaration).WithSemicolonToken(SemicolonToken);
+    }
+
+    public static AssignmentExpressionSyntax CoalesceAssignmentExpression(ExpressionSyntax left, ExpressionSyntax right)
+    {
+        return SyntaxFactory.AssignmentExpression(SyntaxKind.CoalesceAssignmentExpression, left, right);
+    }
 
     public static AssignmentExpressionSyntax SimpleAssignmentExpression(ExpressionSyntax left, ExpressionSyntax right)
     {

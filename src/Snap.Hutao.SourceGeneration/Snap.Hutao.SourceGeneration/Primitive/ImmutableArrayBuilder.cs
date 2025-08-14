@@ -9,7 +9,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
-namespace Snap.Hutao.SourceGeneration.Model;
+namespace Snap.Hutao.SourceGeneration.Primitive;
 
 internal ref struct ImmutableArrayBuilder<T> : IDisposable
 {

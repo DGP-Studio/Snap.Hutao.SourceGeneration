@@ -8,18 +8,24 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record PropertyInfo
 {
-    public PropertyInfo(string minimallyQualifiedName, string fullyQualifiedTypeName)
+    private PropertyInfo(string minimallyQualifiedName, string fullyQualifiedTypeName, string fullyQualifiedTypeNameWithNullabilityAnnotation)
     {
         MinimallyQualifiedName = minimallyQualifiedName;
         FullyQualifiedTypeName = fullyQualifiedTypeName;
+        FullyQualifiedTypeNameWithNullabilityAnnotation = fullyQualifiedTypeNameWithNullabilityAnnotation;
     }
 
     public string MinimallyQualifiedName { get; }
 
     public string FullyQualifiedTypeName { get; }
 
+    public string FullyQualifiedTypeNameWithNullabilityAnnotation { get; }
+
     public static PropertyInfo Create(IPropertySymbol propertySymbol)
     {
-        return new(propertySymbol.Name, propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations());
+        return new(
+            propertySymbol.Name,
+            propertySymbol.Type.GetFullyQualifiedName(),
+            propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations());
     }
 }

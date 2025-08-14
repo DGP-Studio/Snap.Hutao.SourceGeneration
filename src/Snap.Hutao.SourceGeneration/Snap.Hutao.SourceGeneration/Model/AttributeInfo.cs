@@ -4,7 +4,9 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
@@ -12,7 +14,10 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record AttributeInfo
 {
-    public AttributeInfo(string fullyQualifiedTypeName, EquatableArray<TypedConstantInfo> constructorArgumentInfo, EquatableArray<(string Name, TypedConstantInfo Value)> namedArgumentInfo)
+    private AttributeInfo(
+        string fullyQualifiedTypeName,
+        EquatableArray<TypedConstantInfo> constructorArgumentInfo,
+        EquatableArray<(string Name, TypedConstantInfo Value)> namedArgumentInfo)
     {
         FullyQualifiedTypeName = fullyQualifiedTypeName;
         ConstructorArgumentInfo = constructorArgumentInfo;
@@ -39,9 +44,9 @@ internal sealed record AttributeInfo
         }
 
         // Get the named arguments
-        foreach (KeyValuePair<string, TypedConstant> namedConstant in attributeData.NamedArguments)
+        foreach ((string name, TypedConstant constant) in attributeData.NamedArguments)
         {
-            namedArguments.Add((namedConstant.Key, TypedConstantInfo.Create(namedConstant.Value)));
+            namedArguments.Add((name, TypedConstantInfo.Create(constant)));
         }
 
         return new(typeName, constructorArguments.ToImmutable(), namedArguments.ToImmutable());
@@ -61,6 +66,19 @@ internal sealed record AttributeInfo
                     .WithNameEquals(NameEquals(IdentifierName(arg.Name))));
 
         return Attribute(IdentifierName(FullyQualifiedTypeName), AttributeArgumentList(SeparatedList([.. arguments, .. namedArguments])));
+    }
+
+    public bool TryGetConstructorArgument(int index, [NotNullWhen(true)] out string? result)
+    {
+        if (ConstructorArgumentInfo.AsImmutableArray().Length > index &&
+            ConstructorArgumentInfo[index] is TypedConstantInfo.Primitive.String argument)
+        {
+            result = argument.Value;
+            return true;
+        }
+
+        result = default;
+        return false;
     }
 
     public bool HasNamedArgument(string name, bool value)

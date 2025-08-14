@@ -4,101 +4,154 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Model;
 using Snap.Hutao.SourceGeneration.Primitive;
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Threading;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
 
 namespace Snap.Hutao.SourceGeneration.Xaml;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class CommandGenerator : IIncrementalGenerator
 {
-    public const string AttributeName = "Snap.Hutao.Core.Annotation.CommandAttribute";
+    private static readonly NameSyntax NameOfCommunityToolkitMvvmInput = ParseName("global::CommunityToolkit.Mvvm.Input");
+    private static readonly NameSyntax NameOfCommunityToolkitMvvmInputAsyncRelayCommandOptions = ParseName("global::CommunityToolkit.Mvvm.Input.AsyncRelayCommandOptions");
+    private static readonly NameSyntax NameOfSystemDiagnosticsCodeAnalysisMaybeNull = ParseName("global::System.Diagnostics.CodeAnalysis.MaybeNull");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext<IMethodSymbol>>> commands = context.SyntaxProvider
-            .CreateSyntaxProvider(FilterAttributedMethods, CommandMethod)
-            .Where(AttributedGeneratorSymbolContext<IMethodSymbol>.NotNull)
-            .Collect();
+        IncrementalValuesProvider<CommandGeneratorContext> provider = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                WellKnownMetadataNames.CommandAttribute,
+                SyntaxNodeHelper.Is<MethodDeclarationSyntax>,
+                Transform)
+            .GroupBy(t => t.Left, t => AttributedMethodInfo.Create(t.Right))
+            .Select(CommandGeneratorContext.Create);
 
-        context.RegisterImplementationSourceOutput(commands, GenerateCommandImplementations);
+        context.RegisterSourceOutput(provider, GenerateWrapper);
     }
 
-    private static bool FilterAttributedMethods(SyntaxNode node, CancellationToken token)
+    private static (HierarchyInfo Hierarchy, (EquatableArray<AttributeInfo> Attribute, MethodInfo Method)) Transform(GeneratorAttributeSyntaxContext context, CancellationToken token)
     {
-        return node is MethodDeclarationSyntax methodDeclarationSyntax
-            && methodDeclarationSyntax.Parent is ClassDeclarationSyntax classDeclarationSyntax
-            && classDeclarationSyntax.Modifiers.Count > 1
-            && methodDeclarationSyntax.HasAttributeLists();
-    }
-
-    private static AttributedGeneratorSymbolContext<IMethodSymbol> CommandMethod(GeneratorSyntaxContext context, CancellationToken token)
-    {
-        if (context.TryGetDeclaredSymbol(token, out IMethodSymbol? methodSymbol))
+        if (context.TargetSymbol is IMethodSymbol { ContainingType: { } typeSymbol } methodSymbol)
         {
-            ImmutableArray<AttributeData> attributes = methodSymbol.GetAttributes();
-            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() == AttributeName))
-            {
-                return new(context, methodSymbol, attributes);
-            }
+            return (HierarchyInfo.Create(typeSymbol), (ImmutableArray.CreateRange(context.Attributes, AttributeInfo.Create),  MethodInfo.Create(methodSymbol)));
         }
 
         return default;
     }
 
-    private static void GenerateCommandImplementations(SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext<IMethodSymbol>> context2s)
+    private static void GenerateWrapper(SourceProductionContext production, CommandGeneratorContext context)
     {
-        foreach (AttributedGeneratorSymbolContext<IMethodSymbol> context2 in context2s.DistinctBy(c => c.Symbol.ToDisplayString()))
+        try
         {
-            GenerateCommandImplementation(production, context2);
+            Generate(production, context);
+        }
+        catch (Exception e)
+        {
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", e.ToString());
         }
     }
 
-    private static void GenerateCommandImplementation(SourceProductionContext production, AttributedGeneratorSymbolContext<IMethodSymbol> context2)
+    private static void Generate(SourceProductionContext production, CommandGeneratorContext context)
     {
-        INamedTypeSymbol classSymbol = context2.Symbol.ContainingType;
+        CompilationUnitSyntax syntax = context.Hierarchy.GetCompilationUnit([.. GenerateCommandProperties(context.Methods)])
+            .NormalizeWhitespace();
 
-        AttributeData commandInfo = context2.SingleAttribute(AttributeName);
-        string commandName = (string)commandInfo.ConstructorArguments[0].Value!;
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+    }
 
-        string? canExecute = commandInfo.ConstructorArguments.ElementAtOrDefault(1).Value as string;
-        string canExecuteParameter = canExecute is not null
-            ? $", {canExecute}"
-            : string.Empty;
+    private static IEnumerable<MemberDeclarationSyntax> GenerateCommandProperties(EquatableArray<AttributedMethodInfo> methods)
+    {
+        foreach (AttributedMethodInfo attributedMethod in methods)
+        {
+            bool isAsync = attributedMethod.Method.FullyQualifiedReturnTypeMetadataName.StartsWith("System.Threading.Tasks.Task");
+            SyntaxToken identifier = Identifier(isAsync ? "AsyncRelayCommand" : "RelayCommand");
 
-        string commandType = context2.Symbol.ReturnType.HasOrInheritsFromFullyQualifiedMetadataName("System.Threading.Tasks.Task")
-            ? "AsyncRelayCommand"
-            : "RelayCommand";
-
-        string genericParameter = context2.Symbol.Parameters.ElementAtOrDefault(0) is IParameterSymbol parameter
-            ? $"<{parameter.Type.ToDisplayString(SymbolDisplayFormats.NonNullableQualifiedFormat)}>"
-            : string.Empty;
-
-        string commandFullType = $"{commandType}{genericParameter}";
-
-        string concurrentExecution = commandInfo.HasNamedArgument<bool>("AllowConcurrentExecutions", value => value)
-            ? ", AsyncRelayCommandOptions.AllowConcurrentExecutions"
-            : string.Empty;
-
-        string className = classSymbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-
-        string code = $$"""
-            using CommunityToolkit.Mvvm.Input;
-
-            namespace {{classSymbol.ContainingNamespace}};
-
-            partial class {{className}}
+            TypeSyntax propertyType;
+            ImmutableArray<ParameterInfo> parameters = attributedMethod.Method.Parameters;
+            if (parameters.Length >= 1)
             {
-                [field: MaybeNull]
-                public {{commandFullType}} {{commandName}}
-                {
-                    get => field ??= new {{commandFullType}}({{context2.Symbol.Name}}{{canExecuteParameter}}{{concurrentExecution}});
-                }
+                TypeSyntax type = ParseTypeName(parameters[0].FullyQualifiedTypeName);
+                propertyType = QualifiedName(NameOfCommunityToolkitMvvmInput, GenericName(identifier).WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type))));
             }
-            """;
+            else
+            {
+                propertyType = QualifiedName(NameOfCommunityToolkitMvvmInput, IdentifierName(identifier));
+            }
 
-        production.AddSource($"{classSymbol.NormalizedFullyQualifiedName()}.{commandName}.g.cs", code);
+            foreach (AttributeInfo attribute in attributedMethod.Attributes)
+            {
+                if (!attribute.TryGetConstructorArgument(0, out string? commandName))
+                {
+                    continue;
+                }
+
+                SeparatedSyntaxList<ArgumentSyntax> arguments = SingletonSeparatedList(
+                    Argument(IdentifierName(attributedMethod.Method.MinimallyQualifiedName)));
+
+                if (attribute.HasNamedArgument("AllowConcurrentExecutions", true))
+                {
+                    arguments = arguments.Add(Argument(SimpleMemberAccessExpression(
+                        NameOfCommunityToolkitMvvmInputAsyncRelayCommandOptions,
+                        IdentifierName("AllowConcurrentExecutions"))));
+                }
+
+                yield return PropertyDeclaration(propertyType, commandName)
+                    .WithAttributeLists(SingletonList(
+                        AttributeList(SingletonSeparatedList(
+                            Attribute(NameOfSystemDiagnosticsCodeAnalysisMaybeNull)))
+                            .WithTarget(AttributeTargetSpecifier(FieldKeyword))))
+                    .WithModifiers(PublicTokenList)
+                    .WithAccessorList(AccessorList(SingletonList(
+                        GetAccessorDeclaration()
+                            .WithExpressionBody(ArrowExpressionClause(CoalesceAssignmentExpression(
+                                FieldExpression(),
+                                ImplicitObjectCreationExpression()
+                                    .WithArgumentList(ArgumentList(arguments))))))));
+            }
+        }
+    }
+
+    private sealed record CommandGeneratorContext
+    {
+        private CommandGeneratorContext(HierarchyInfo hierarchy, EquatableArray<AttributedMethodInfo> methods)
+        {
+            Hierarchy = hierarchy;
+            Methods = methods;
+        }
+
+        public HierarchyInfo Hierarchy { get; }
+
+        public EquatableArray<AttributedMethodInfo> Methods { get; }
+
+        public static CommandGeneratorContext Create((HierarchyInfo Hierarchy, EquatableArray<AttributedMethodInfo> Methods) tuple, CancellationToken token)
+        {
+            token.ThrowIfCancellationRequested();
+            return new(tuple.Hierarchy, tuple.Methods);
+        }
+    }
+
+    private sealed record AttributedMethodInfo
+    {
+        private AttributedMethodInfo(EquatableArray<AttributeInfo> attributes, MethodInfo method)
+        {
+            Attributes = attributes;
+            Method = method;
+        }
+
+        public EquatableArray<AttributeInfo> Attributes { get; }
+
+        public MethodInfo Method { get; }
+
+        public static AttributedMethodInfo Create((EquatableArray<AttributeInfo> Attributes, MethodInfo Method) tuple)
+        {
+            return new AttributedMethodInfo(tuple.Attributes, tuple.Method);
+        }
     }
 }

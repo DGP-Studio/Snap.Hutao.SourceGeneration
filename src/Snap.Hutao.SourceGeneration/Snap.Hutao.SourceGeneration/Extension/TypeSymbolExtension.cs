@@ -3,6 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 using Snap.Hutao.SourceGeneration.Model;
+using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Linq;
 
