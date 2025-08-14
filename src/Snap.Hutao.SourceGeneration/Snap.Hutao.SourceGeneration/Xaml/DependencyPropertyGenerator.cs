@@ -21,7 +21,7 @@ namespace Snap.Hutao.SourceGeneration.Xaml;
 [Generator(LanguageNames.CSharp)]
 internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
 {
-    private static readonly NameSyntax NameOfMicrosoftUIXaml = ParseName("global::Microsoft.UI.Xaml.");
+    private static readonly NameSyntax NameOfMicrosoftUIXaml = ParseName("global::Microsoft.UI.Xaml");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {

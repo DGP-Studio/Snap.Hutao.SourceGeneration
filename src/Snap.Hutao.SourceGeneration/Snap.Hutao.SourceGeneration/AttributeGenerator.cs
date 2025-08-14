@@ -128,13 +128,13 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                             PropertyDeclaration(BoolType, identifierOfIsAttached)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(StringType, identifierOfDefaultValue)
+                            PropertyDeclaration(NullableObjectType, identifierOfDefaultValue)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(StringType, identifierOfCreateDefaultValueCallbackName)
+                            PropertyDeclaration(NullableStringType, identifierOfCreateDefaultValueCallbackName)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(StringType, identifierOfPropertyChangedCallbackName)
+                            PropertyDeclaration(NullableStringType, identifierOfPropertyChangedCallbackName)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList)
                         ])),
