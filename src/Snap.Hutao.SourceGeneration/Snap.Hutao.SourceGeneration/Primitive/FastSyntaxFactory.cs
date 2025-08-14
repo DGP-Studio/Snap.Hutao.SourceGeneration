@@ -70,7 +70,7 @@ internal static partial class FastSyntaxFactory
         return SyntaxFactory.FileScopedNamespaceDeclaration(SyntaxFactory.ParseName(symbol.ToDisplayString()));
     }
 
-    public static InvocationExpressionSyntax NameOf(ExpressionSyntax argument)
+    public static InvocationExpressionSyntax NameOfExpression(ExpressionSyntax argument)
     {
         return SyntaxFactory.InvocationExpression(SyntaxFactory.IdentifierName("nameof"), SyntaxFactory.ArgumentList(SyntaxFactory.SingletonSeparatedList(SyntaxFactory.Argument(argument))));
     }

@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Model;
+using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -23,18 +24,13 @@ internal sealed class PropertyValuesProviderGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         IncrementalValuesProvider<PropertyValuesProviderGeneratorContext> commands = context.SyntaxProvider
-            .CreateSyntaxProvider(FilterTypeWithBaseList, ProviderType)
+            .CreateSyntaxProvider(SyntaxNodeHelper.TypeHasBaseType, InheritedType)
             .Where(static c => c is not null);
 
         context.RegisterSourceOutput(commands, GenerateWrapper);
     }
 
-    private static bool FilterTypeWithBaseList(SyntaxNode node, CancellationToken token)
-    {
-        return node is TypeDeclarationSyntax { BaseList: not null };
-    }
-
-    private static PropertyValuesProviderGeneratorContext ProviderType(GeneratorSyntaxContext context, CancellationToken token)
+    private static PropertyValuesProviderGeneratorContext InheritedType(GeneratorSyntaxContext context, CancellationToken token)
     {
         if (context.SemanticModel.GetDeclaredSymbol(context.Node) is INamedTypeSymbol typeSymbol)
         {
@@ -84,7 +80,7 @@ internal sealed class PropertyValuesProviderGenerator : IIncrementalGenerator
 
             // nameof(${propertyName}) => ${propertyName}
             yield return SwitchExpressionArm(
-                ConstantPattern(NameOf(propertyName)),
+                ConstantPattern(NameOfExpression(propertyName)),
                 propertyName);
         }
 

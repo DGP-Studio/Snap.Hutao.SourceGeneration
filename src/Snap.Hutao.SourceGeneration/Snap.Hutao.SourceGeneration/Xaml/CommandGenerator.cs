@@ -151,7 +151,7 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
         public static AttributedMethodInfo Create((EquatableArray<AttributeInfo> Attributes, MethodInfo Method) tuple)
         {
-            return new AttributedMethodInfo(tuple.Attributes, tuple.Method);
+            return new(tuple.Attributes, tuple.Method);
         }
     }
 }

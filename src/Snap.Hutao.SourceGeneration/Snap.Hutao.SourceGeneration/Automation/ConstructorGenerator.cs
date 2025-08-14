@@ -229,7 +229,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                                         ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), TypeOfSystemNetHttpIHttpClientFactory),
                                         IdentifierName("CreateClient")))
                                 .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                                    Argument(NameOf(IdentifierName(classSymbol.Name))))))));
+                                    Argument(NameOfExpression(IdentifierName(classSymbol.Name))))))));
                     break;
 
                 // this.${fieldName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
@@ -284,7 +284,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                                         ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), TypeOfSystemNetHttpIHttpClientFactory),
                                         IdentifierName("CreateClient")))
                                 .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                                    Argument(NameOf(IdentifierName(classSymbol.Name))))))));
+                                    Argument(NameOfExpression(IdentifierName(classSymbol.Name))))))));
                     break;
 
                 // this.${propertyName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);

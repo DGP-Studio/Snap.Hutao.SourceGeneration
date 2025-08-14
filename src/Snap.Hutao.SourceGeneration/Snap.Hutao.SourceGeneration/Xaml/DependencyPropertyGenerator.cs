@@ -5,150 +5,211 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Model;
 using Snap.Hutao.SourceGeneration.Primitive;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
 
 namespace Snap.Hutao.SourceGeneration.Xaml;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
 {
-    private const string AttributeName = "Snap.Hutao.Core.Annotation.DependencyPropertyAttribute";
+    private static readonly NameSyntax NameOfMicrosoftUIXaml = ParseName("global::Microsoft.UI.Xaml.");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<AttributedGeneratorSymbolContext>> commands =
-            context.SyntaxProvider.CreateSyntaxProvider(FilterAttributedClasses, CommandMethod)
-            .Where(AttributedGeneratorSymbolContext.NotNull)
-            .Collect();
+        IncrementalValuesProvider<DependencyPropertyGeneratorContext> provider = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                WellKnownMetadataNames.DependencyPropertyAttributeT,
+                SyntaxNodeHelper.Is<TypeDeclarationSyntax>,
+                Transform)
+            .Where(static c => c is not null);
 
-        context.RegisterImplementationSourceOutput(commands, GenerateDependencyPropertyImplementations);
+        context.RegisterSourceOutput(provider, GenerateWrapper);
     }
 
-    private static bool FilterAttributedClasses(SyntaxNode node, CancellationToken token)
+    private static DependencyPropertyGeneratorContext Transform(GeneratorAttributeSyntaxContext context, CancellationToken token)
     {
-        return node is ClassDeclarationSyntax classDeclarationSyntax
-            && classDeclarationSyntax.Modifiers.Count > 1
-            && classDeclarationSyntax.HasAttributeLists();
-    }
-
-    private static AttributedGeneratorSymbolContext CommandMethod(GeneratorSyntaxContext context, CancellationToken token)
-    {
-        if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? methodSymbol))
+        if (context.TargetSymbol is not INamedTypeSymbol typeSymbol)
         {
-            ImmutableArray<AttributeData> attributes = methodSymbol.GetAttributes();
-            if (attributes.Any(data => data.AttributeClass!.ToDisplayString() == AttributeName))
-            {
-                return new(context, methodSymbol, attributes);
-            }
+            return default!;
         }
 
-        return default;
+        return DependencyPropertyGeneratorContext.Create(typeSymbol);
     }
 
-    private static void GenerateDependencyPropertyImplementations(SourceProductionContext production, ImmutableArray<AttributedGeneratorSymbolContext> contexts)
+    private static void GenerateWrapper(SourceProductionContext production, DependencyPropertyGeneratorContext context)
     {
-        foreach (AttributedGeneratorSymbolContext context2 in contexts.DistinctBy(c => c.Symbol.ToDisplayString()))
+        try
         {
-            GenerateDependencyPropertyImplementation(production, context2);
+            Generate(production, context);
+        }
+        catch (Exception e)
+        {
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", e.ToString());
         }
     }
 
-    private static void GenerateDependencyPropertyImplementation(SourceProductionContext production, AttributedGeneratorSymbolContext context)
+    private static void Generate(SourceProductionContext production, DependencyPropertyGeneratorContext context)
     {
-        foreach (AttributeData propertyInfo in context.Attributes.Where(attr => attr.AttributeClass!.ToDisplayString() is AttributeName))
+        CompilationUnitSyntax syntax = context.Hierarchy
+            .GetCompilationUnit([.. GenerateMembers(context)])
+            .NormalizeWhitespace();
+
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+    }
+
+    private static IEnumerable<MemberDeclarationSyntax> GenerateMembers(DependencyPropertyGeneratorContext context)
+    {
+        foreach (AttributeInfo attribute in context.Attributes)
         {
-            string owner = context.Symbol.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat);
-            Dictionary<string, TypedConstant> namedArguments = propertyInfo.NamedArguments.ToDictionary();
-            bool isAttached = namedArguments.TryGetValue("IsAttached", out TypedConstant constant) && (bool)constant.Value!;
-            string register = isAttached ? "RegisterAttached" : "Register";
-
-            ImmutableArray<TypedConstant> constructorArguments = propertyInfo.ConstructorArguments;
-
-            string propertyName = (string)constructorArguments[0].Value!;
-            string propertyType = constructorArguments[1].Value!.ToString();
-            string defaultValue = constructorArguments.ElementAtOrDefault(2).ToCSharpString() ?? "default";
-
-            if (defaultValue is "null")
+            if (!attribute.TryGetConstructorArgument(0, out string? name))
             {
-                defaultValue = "default";
+                continue;
             }
 
-            if (namedArguments.TryGetValue("RawDefaultValue", out TypedConstant rawDefaultValue))
+            if (!attribute.TryGetTypeArgument(0, out TypeArgumentInfo? propertyType))
             {
-                defaultValue = (string)rawDefaultValue.Value!;
+                continue;
             }
 
-            string propertyChangedCallback = constructorArguments.ElementAtOrDefault(3) is { IsNull: false } callbackName ? $", {callbackName.Value}" : string.Empty;
+            TypeSyntax propertyTypeSyntax = propertyType.GetSyntax();
 
-            string code;
-            if (isAttached)
+            // Register(string name, Type propertyType, Type ownerType, PropertyMetadata typeMetadata)
+            // RegisterAttached(string name, Type propertyType, Type ownerType, PropertyMetadata typeMetadata)
+            SeparatedSyntaxList<ArgumentSyntax> registerArguments = SeparatedList(
+            [
+                Argument(NameOfExpression(IdentifierName(name))),                                                 // name
+                Argument(TypeOfExpression(propertyTypeSyntax)),                                                   // propertyType
+                Argument(TypeOfExpression(IdentifierName(context.Hierarchy.Hierarchy[0].MinimallyQualifiedName))) // ownerType
+            ]);
+
+            // PropertyMetadata.Create(object defaultValue)
+            // PropertyMetadata.Create(object defaultValue, PropertyChangedCallback propertyChangedCallback)
+            // PropertyMetadata.Create(CreateDefaultValueCallback createDefaultValueCallback)
+            // PropertyMetadata.Create(CreateDefaultValueCallback createDefaultValueCallback, PropertyChangedCallback propertyChangedCallback)
+
+            SeparatedSyntaxList<ArgumentSyntax> createArguments = SeparatedList<ArgumentSyntax>();
+            if (attribute.TryGetNamedArgument("CreateDefaultValueCallback", out string? createDefaultValueCallbackName))
             {
-                string objType = namedArguments.TryGetValue("AttachedType", out TypedConstant attachedType)
-                    ? attachedType.Value!.ToString()
-                    : "object";
-
-                code = $$"""
-                    using Microsoft.UI.Xaml;
-
-                    namespace {{context.Symbol.ContainingNamespace}};
-
-                    partial class {{owner}}
-                    {
-                        private static readonly DependencyProperty {{propertyName}}Property =
-                            DependencyProperty.RegisterAttached(
-                                "{{propertyName}}",
-                                typeof({{propertyType}}),
-                                typeof({{owner}}),
-                                new PropertyMetadata({{defaultValue}}{{propertyChangedCallback}}));
-
-                        /// <summary>
-                        /// Gets the value of the {{propertyName}} from the specified object.
-                        /// </summary>
-                        public static {{propertyType}} Get{{propertyName}}({{objType}} obj)
-                        {
-                            return ({{propertyType}})obj?.GetValue({{propertyName}}Property);
-                        }
-
-                        /// <summary>
-                        /// Sets the value of the {{propertyName}} on the specified object.
-                        /// </summary>
-                        public static void Set{{propertyName}}({{objType}} obj, {{propertyType}} value)
-                        {
-                            obj.SetValue({{propertyName}}Property, value);
-                        }
-                    }
-                    """;
+                createArguments = createArguments.Add(Argument(IdentifierName(createDefaultValueCallbackName)));
             }
             else
             {
-                code = $$"""
-                    using Microsoft.UI.Xaml;
-
-                    namespace {{context.Symbol.ContainingNamespace}};
-
-                    partial class {{owner}}
-                    {
-                        private static readonly DependencyProperty {{propertyName}}Property =
-                            DependencyProperty.Register(
-                                nameof({{propertyName}}),
-                                typeof({{propertyType}}),
-                                typeof({{owner}}),
-                                new PropertyMetadata({{defaultValue}}{{propertyChangedCallback}}));
-
-                        public {{propertyType}} {{propertyName}}
-                        {
-                            get => ({{propertyType}})GetValue({{propertyName}}Property);
-                            set => SetValue({{propertyName}}Property, value);
-                        }
-                    }
-                    """;
+                bool hasDefaultValue = attribute.TryGetNamedArgument("DefaultValue", out TypedConstantInfo? defaultValue);
+                createArguments = createArguments.Add(hasDefaultValue
+                    ? Argument(defaultValue!.GetSyntax())
+                    : Argument(NullLiteralExpression));
             }
 
-            production.AddSource($"{context.Symbol.NormalizedFullyQualifiedName()}.{propertyName}.g.cs", code);
+            if (attribute.TryGetNamedArgument("PropertyChangedCallback", out string? propertyChangedCallbackName))
+            {
+                createArguments = createArguments.Add(Argument(IdentifierName(propertyChangedCallbackName)));
+            }
+
+            registerArguments = registerArguments.Add(Argument(InvocationExpression(
+                    SimpleMemberAccessExpression(
+                        SimpleMemberAccessExpression(
+                            NameOfMicrosoftUIXaml,
+                            IdentifierName("PropertyMetadata")),
+                        IdentifierName("Create")))
+                .WithArgumentList(ArgumentList(createArguments))));
+
+            bool isAttached = attribute.HasNamedArgument("IsAttached", true);
+
+            TypeSyntax dependencyPropertyType = QualifiedName(NameOfMicrosoftUIXaml, IdentifierName("DependencyProperty"));
+            string propertyName = $"{name}Property";
+
+            yield return FieldDeclaration(VariableDeclaration(dependencyPropertyType)
+                .WithVariables(SingletonSeparatedList(
+                    VariableDeclarator(Identifier(propertyName))
+                        .WithInitializer(EqualsValueClause(
+                            InvocationExpression(SimpleMemberAccessExpression(
+                                    SimpleMemberAccessExpression(
+                                        NameOfMicrosoftUIXaml,
+                                        IdentifierName("DependencyProperty")),
+                                    IdentifierName(isAttached ? "Register" : "RegisterAttached")))
+                                .WithArgumentList(ArgumentList(registerArguments)))))));
+
+            if (!isAttached)
+            {
+                // Generate a property for non-attached properties
+                yield return PropertyDeclaration(dependencyPropertyType, Identifier(name))
+                    .WithModifiers(PublicTokenList)
+                    .WithIdentifier(Identifier(name))
+                    .WithAccessorList(AccessorList(List(
+                    [
+                        GetAccessorDeclaration().WithExpressionBody(ArrowExpressionClause(CastExpression(
+                            propertyTypeSyntax,
+                            InvocationExpression(IdentifierName("GetValue"))
+                                .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                    Argument(IdentifierName(propertyName)))))))),
+                        SetAccessorDeclaration().WithExpressionBody(ArrowExpressionClause(
+                            InvocationExpression(IdentifierName("SetValue"))
+                                .WithArgumentList(ArgumentList(SeparatedList(
+                                [
+                                    Argument(IdentifierName(propertyName)),
+                                    Argument(IdentifierName("value"))
+                                ])))))
+                    ])));
+            }
+            else
+            {
+                // Generate static methods for attached properties
+                yield return MethodDeclaration(propertyTypeSyntax, Identifier($"Get{name}"))
+                    .WithModifiers(PublicStaticTokenList)
+                    .WithParameterList(ParameterList(SeparatedList(
+                    [
+                        Parameter(NullableType(QualifiedName(NameOfMicrosoftUIXaml, IdentifierName("DependencyObject"))), Identifier("obj"))
+                    ])))
+                    .WithBody(Block(SingletonList(
+                        ReturnStatement(CastExpression(propertyTypeSyntax,
+                            InvocationExpression(IdentifierName("GetValue"))
+                                .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                    Argument(IdentifierName(propertyName))))))))));
+
+                yield return MethodDeclaration(VoidType, Identifier($"Set{name}"))
+                    .WithModifiers(PublicStaticTokenList)
+                    .WithParameterList(ParameterList(SeparatedList(
+                    [
+                        Parameter(NullableType(QualifiedName(NameOfMicrosoftUIXaml, IdentifierName("DependencyObject"))), Identifier("obj")),
+                        Parameter(propertyTypeSyntax, Identifier("value"))
+                    ])))
+                    .WithBody(Block(SingletonList(
+                        ExpressionStatement(InvocationExpression(SimpleMemberAccessExpression(
+                            IdentifierName("obj"),
+                            IdentifierName("SetValue")))
+                            .WithArgumentList(ArgumentList(SeparatedList(
+                                [
+                                    Argument(IdentifierName(propertyName)),
+                                    Argument(IdentifierName("value"))
+                                ])))))));
+            }
+        }
+    }
+
+    private sealed record DependencyPropertyGeneratorContext
+    {
+        private DependencyPropertyGeneratorContext(HierarchyInfo hierarchy, ImmutableArray<AttributeInfo> attributes)
+        {
+            Hierarchy = hierarchy;
+            Attributes = attributes;
+        }
+
+        public HierarchyInfo Hierarchy { get; }
+
+        public EquatableArray<AttributeInfo> Attributes { get; }
+
+        public static DependencyPropertyGeneratorContext Create(INamedTypeSymbol typeSymbol)
+        {
+            return new(HierarchyInfo.Create(typeSymbol), ImmutableArray.CreateRange(typeSymbol.GetAttributes(), AttributeInfo.Create));
         }
     }
 }

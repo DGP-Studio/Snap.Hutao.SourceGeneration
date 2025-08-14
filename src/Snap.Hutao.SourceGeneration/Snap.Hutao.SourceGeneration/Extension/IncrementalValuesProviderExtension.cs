@@ -6,6 +6,7 @@ using Snap.Hutao.SourceGeneration.Model;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Snap.Hutao.SourceGeneration.Extension;
 
@@ -51,5 +52,11 @@ internal static class IncrementalValuesProviderExtension
 
             return result;
         });
+    }
+
+    public static IncrementalValuesProvider<T> Distinct<T>(this IncrementalValuesProvider<T> source)
+        where T : IEquatable<T>
+    {
+        return source.Collect().SelectMany((array, token) => array.Distinct().ToImmutableArray());
     }
 }

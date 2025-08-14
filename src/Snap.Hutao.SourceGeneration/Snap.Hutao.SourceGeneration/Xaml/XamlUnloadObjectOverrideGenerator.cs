@@ -1,74 +1,86 @@
 ﻿using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
-using System.Text;
+using Snap.Hutao.SourceGeneration.Model;
 using System.Threading;
 using Snap.Hutao.SourceGeneration.Primitive;
-using System.Collections.Immutable;
+using System;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.Xaml;
 
 [Generator]
 internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
 {
-    private const string ClassName = "Snap.Hutao.UI.Xaml.Control.ScopedPage";
+    private const string ClassMetadataName = "Snap.Hutao.UI.Xaml.Control.ScopedPage";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValueProvider<ImmutableArray<GeneratorSymbolContext>> inheritClasses = context.SyntaxProvider
-            .CreateSyntaxProvider(FilterClassWithBaseList, ScopedPageInheritClass)
-            .Where(GeneratorSymbolContext.NotNull)
-            .Collect();
+        IncrementalValuesProvider<XamlUnloadObjectOverrideGeneratorContext> inheritClasses = context.SyntaxProvider
+            .CreateSyntaxProvider(SyntaxNodeHelper.TypeHasBaseType, InheritedType)
+            .Where(static c => c is not null)
+            .Distinct();
 
-        context.RegisterSourceOutput(inheritClasses, GenerateUnloadObjectOverrideImplementations);
+        context.RegisterSourceOutput(inheritClasses, GenerateWrapper);
     }
 
-    private static bool FilterClassWithBaseList(SyntaxNode node, CancellationToken token)
+    private static XamlUnloadObjectOverrideGeneratorContext InheritedType(GeneratorSyntaxContext context, CancellationToken token)
     {
-        return node is ClassDeclarationSyntax { BaseList: not null };
-    }
-
-    private static GeneratorSymbolContext ScopedPageInheritClass(GeneratorSyntaxContext context, CancellationToken token)
-    {
-        if (context.TryGetDeclaredSymbol(token, out INamedTypeSymbol? classSymbol))
+        if (context.SemanticModel.GetDeclaredSymbol(context.Node) is INamedTypeSymbol typeSymbol)
         {
-            if (classSymbol.BaseType?.ToDisplayString() is ClassName)
+            if (typeSymbol.BaseType?.HasFullyQualifiedMetadataName(ClassMetadataName) is true)
             {
-                return new(context, classSymbol);
+                return XamlUnloadObjectOverrideGeneratorContext.Create(typeSymbol);
             }
         }
 
-        return default;
+        return default!;
     }
 
-    private static void GenerateUnloadObjectOverrideImplementations(SourceProductionContext production, ImmutableArray<GeneratorSymbolContext> context3s)
+    private static void GenerateWrapper(SourceProductionContext production, XamlUnloadObjectOverrideGeneratorContext context)
     {
-        foreach (GeneratorSymbolContext context3 in context3s.DistinctBy(c => c.Symbol.ToDisplayString()))
+        try
         {
-            GenerateUnloadObjectOverrideImplementation(production, context3);
+            Generate(production, context);
+        }
+        catch (Exception e)
+        {
+            production.AddSource($"Error-{Guid.NewGuid().ToString()}.g.cs", e.ToString());
         }
     }
 
-    private static void GenerateUnloadObjectOverrideImplementation(SourceProductionContext production, GeneratorSymbolContext context3)
+    private static void Generate(SourceProductionContext production, XamlUnloadObjectOverrideGeneratorContext context)
     {
-        StringBuilder sourceBuilder = new StringBuilder().Append($$"""
-            // Copyright (c) DGP Studio. All rights reserved.
-            // Licensed under the MIT license.
+        CompilationUnitSyntax syntax = context.Hierarchy.GetCompilationUnit(
+            [
+                MethodDeclaration(VoidType, Identifier("UnloadObjectOverride"))
+                    .WithModifiers(PublicOverrideTokenList)
+                    .WithParameterList(ParameterList(SingletonSeparatedList(
+                        Parameter(ParseTypeName("global::Microsoft.UI.Xaml.DependencyObject"), Identifier("unloadableObject")))))
+                    .WithBody(Block(SingletonList<StatementSyntax>(
+                        ExpressionStatement(
+                            InvocationExpression(IdentifierName("UnloadObject"))
+                                .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                    Argument(IdentifierName("unloadableObject"))))))))),
+            ])
+            .NormalizeWhitespace();
 
-            using Microsoft.UI.Xaml;
-            
-            namespace {{context3.Symbol.ContainingNamespace}};
-            
-            partial class {{context3.Symbol.ToDisplayString(SymbolDisplayFormats.NonNullableFormat)}}
-            {
-                [global::System.CodeDom.Compiler.GeneratedCodeAttribute("{{nameof(XamlUnloadObjectOverrideGenerator)}}", "1.0.0.0")]
-                public override void UnloadObjectOverride(DependencyObject unloadableObject)
-                {
-                    UnloadObject(unloadableObject);
-                }
-            }
-            """);
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+    }
 
-        production.AddSource($"{context3.Symbol.NormalizedFullyQualifiedName()}.ctor.g.cs", sourceBuilder.ToString());
+    private sealed record XamlUnloadObjectOverrideGeneratorContext
+    {
+        private XamlUnloadObjectOverrideGeneratorContext(HierarchyInfo hierarchy)
+        {
+            Hierarchy = hierarchy;
+        }
+
+        public HierarchyInfo Hierarchy { get; }
+
+        public static XamlUnloadObjectOverrideGeneratorContext Create(INamedTypeSymbol symbol)
+        {
+            return new(HierarchyInfo.Create(symbol));
+        }
     }
 }

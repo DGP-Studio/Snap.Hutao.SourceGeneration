@@ -56,12 +56,10 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         SyntaxToken identifierOfDependencyPropertyAttribute = Identifier("DependencyPropertyAttribute");
         SyntaxToken identifierOfName = Identifier("name");
-        SyntaxToken identifierOfType = Identifier("type");
-        SyntaxToken identifierOfDefaultValue = Identifier("defaultValue");
-        SyntaxToken identifierOfValueChangedCallbackName = Identifier("valueChangedCallbackName");
         SyntaxToken identifierOfIsAttached = Identifier("IsAttached");
-        SyntaxToken identifierOfAttachedType = Identifier("AttachedType");
-        SyntaxToken identifierOfRawDefaultValue = Identifier("RawDefaultValue");
+        SyntaxToken identifierOfDefaultValue = Identifier("DefaultValue");
+        SyntaxToken identifierOfCreateDefaultValueCallbackName = Identifier("CreateDefaultValueCallbackName");
+        SyntaxToken identifierOfPropertyChangedCallbackName = Identifier("PropertyChangedCallbackName");
 
         SyntaxToken identifierOfFieldAccessorAttribute = Identifier("FieldAccessorAttribute");
 
@@ -115,6 +113,8 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                     ClassDeclaration(identifierOfDependencyPropertyAttribute)
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, allowMultiple: true, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
+                        .WithTypeParameterList(TypeParameterList(SingletonSeparatedList(
+                            TypeParameter(Identifier("T")))))
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
@@ -122,36 +122,19 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(StringType, identifierOfName),
-                                    Parameter(TypeOfSystemType, identifierOfType)
-                                ])))
-                                .WithEmptyBlockBody(),
-                            ConstructorDeclaration(identifierOfDependencyPropertyAttribute)
-                                .WithModifiers(PublicTokenList)
-                                .WithParameterList(ParameterList(SeparatedList(
-                                [
-                                    Parameter(StringType, identifierOfName),
-                                    Parameter(TypeOfSystemType, identifierOfType),
-                                    Parameter(ObjectType, identifierOfDefaultValue)
-                                ])))
-                                .WithEmptyBlockBody(),
-                            ConstructorDeclaration(identifierOfDependencyPropertyAttribute)
-                                .WithModifiers(PublicTokenList)
-                                .WithParameterList(ParameterList(SeparatedList(
-                                [
-                                    Parameter(StringType, identifierOfName),
-                                    Parameter(TypeOfSystemType, identifierOfType),
-                                    Parameter(ObjectType, identifierOfDefaultValue),
-                                    Parameter(StringType, identifierOfValueChangedCallbackName)
+                                    Parameter(StringType, identifierOfName)
                                 ])))
                                 .WithEmptyBlockBody(),
                             PropertyDeclaration(BoolType, identifierOfIsAttached)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(TypeOfSystemType, identifierOfAttachedType)
+                            PropertyDeclaration(StringType, identifierOfDefaultValue)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(StringType, identifierOfRawDefaultValue)
+                            PropertyDeclaration(StringType, identifierOfCreateDefaultValueCallbackName)
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            PropertyDeclaration(StringType, identifierOfPropertyChangedCallbackName)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList)
                         ])),
