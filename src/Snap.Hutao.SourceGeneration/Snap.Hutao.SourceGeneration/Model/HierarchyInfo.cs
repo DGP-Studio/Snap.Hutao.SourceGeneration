@@ -82,10 +82,10 @@ internal sealed record HierarchyInfo
             //
             // <SYNTAX_TRIVIA>
             // <TYPE_HIERARCHY>
-            return
-                CompilationUnit()
-                .AddMembers(typeDeclarationSyntax.WithLeadingTrivia(NullableEnableTriviaList))
-                .NormalizeWhitespace();
+            return CompilationUnit()
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                    typeDeclarationSyntax
+                        .WithLeadingTrivia(NullableEnableTriviaList)));
         }
 
         // Create the compilation unit with disabled warnings, target namespace and generated type.
@@ -94,8 +94,8 @@ internal sealed record HierarchyInfo
         // namespace <NAMESPACE>;
         // <TYPE_HIERARCHY>
         return CompilationUnit()
-            .AddMembers(FileScopedNamespaceDeclaration(Namespace)
-                .AddMembers(typeDeclarationSyntax))
-            .NormalizeWhitespace();
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(Namespace)
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(typeDeclarationSyntax
+                    .WithLeadingTrivia(NullableEnableTriviaList)))));
     }
 }

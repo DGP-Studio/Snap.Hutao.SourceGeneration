@@ -15,12 +15,15 @@ internal sealed record TypeInfo
     public TypeInfo(INamedTypeSymbol symbol)
     {
         FullyQualifiedName = symbol.GetFullyQualifiedName();
+        FullyQualifiedMetadataName = symbol.GetFullyQualifiedMetadataName();
         MinimallyQualifiedName = symbol.GetMinimallyQualifiedName();
         Kind = symbol.TypeKind;
         IsRecord = symbol.IsRecord;
     }
 
     public string FullyQualifiedName { get; }
+
+    public string FullyQualifiedMetadataName { get; }
 
     public string MinimallyQualifiedName { get; }
 

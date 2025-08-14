@@ -23,6 +23,7 @@ internal static class AttributeDataExtension
         return false;
     }
 
+    [Obsolete]
     public static bool HasNamedArgument<TValue>(this AttributeData attributeData, string name, Func<TValue, bool> predicate)
     {
         foreach ((string propertyName, TypedConstant constant) in attributeData.NamedArguments)

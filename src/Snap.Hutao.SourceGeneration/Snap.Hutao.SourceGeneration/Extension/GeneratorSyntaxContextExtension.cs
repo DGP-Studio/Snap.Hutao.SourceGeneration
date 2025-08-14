@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 
@@ -9,6 +10,7 @@ namespace Snap.Hutao.SourceGeneration.Extension;
 
 internal static class GeneratorSyntaxContextExtension
 {
+    [Obsolete]
     public static bool TryGetDeclaredSymbol<TSymbol>(this GeneratorSyntaxContext context, CancellationToken token, [NotNullWhen(true)] out TSymbol? symbol)
         where TSymbol : class, ISymbol
     {

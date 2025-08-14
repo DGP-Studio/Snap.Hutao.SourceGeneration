@@ -9,6 +9,8 @@ namespace Snap.Hutao.SourceGeneration.Primitive;
 
 internal static partial class FastSyntaxFactory
 {
+    public static LiteralExpressionSyntax DefaultLiteralExpression { get; } = SyntaxFactory.LiteralExpression(SyntaxKind.DefaultLiteralExpression);
+
     public static LiteralExpressionSyntax FalseLiteralExpression { get; } = SyntaxFactory.LiteralExpression(SyntaxKind.FalseLiteralExpression);
 
     public static LiteralExpressionSyntax NullLiteralExpression { get; } = SyntaxFactory.LiteralExpression(SyntaxKind.NullLiteralExpression);

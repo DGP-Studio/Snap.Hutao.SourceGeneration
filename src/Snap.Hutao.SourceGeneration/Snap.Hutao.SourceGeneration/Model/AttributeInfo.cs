@@ -62,4 +62,17 @@ internal sealed record AttributeInfo
 
         return Attribute(IdentifierName(FullyQualifiedTypeName), AttributeArgumentList(SeparatedList([.. arguments, .. namedArguments])));
     }
+
+    public bool HasNamedArgument(string name, bool value)
+    {
+        foreach ((string propertyName, TypedConstantInfo constant) in NamedArgumentInfo)
+        {
+            if (propertyName == name)
+            {
+                return constant is TypedConstantInfo.Primitive.Boolean argument && argument.Value == value;
+            }
+        }
+
+        return false;
+    }
 }
