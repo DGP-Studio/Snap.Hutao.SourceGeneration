@@ -57,9 +57,11 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         SyntaxToken identifierOfDependencyPropertyAttribute = Identifier("DependencyPropertyAttribute");
         SyntaxToken identifierOfName = Identifier("name");
         SyntaxToken identifierOfIsAttached = Identifier("IsAttached");
+        SyntaxToken identifierOfTargetType = Identifier("TargetType");
         SyntaxToken identifierOfDefaultValue = Identifier("DefaultValue");
         SyntaxToken identifierOfCreateDefaultValueCallbackName = Identifier("CreateDefaultValueCallbackName");
         SyntaxToken identifierOfPropertyChangedCallbackName = Identifier("PropertyChangedCallbackName");
+        SyntaxToken identifierOfNotNull = Identifier("NotNull");
 
         SyntaxToken identifierOfFieldAccessorAttribute = Identifier("FieldAccessorAttribute");
 
@@ -128,6 +130,9 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                             PropertyDeclaration(BoolType, identifierOfIsAttached)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
+                            PropertyDeclaration(TypeOfSystemType, identifierOfTargetType)
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
                             PropertyDeclaration(NullableObjectType, identifierOfDefaultValue)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
@@ -136,7 +141,10 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                                 .WithAccessorList(GetAndSetAccessorList),
                             PropertyDeclaration(NullableStringType, identifierOfPropertyChangedCallbackName)
                                 .WithModifiers(PublicTokenList)
-                                .WithAccessorList(GetAndSetAccessorList)
+                                .WithAccessorList(GetAndSetAccessorList),
+                            PropertyDeclaration(BoolType, identifierOfNotNull)
+                                .WithModifiers(PublicTokenList)
+                                .WithAccessorList(GetAndSetAccessorList),
                         ])),
                     ClassDeclaration(identifierOfFieldAccessorAttribute)
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsProperty, inherited: false)))

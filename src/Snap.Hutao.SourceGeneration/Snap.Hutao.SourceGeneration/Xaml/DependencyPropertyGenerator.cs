@@ -80,14 +80,20 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                 continue;
             }
 
-            TypeSyntax propertyTypeSyntax = propertyType.GetSyntax();
+            TypeSyntax propertyTypeSyntaxWithoutNullabilityAnnotation = propertyType.GetSyntax();
+            TypeSyntax propertyTypeSyntax = propertyTypeSyntaxWithoutNullabilityAnnotation;
+
+            if (!attribute.HasNamedArgument("NotNull", true))
+            {
+                propertyTypeSyntax = NullableType(propertyTypeSyntax);
+            }
 
             // Register(string name, Type propertyType, Type ownerType, PropertyMetadata typeMetadata)
             // RegisterAttached(string name, Type propertyType, Type ownerType, PropertyMetadata typeMetadata)
             SeparatedSyntaxList<ArgumentSyntax> registerArguments = SeparatedList(
             [
-                Argument(NameOfExpression(IdentifierName(name))),                                                 // name
-                Argument(TypeOfExpression(propertyTypeSyntax)),                                                   // propertyType
+                Argument(StringLiteralExpression(name)),                                                          // name
+                Argument(TypeOfExpression(propertyTypeSyntaxWithoutNullabilityAnnotation)),                       // propertyType
                 Argument(TypeOfExpression(IdentifierName(context.Hierarchy.Hierarchy[0].MinimallyQualifiedName))) // ownerType
             ]);
 
@@ -97,7 +103,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
             // PropertyMetadata.Create(CreateDefaultValueCallback createDefaultValueCallback, PropertyChangedCallback propertyChangedCallback)
 
             SeparatedSyntaxList<ArgumentSyntax> createArguments = SeparatedList<ArgumentSyntax>();
-            if (attribute.TryGetNamedArgument("CreateDefaultValueCallback", out string? createDefaultValueCallbackName))
+            if (attribute.TryGetNamedArgument("CreateDefaultValueCallbackName", out string? createDefaultValueCallbackName))
             {
                 createArguments = createArguments.Add(Argument(IdentifierName(createDefaultValueCallbackName)));
             }
@@ -106,10 +112,10 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                 bool hasDefaultValue = attribute.TryGetNamedArgument("DefaultValue", out TypedConstantInfo? defaultValue);
                 createArguments = createArguments.Add(hasDefaultValue
                     ? Argument(defaultValue!.GetSyntax())
-                    : Argument(NullLiteralExpression));
+                    : Argument(DefaultExpression(ObjectType)));
             }
 
-            if (attribute.TryGetNamedArgument("PropertyChangedCallback", out string? propertyChangedCallbackName))
+            if (attribute.TryGetNamedArgument("PropertyChangedCallbackName", out string? propertyChangedCallbackName))
             {
                 createArguments = createArguments.Add(Argument(IdentifierName(propertyChangedCallbackName)));
             }
@@ -135,19 +141,20 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                                     SimpleMemberAccessExpression(
                                         NameOfMicrosoftUIXaml,
                                         IdentifierName("DependencyProperty")),
-                                    IdentifierName(isAttached ? "Register" : "RegisterAttached")))
-                                .WithArgumentList(ArgumentList(registerArguments)))))));
+                                    IdentifierName(isAttached ? "RegisterAttached" : "Register")))
+                                .WithArgumentList(ArgumentList(registerArguments)))))))
+                .WithModifiers(PrivateStaticReadonlyTokenList);
 
             if (!isAttached)
             {
                 // Generate a property for non-attached properties
-                yield return PropertyDeclaration(dependencyPropertyType, Identifier(name))
+                yield return PropertyDeclaration(propertyTypeSyntax, Identifier(name))
                     .WithModifiers(PublicTokenList)
                     .WithIdentifier(Identifier(name))
                     .WithAccessorList(AccessorList(List(
                     [
                         GetAccessorDeclaration().WithExpressionBody(ArrowExpressionClause(CastExpression(
-                            propertyTypeSyntax,
+                            propertyTypeSyntaxWithoutNullabilityAnnotation,
                             InvocationExpression(IdentifierName("GetValue"))
                                 .WithArgumentList(ArgumentList(SingletonSeparatedList(
                                     Argument(IdentifierName(propertyName)))))))),
@@ -162,35 +169,49 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
             }
             else
             {
+                TypeSyntax targetTypeSyntax;
+                if (attribute.TryGetNamedArgument("TargetType", out TypedConstantInfo? targetType) &&
+                    targetType is TypedConstantInfo.Type type)
+                {
+                    targetTypeSyntax = NullableType(ParseName(type.FullyQualifiedTypeName));
+                }
+                else
+                {
+                    targetTypeSyntax = NullableType(QualifiedName(NameOfMicrosoftUIXaml, IdentifierName("DependencyObject")));
+                }
+
                 // Generate static methods for attached properties
                 yield return MethodDeclaration(propertyTypeSyntax, Identifier($"Get{name}"))
                     .WithModifiers(PublicStaticTokenList)
                     .WithParameterList(ParameterList(SeparatedList(
                     [
-                        Parameter(NullableType(QualifiedName(NameOfMicrosoftUIXaml, IdentifierName("DependencyObject"))), Identifier("obj"))
+                        Parameter(targetTypeSyntax, Identifier("obj"))
                     ])))
                     .WithBody(Block(SingletonList(
-                        ReturnStatement(CastExpression(propertyTypeSyntax,
-                            InvocationExpression(IdentifierName("GetValue"))
-                                .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                                    Argument(IdentifierName(propertyName))))))))));
+                        ReturnStatement(CastExpression(
+                            propertyTypeSyntax,
+                            ConditionalAccessExpression(
+                                IdentifierName("obj"),
+                                InvocationExpression(MemberBindingExpression(IdentifierName("GetValue")))
+                                    .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                        Argument(IdentifierName(propertyName)))))))))));
 
                 yield return MethodDeclaration(VoidType, Identifier($"Set{name}"))
                     .WithModifiers(PublicStaticTokenList)
                     .WithParameterList(ParameterList(SeparatedList(
                     [
-                        Parameter(NullableType(QualifiedName(NameOfMicrosoftUIXaml, IdentifierName("DependencyObject"))), Identifier("obj")),
+                        Parameter(targetTypeSyntax, Identifier("obj")),
                         Parameter(propertyTypeSyntax, Identifier("value"))
                     ])))
                     .WithBody(Block(SingletonList(
-                        ExpressionStatement(InvocationExpression(SimpleMemberAccessExpression(
+                        ExpressionStatement(ConditionalAccessExpression(
                             IdentifierName("obj"),
-                            IdentifierName("SetValue")))
-                            .WithArgumentList(ArgumentList(SeparatedList(
+                            InvocationExpression(MemberBindingExpression(IdentifierName("SetValue")))
+                                .WithArgumentList(ArgumentList(SeparatedList(
                                 [
                                     Argument(IdentifierName(propertyName)),
                                     Argument(IdentifierName("value"))
-                                ])))))));
+                                ]))))))));
             }
         }
     }

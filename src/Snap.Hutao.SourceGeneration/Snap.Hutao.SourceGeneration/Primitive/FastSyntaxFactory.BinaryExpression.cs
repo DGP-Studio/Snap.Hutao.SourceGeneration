@@ -12,6 +12,11 @@ internal static partial class FastSyntaxFactory
         return SyntaxFactory.BinaryExpression(SyntaxKind.AddExpression, left, right);
     }
 
+    public static BinaryExpressionSyntax AsExpression(ExpressionSyntax left, ExpressionSyntax right)
+    {
+        return SyntaxFactory.BinaryExpression(SyntaxKind.AsExpression, left, right);
+    }
+
     public static BinaryExpressionSyntax BitwiseOrExpression(ExpressionSyntax left, ExpressionSyntax right)
     {
         return SyntaxFactory.BinaryExpression(SyntaxKind.BitwiseOrExpression, left, right);

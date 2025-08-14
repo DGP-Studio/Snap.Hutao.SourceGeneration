@@ -30,6 +30,8 @@ internal static partial class FastSyntaxFactory
 
     public static SyntaxTokenList PrivateStaticExternTokenList { get; } = SyntaxFactory.TokenList(PrivateKeyword, StaticKeyword, ExternKeyword);
 
+    public static SyntaxTokenList PrivateStaticReadonlyTokenList { get; } = SyntaxFactory.TokenList(PrivateKeyword, StaticKeyword, ReadOnlyKeyword);
+
     public static SyntaxTokenList ProtectedTokenList { get; } = SyntaxFactory.TokenList(ProtectedKeyword);
 
     public static SyntaxTokenList ProtectedInternalTokenList { get; } = SyntaxFactory.TokenList(ProtectedKeyword, InternalKeyword);
