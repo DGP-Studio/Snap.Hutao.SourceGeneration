@@ -13,16 +13,13 @@ using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
+using static Snap.Hutao.SourceGeneration.WellKnownSyntax;
 
 namespace Snap.Hutao.SourceGeneration.Xaml;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class CommandGenerator : IIncrementalGenerator
 {
-    private static readonly NameSyntax NameOfCommunityToolkitMvvmInput = ParseName("global::CommunityToolkit.Mvvm.Input");
-    private static readonly NameSyntax NameOfCommunityToolkitMvvmInputAsyncRelayCommandOptions = ParseName("global::CommunityToolkit.Mvvm.Input.AsyncRelayCommandOptions");
-    private static readonly NameSyntax NameOfSystemDiagnosticsCodeAnalysisMaybeNull = ParseName("global::System.Diagnostics.CodeAnalysis.MaybeNull");
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         IncrementalValuesProvider<CommandGeneratorContext> provider = context.SyntaxProvider
@@ -120,38 +117,34 @@ internal sealed class CommandGenerator : IIncrementalGenerator
 
     private sealed record CommandGeneratorContext
     {
-        private CommandGeneratorContext(HierarchyInfo hierarchy, EquatableArray<AttributedMethodInfo> methods)
-        {
-            Hierarchy = hierarchy;
-            Methods = methods;
-        }
+        public required HierarchyInfo Hierarchy { get; init; }
 
-        public HierarchyInfo Hierarchy { get; }
-
-        public EquatableArray<AttributedMethodInfo> Methods { get; }
+        public required EquatableArray<AttributedMethodInfo> Methods { get; init; }
 
         public static CommandGeneratorContext Create((HierarchyInfo Hierarchy, EquatableArray<AttributedMethodInfo> Methods) tuple, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            return new(tuple.Hierarchy, tuple.Methods);
+            return new()
+            {
+                Hierarchy = tuple.Hierarchy,
+                Methods = tuple.Methods,
+            };
         }
     }
 
     private sealed record AttributedMethodInfo
     {
-        private AttributedMethodInfo(EquatableArray<AttributeInfo> attributes, MethodInfo method)
-        {
-            Attributes = attributes;
-            Method = method;
-        }
+        public required EquatableArray<AttributeInfo> Attributes { get; init; }
 
-        public EquatableArray<AttributeInfo> Attributes { get; }
-
-        public MethodInfo Method { get; }
+        public required MethodInfo Method { get; init; }
 
         public static AttributedMethodInfo Create((EquatableArray<AttributeInfo> Attributes, MethodInfo Method) tuple)
         {
-            return new(tuple.Attributes, tuple.Method);
+            return new()
+            {
+                Attributes = tuple.Attributes,
+                Method = tuple.Method,
+            };
         }
     }
 }

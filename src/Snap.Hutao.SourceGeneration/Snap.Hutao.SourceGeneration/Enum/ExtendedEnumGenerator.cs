@@ -4,34 +4,35 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Model;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
+using static Snap.Hutao.SourceGeneration.WellKnownSyntax;
 
 namespace Snap.Hutao.SourceGeneration.Enum;
 
 [Generator(LanguageNames.CSharp)]
 internal class ExtendedEnumGenerator : IIncrementalGenerator
 {
-    private static readonly TypeSyntax TypeOfSystemEnum = ParseTypeName("global::System.Enum");
-    private static readonly TypeSyntax TypeOfSystemResourcesResourceManager = ParseTypeName("global::System.Resources.ResourceManager");
-    private static readonly TypeSyntax TypeOfSystemGlobalizationCultureInfo = ParseTypeName("global::System.Globalization.CultureInfo");
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValuesProvider<GeneratorAttributeSyntaxContext> provider = context.SyntaxProvider
+        IncrementalValuesProvider<ExtendedEnumGeneratorContext> provider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 WellKnownMetadataNames.ExtendedEnumAttribute,
                 SyntaxNodeHelper.Is<EnumDeclarationSyntax>,
-                SyntaxContext.Transform);
+                ExtendedEnumGeneratorContext.Create)
+            .Where(static c => c is not null);
 
         context.RegisterSourceOutput(provider, GenerateWrapper);
     }
 
-    private static void GenerateWrapper(SourceProductionContext production, GeneratorAttributeSyntaxContext context)
+    private static void GenerateWrapper(SourceProductionContext production, ExtendedEnumGeneratorContext context)
     {
         try
         {
@@ -43,22 +44,16 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
         }
     }
 
-    private static void Generate(SourceProductionContext production, GeneratorAttributeSyntaxContext context)
+    private static void Generate(SourceProductionContext production, ExtendedEnumGeneratorContext context)
     {
-        if (context.TargetSymbol is not INamedTypeSymbol enumSymbol)
-        {
-            return;
-        }
-
-        TypeSyntax enumType = ParseTypeName(enumSymbol.GetFullyQualifiedNameWithNullabilityAnnotations());
-        ExpressionSyntax typeExpression = ParseTypeName(enumSymbol.GetFullyQualifiedNameWithNullabilityAnnotations());
+        TypeSyntax enumType = context.Type.GetTypeSyntax();
 
         CompilationUnitSyntax syntax = CompilationUnit()
             .WithUsings(SingletonList(UsingDirective("System.Globalization")))
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Resource.Localization")
                 .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                    ClassDeclaration($"{enumSymbol.Name}Extension")
+                    ClassDeclaration($"{context.Type.Name}Extension")
                         .WithModifiers(InternalStaticPartialTokenList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
@@ -69,7 +64,7 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
                                     Parameter(enumType, Identifier("value")).WithModifiers(ThisTokenList))))
                                 .WithBody(Block(SingletonList<StatementSyntax>(
                                     ReturnStatement(SwitchExpression(IdentifierName("value"))
-                                        .WithArms(SeparatedList(GenerateGetNameSwitchArms(enumSymbol, typeExpression))))))),
+                                        .WithArms(SeparatedList(GenerateGetNameSwitchArms(enumType, context.Fields))))))),
 
                             // public static string? GetLocalizedDescriptionOrDefault(this T value, ResourceManager resourceManager, CultureInfo cultureInfo)
                             MethodDeclaration(NullableStringType, "GetLocalizedDescriptionOrDefault")
@@ -86,7 +81,7 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
                                         .WithVariables(SingletonSeparatedList(
                                             VariableDeclarator(Identifier("key"))
                                                 .WithInitializer(EqualsValueClause(SwitchExpression(IdentifierName("value"))
-                                                    .WithArms(SeparatedList(GenerateGetLocalizedDescriptionOrDefaultSwitchArms(enumSymbol, typeExpression)))))))),
+                                                    .WithArms(SeparatedList(GenerateGetLocalizedDescriptionOrDefaultSwitchArms(enumType, context.Fields)))))))),
                                     ReturnStatement(InvocationExpression(SimpleMemberAccessExpression(
                                             IdentifierName("resourceManager"),
                                             IdentifierName("GetString")))
@@ -157,16 +152,16 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
                         ]))))))
             .NormalizeWhitespace();
 
-        production.AddSource($"{enumSymbol.NormalizedFullyQualifiedName()}Extension.g.cs", syntax.ToFullString());
+        production.AddSource(context.FileNameHint, syntax.ToFullString());
     }
 
-    private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetNameSwitchArms(INamedTypeSymbol enumSymbol, ExpressionSyntax typeExpression)
+    private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetNameSwitchArms(TypeSyntax enumType, ImmutableArray<(FieldInfo Field, AttributeInfo? Attribute)> fields)
     {
-        foreach (IFieldSymbol fieldSymbol in enumSymbol.GetMembers().OfType<IFieldSymbol>())
+        foreach ((FieldInfo field, _) in fields)
         {
             yield return SwitchExpressionArm(
-                ConstantPattern(SimpleMemberAccessExpression(typeExpression, IdentifierName(fieldSymbol.Name))),
-                StringLiteralExpression(fieldSymbol.Name));
+                ConstantPattern(SimpleMemberAccessExpression(enumType, IdentifierName(field.MinimallyQualifiedName))),
+                StringLiteralExpression(field.MinimallyQualifiedName));
         }
 
         yield return SwitchExpressionArm(
@@ -178,16 +173,14 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
                     Argument(IdentifierName("value"))))));
     }
 
-    private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetLocalizedDescriptionOrDefaultSwitchArms(INamedTypeSymbol enumSymbol, ExpressionSyntax typeExpression)
+    private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetLocalizedDescriptionOrDefaultSwitchArms(TypeSyntax enumType, ImmutableArray<(FieldInfo Field, AttributeInfo? Attribute)> fields)
     {
-        foreach (IFieldSymbol fieldSymbol in enumSymbol.GetMembers().OfType<IFieldSymbol>())
+        foreach ((FieldInfo field, AttributeInfo? localizationKeyInfo) in fields)
         {
-            AttributeData? localizationKeyInfo = fieldSymbol.GetAttributes()
-                .SingleOrDefault(static data => data.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.LocalizationKeyAttribute) is true);
             if (localizationKeyInfo is not null && localizationKeyInfo.TryGetConstructorArgument(0, out string? localizationKey))
             {
                 yield return SwitchExpressionArm(
-                    ConstantPattern(SimpleMemberAccessExpression(typeExpression, IdentifierName(fieldSymbol.Name))),
+                    ConstantPattern(SimpleMemberAccessExpression(enumType, IdentifierName(field.MinimallyQualifiedName))),
                     StringLiteralExpression(localizationKey));
             }
         }
@@ -195,5 +188,33 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
         yield return SwitchExpressionArm(
             DiscardPattern(),
             SimpleMemberAccessExpression(StringType, IdentifierName("Empty")));
+    }
+
+    private sealed record ExtendedEnumGeneratorContext
+    {
+        public required string FileNameHint { get; init; }
+
+        public required Model.TypeInfo Type { get; init; }
+
+        public required EquatableArray<(FieldInfo Field, AttributeInfo? Attribute)> Fields { get; init; }
+
+        public static ExtendedEnumGeneratorContext Create(GeneratorAttributeSyntaxContext context, CancellationToken token)
+        {
+            if (context.TargetSymbol is not INamedTypeSymbol symbol)
+            {
+                return default!;
+            }
+
+            return new()
+            {
+                FileNameHint = symbol.GetFullyQualifiedMetadataName(),
+                Type = Model.TypeInfo.Create(symbol),
+                Fields = symbol
+                    .GetMembers()
+                    .OfType<IFieldSymbol>()
+                    .Select(static field => (FieldInfo.Create(field), AttributeInfo.CreateOrDefault(field.GetAttributes().SingleOrDefault(static data => data.AttributeClass?.HasFullyQualifiedMetadataName(WellKnownMetadataNames.LocalizationKeyAttribute) is true))))
+                    .ToImmutableArray(),
+            };
+        }
     }
 }

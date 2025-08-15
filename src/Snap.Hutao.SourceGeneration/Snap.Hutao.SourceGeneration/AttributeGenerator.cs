@@ -7,6 +7,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Runtime.CompilerServices;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
+using static Snap.Hutao.SourceGeneration.WellKnownSyntax;
 
 [assembly:InternalsVisibleTo("Snap.Hutao.SourceGeneration.Test")]
 
@@ -15,28 +16,6 @@ namespace Snap.Hutao.SourceGeneration;
 [Generator(LanguageNames.CSharp)]
 internal sealed class AttributeGenerator : IIncrementalGenerator
 {
-    private static readonly TypeSyntax TypeOfSystemType = ParseTypeName("global::System.Type");
-    private static readonly TypeSyntax TypeOfSystemAttributeTargets = ParseTypeName("global::System.AttributeTargets");
-    private static readonly TypeSyntax TypeOfMicrosoftExtensionsDependencyInjectionServiceLifetime = ParseTypeName("global::Microsoft.Extensions.DependencyInjection.ServiceLifetime");
-
-    private static readonly BaseListSyntax SystemAttributeBaseList = BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(ParseTypeName("global::System.Attribute"))));
-    private static readonly AttributeListSyntax JetBrainsAnnotationsMeansImplicitUseAttributeList = AttributeList(SingletonSeparatedList(Attribute(ParseName("global::JetBrains.Annotations.MeansImplicitUse"))));
-
-    private static readonly IdentifierNameSyntax IdentifierNameOfField = IdentifierName("Field");
-    private static readonly IdentifierNameSyntax IdentifierNameOfProperty = IdentifierName("Property");
-
-    private static readonly AttributeArgumentSyntax AttributeTargetsClass = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Class")));
-    private static readonly AttributeArgumentSyntax AttributeTargetsEnum = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Enum")));
-    private static readonly AttributeArgumentSyntax AttributeTargetsField = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierNameOfField));
-    private static readonly AttributeArgumentSyntax AttributeTargetsFieldAndProperty = AttributeArgument(BitwiseOrExpression(
-        SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierNameOfField),
-        SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierNameOfProperty)));
-    private static readonly AttributeArgumentSyntax AttributeTargetsMethod = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Method")));
-    private static readonly AttributeArgumentSyntax AttributeTargetsProperty = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierNameOfProperty));
-
-    private static readonly AttributeArgumentSyntax AllowMultipleTrue = AttributeArgument(TrueLiteralExpression).WithNameEquals(NameEquals(IdentifierName("AllowMultiple")));
-    private static readonly AttributeArgumentSyntax InheritedFalse = AttributeArgument(FalseLiteralExpression).WithNameEquals(NameEquals(IdentifierName("Inherited")));
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         context.RegisterPostInitializationOutput(GenerateAllAttributes);

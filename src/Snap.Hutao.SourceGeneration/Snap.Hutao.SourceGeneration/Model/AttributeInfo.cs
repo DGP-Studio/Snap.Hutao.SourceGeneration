@@ -16,17 +16,21 @@ internal sealed record AttributeInfo
 {
     private AttributeInfo(
         string fullyQualifiedTypeName,
+        string fullyQualifiedMetadataName,
         EquatableArray<TypeArgumentInfo> typeArguments,
         EquatableArray<TypedConstantInfo> constructorArguments,
         EquatableArray<(string Name, TypedConstantInfo Value)> namedArguments)
     {
         FullyQualifiedTypeName = fullyQualifiedTypeName;
+        FullyQualifiedMetadataName = fullyQualifiedMetadataName;
         TypeArguments = typeArguments;
         ConstructorArguments = constructorArguments;
         NamedArguments = namedArguments;
     }
 
     public string FullyQualifiedTypeName { get; }
+
+    public string FullyQualifiedMetadataName { get; }
 
     public EquatableArray<TypeArgumentInfo> TypeArguments { get; }
 
@@ -36,12 +40,16 @@ internal sealed record AttributeInfo
 
     public static AttributeInfo Create(AttributeData attributeData)
     {
-        string typeName = attributeData.AttributeClass!.GetFullyQualifiedName();
-
         return new(attributeData.AttributeClass!.GetFullyQualifiedName(),
+            attributeData.AttributeClass!.GetFullyQualifiedMetadataName(),
             ImmutableArray.CreateRange(attributeData.AttributeClass!.TypeArguments, TypeArgumentInfo.Create),
             ImmutableArray.CreateRange(attributeData.ConstructorArguments, TypedConstantInfo.Create),
             ImmutableArray.CreateRange(attributeData.NamedArguments, static kvp => (kvp.Key, TypedConstantInfo.Create(kvp.Value))));
+    }
+
+    public static AttributeInfo? CreateOrDefault(AttributeData? attributeData)
+    {
+        return attributeData is not null ? Create(attributeData) : default;
     }
 
     public AttributeSyntax GetSyntax()

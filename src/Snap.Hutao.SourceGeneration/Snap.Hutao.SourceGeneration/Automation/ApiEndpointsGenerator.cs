@@ -22,7 +22,6 @@ namespace Snap.Hutao.SourceGeneration.Automation;
 internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 {
     private const string FileName = "Endpoints.csv";
-    private static readonly ExpressionSyntax ThrowNotSupportedException = ThrowExpression(ObjectCreationExpression(IdentifierName("NotSupportedException")).WithEmptyArgumentList());
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -232,12 +231,12 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
 
         public ExpressionSyntax GetChineseExpression()
         {
-            return string.IsNullOrEmpty(Chinese) ? ThrowNotSupportedException : ParseExpression($"$\"{Chinese}\"");
+            return string.IsNullOrEmpty(Chinese) ? WellKnownSyntax.ThrowNotSupportedException : ParseExpression($"$\"{Chinese}\"");
         }
 
         public ExpressionSyntax GetOverseaExpression()
         {
-            return string.IsNullOrEmpty(Oversea) ? ThrowNotSupportedException : ParseExpression($"$\"{Oversea}\"");
+            return string.IsNullOrEmpty(Oversea) ? WellKnownSyntax.ThrowNotSupportedException : ParseExpression($"$\"{Oversea}\"");
         }
 
         public bool Equals(EndpointsMetadata? other)
@@ -246,6 +245,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
             {
                 return false;
             }
+
             if (ReferenceEquals(this, other))
             {
                 return true;

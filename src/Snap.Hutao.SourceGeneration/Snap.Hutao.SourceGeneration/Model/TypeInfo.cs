@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using System.Collections.Immutable;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
 
@@ -12,13 +13,15 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record TypeInfo
 {
-    public TypeInfo(INamedTypeSymbol symbol)
+    private TypeInfo(INamedTypeSymbol symbol)
     {
         FullyQualifiedName = symbol.GetFullyQualifiedName();
         FullyQualifiedMetadataName = symbol.GetFullyQualifiedMetadataName();
         MinimallyQualifiedName = symbol.GetMinimallyQualifiedName();
+        Name = symbol.Name;
         Kind = symbol.TypeKind;
         IsRecord = symbol.IsRecord;
+        TypeArguments = ImmutableArray.CreateRange(symbol.TypeArguments, TypeArgumentInfo.Create);
     }
 
     public string FullyQualifiedName { get; }
@@ -27,9 +30,18 @@ internal sealed record TypeInfo
 
     public string MinimallyQualifiedName { get; }
 
+    public string Name { get; }
+
     public TypeKind Kind { get; }
 
     public bool IsRecord { get; }
+
+    public EquatableArray<TypeArgumentInfo> TypeArguments { get; }
+
+    public static TypeInfo Create(INamedTypeSymbol symbol)
+    {
+        return new(symbol);
+    }
 
     public TypeDeclarationSyntax GetSyntax()
     {

@@ -54,6 +54,44 @@ internal static class IncrementalValuesProviderExtension
         });
     }
 
+    public static IncrementalValuesProvider<(TKey Key, EquatableArray<TElement> Right)> GroupBy<TKey, TElement>(
+        this IncrementalValuesProvider<TElement> source,
+        Func<TElement, TKey> keySelector)
+        where TKey : IEquatable<TKey>
+        where TElement : IEquatable<TElement>
+    {
+        return source.Collect().SelectMany((item, token) =>
+        {
+            Dictionary<TKey, ImmutableArray<TElement>.Builder> map = new();
+
+            foreach (TElement source in item)
+            {
+                TKey key = keySelector(source);
+
+                if (!map.TryGetValue(key, out ImmutableArray<TElement>.Builder builder))
+                {
+                    builder = ImmutableArray.CreateBuilder<TElement>();
+
+                    map.Add(key, builder);
+                }
+
+                builder.Add(source);
+            }
+
+            token.ThrowIfCancellationRequested();
+
+            ImmutableArray<(TKey Key, EquatableArray<TElement> Elements)>.Builder result =
+                ImmutableArray.CreateBuilder<(TKey, EquatableArray<TElement>)>();
+
+            foreach (KeyValuePair<TKey, ImmutableArray<TElement>.Builder> entry in map)
+            {
+                result.Add((entry.Key, entry.Value.ToImmutable()));
+            }
+
+            return result;
+        });
+    }
+
     public static IncrementalValuesProvider<T> Distinct<T>(this IncrementalValuesProvider<T> source)
         where T : IEquatable<T>
     {

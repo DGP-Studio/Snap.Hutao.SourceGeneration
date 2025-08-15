@@ -2,27 +2,22 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Model;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
-using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
+using static Snap.Hutao.SourceGeneration.WellKnownSyntax;
 
 namespace Snap.Hutao.SourceGeneration.Xaml;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
 {
-    private static readonly NameSyntax NameOfMicrosoftUIXaml = ParseName("global::Microsoft.UI.Xaml");
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         IncrementalValuesProvider<DependencyPropertyGeneratorContext> provider = context.SyntaxProvider
@@ -92,9 +87,9 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
             // RegisterAttached(string name, Type propertyType, Type ownerType, PropertyMetadata typeMetadata)
             SeparatedSyntaxList<ArgumentSyntax> registerArguments = SeparatedList(
             [
-                Argument(StringLiteralExpression(name)),                                                          // name
-                Argument(TypeOfExpression(propertyTypeSyntaxWithoutNullabilityAnnotation)),                       // propertyType
-                Argument(TypeOfExpression(IdentifierName(context.Hierarchy.Hierarchy[0].MinimallyQualifiedName))) // ownerType
+                Argument(StringLiteralExpression(name)),                                        // name
+                Argument(TypeOfExpression(propertyTypeSyntaxWithoutNullabilityAnnotation)),     // propertyType
+                Argument(TypeOfExpression(IdentifierName(context.Hierarchy.Hierarchy[0].Name))) // ownerType
             ]);
 
             // PropertyMetadata.Create(object defaultValue)
@@ -218,19 +213,17 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
 
     private sealed record DependencyPropertyGeneratorContext
     {
-        private DependencyPropertyGeneratorContext(HierarchyInfo hierarchy, ImmutableArray<AttributeInfo> attributes)
-        {
-            Hierarchy = hierarchy;
-            Attributes = attributes;
-        }
+        public required HierarchyInfo Hierarchy { get; init; }
 
-        public HierarchyInfo Hierarchy { get; }
-
-        public EquatableArray<AttributeInfo> Attributes { get; }
+        public required EquatableArray<AttributeInfo> Attributes { get; init; }
 
         public static DependencyPropertyGeneratorContext Create(INamedTypeSymbol typeSymbol)
         {
-            return new(HierarchyInfo.Create(typeSymbol), ImmutableArray.CreateRange(typeSymbol.GetAttributes(), AttributeInfo.Create));
+            return new()
+            {
+                Hierarchy = HierarchyInfo.Create(typeSymbol),
+                Attributes = ImmutableArray.CreateRange(typeSymbol.GetAttributes(), AttributeInfo.Create)
+            };
         }
     }
 }

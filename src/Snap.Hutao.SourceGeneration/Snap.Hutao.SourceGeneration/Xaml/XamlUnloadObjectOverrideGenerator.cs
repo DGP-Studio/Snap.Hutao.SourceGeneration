@@ -2,9 +2,9 @@
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Model;
-using System.Threading;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
+using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
@@ -71,16 +71,14 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
 
     private sealed record XamlUnloadObjectOverrideGeneratorContext
     {
-        private XamlUnloadObjectOverrideGeneratorContext(HierarchyInfo hierarchy)
-        {
-            Hierarchy = hierarchy;
-        }
-
-        public HierarchyInfo Hierarchy { get; }
+        public required HierarchyInfo Hierarchy { get; init; }
 
         public static XamlUnloadObjectOverrideGeneratorContext Create(INamedTypeSymbol symbol)
         {
-            return new(HierarchyInfo.Create(symbol));
+            return new()
+            {
+                Hierarchy = HierarchyInfo.Create(symbol),
+            };
         }
     }
 }

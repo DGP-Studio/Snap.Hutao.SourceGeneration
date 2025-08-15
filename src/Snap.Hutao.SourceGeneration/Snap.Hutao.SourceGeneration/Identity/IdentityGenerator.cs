@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
+using static Snap.Hutao.SourceGeneration.WellKnownSyntax;
 
 namespace Snap.Hutao.SourceGeneration.Identity;
 
@@ -18,14 +19,6 @@ namespace Snap.Hutao.SourceGeneration.Identity;
 internal sealed class IdentityGenerator : IIncrementalGenerator
 {
     private const string FileName = "IdentityStructs.json";
-
-    private static readonly NameSyntax NameOfSystemTextJsonSerializationJsonConverter = ParseName("global::System.Text.Json.Serialization.JsonConverter");
-    private static readonly NameSyntax NameOfSnapHutaoModelPrimitiveConverter = ParseName("Snap.Hutao.Model.Primitive.Converter");
-    private static readonly NameSyntax NameOfSystem = ParseName("global::System");
-    private static readonly NameSyntax NameOfSystemNumerics = ParseName("global::System.Numerics");
-
-    private static readonly TypeSyntax TypeOfSystemIComparable = ParseTypeName("global::System.IComparable");
-    private static readonly TypeSyntax TypeOfSystemArgumentException = ParseTypeName("global::System.ArgumentException");
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -60,7 +53,12 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
 
     private static void Generate(SourceProductionContext context, IdentityStructMetadata metadata)
     {
-        string metadataName = metadata.Name;
+        string metadataName = metadata.Name!;
+        if (string.IsNullOrEmpty(metadataName))
+        {
+            return;
+        }
+
         SyntaxTriviaList trivia = ParseLeadingTrivia($"""
             /// <summary>
             /// {metadata.Documentation}
@@ -356,7 +354,7 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
     private static TypeSyntax GenerateGenericType(NameSyntax left, string genericName, TypeSyntax type)
     {
         return QualifiedName(left, GenericName(genericName)
-            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList<TypeSyntax>(type))));
+            .WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type))));
     }
 
     private static TypeSyntax GenerateGenericType(NameSyntax left, string genericName, TypeSyntax type1, TypeSyntax type2, TypeSyntax type3)
@@ -367,7 +365,7 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
 
     private sealed record IdentityStructMetadata
     {
-        public string Name { get; set; } = default!;
+        public string? Name { get; set; }
 
         public string? Documentation { get; set; }
     }

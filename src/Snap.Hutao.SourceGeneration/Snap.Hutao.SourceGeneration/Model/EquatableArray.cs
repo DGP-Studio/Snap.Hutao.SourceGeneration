@@ -33,6 +33,12 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
         get => AsImmutableArray().IsEmpty;
     }
 
+    public int Length
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => AsImmutableArray().Length;
+    }
+
     public bool Equals(EquatableArray<T> array)
     {
         return AsSpan().SequenceEqual(array.AsSpan());
@@ -99,6 +105,17 @@ internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnu
     public ImmutableArray<TResult> SelectAsArray<TResult>(Func<T,TResult> selector)
     {
         return ImmutableArray.CreateRange(AsImmutableArray(), selector);
+    }
+
+    public T Single()
+    {
+        ImmutableArray<T> array = AsImmutableArray();
+        if (array.Length != 1)
+        {
+            throw new InvalidOperationException("Sequence contains more than one element");
+        }
+
+        return array[0];
     }
 
     public static implicit operator EquatableArray<T>(ImmutableArray<T> array)

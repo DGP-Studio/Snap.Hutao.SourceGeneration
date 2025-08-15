@@ -37,7 +37,7 @@ internal sealed record HierarchyInfo
 
         for (INamedTypeSymbol? parent = typeSymbol; parent is not null; parent = parent.ContainingType)
         {
-            hierarchy.Add(new(parent));
+            hierarchy.Add(TypeInfo.Create(parent));
         }
 
         return new(

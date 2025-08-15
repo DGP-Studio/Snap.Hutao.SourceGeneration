@@ -15,30 +15,26 @@ using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
+using static Snap.Hutao.SourceGeneration.WellKnownSyntax;
+using TypeInfo = Snap.Hutao.SourceGeneration.Model.TypeInfo;
 
 namespace Snap.Hutao.SourceGeneration.Automation;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class ConstructorGenerator : IIncrementalGenerator
 {
-    private static readonly TypeSyntax TypeOfCommunityToolkitMvvmMessagingIMessenger = ParseTypeName("global::CommunityToolkit.Mvvm.Messaging.IMessenger");
-    private static readonly TypeSyntax TypeOfCommunityToolkitMvvmMessagingIMessengerExtensions = ParseTypeName("global::CommunityToolkit.Mvvm.Messaging.IMessengerExtensions");
-    private static readonly TypeSyntax TypeOfSystemNetHttpIHttpClientFactory = ParseTypeName("global::System.Net.Http.IHttpClientFactory");
-    private static readonly TypeSyntax TypeOfSystemNetHttpHttpClient = ParseTypeName("global::System.Net.Http.HttpClient");
-    private static readonly TypeSyntax TypeOfSystemIServiceProvider = ParseTypeName("global::System.IServiceProvider");
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValuesProvider<GeneratorAttributeSyntaxContext> provider = context.SyntaxProvider
+        IncrementalValuesProvider<ConstructorGeneratorContext> provider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 WellKnownMetadataNames.ConstructorGeneratedAttribute,
                 SyntaxNodeHelper.Is<ClassDeclarationSyntax>,
-                SyntaxContext.Transform);
+                ConstructorGeneratorContext.Create);
 
         context.RegisterSourceOutput(provider, GenerateWrapper);
     }
 
-    private static void GenerateWrapper(SourceProductionContext production, GeneratorAttributeSyntaxContext context)
+    private static void GenerateWrapper(SourceProductionContext production, ConstructorGeneratorContext context)
     {
         try
         {
@@ -50,52 +46,39 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         }
     }
 
-    private static void Generate(SourceProductionContext production, GeneratorAttributeSyntaxContext context)
+    private static void Generate(SourceProductionContext production, ConstructorGeneratorContext context)
     {
-        if (context.TargetSymbol is not INamedTypeSymbol classSymbol)
-        {
-            return;
-        }
+        CompilationUnitSyntax syntax = context.Hierarchy.GetCompilationUnit(
+        [
+            GenerateConstructorDeclaration(context)
+                .WithParameterList(GenerateConstructorParameterList(context.Attribute))
+                .WithBody(Block(List(GenerateConstructorBodyStatements(context, production.CancellationToken)))),
 
-        AttributeData attributeData = context.Attributes.Single();
+            // Property declarations
+            .. GeneratePropertyDeclarations(context, production.CancellationToken),
 
-        CompilationUnitSyntax syntax = CompilationUnit()
-            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(context.TargetSymbol.ContainingNamespace)
-                .WithLeadingTrivia(NullableEnableTriviaList)
-                .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                    PartialTypeDeclaration(classSymbol)
-                        .WithMembers(List<MemberDeclarationSyntax>(
-                        [
-                            GenerateConstructorDeclaration(classSymbol, attributeData)
-                                .WithParameterList(GenerateConstructorParameterList(attributeData))
-                                .WithBody(Block(List(GenerateConstructorBodyStatements(classSymbol, attributeData, production.CancellationToken)))),
+            // PreConstruct & PostConstruct Method declarations
+            MethodDeclaration(VoidType, Identifier("PreConstruct"))
+                .WithModifiers(TokenList(PartialKeyword))
+                .WithParameterList(ParameterList(SingletonSeparatedList(
+                    Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")))))
+                .WithSemicolonToken(SemicolonToken),
+            MethodDeclaration(VoidType, Identifier("PostConstruct"))
+                .WithModifiers(TokenList(Token(SyntaxKind.PartialKeyword)))
+                .WithParameterList(ParameterList(SingletonSeparatedList(
+                    Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")))))
+                .WithSemicolonToken(SemicolonToken)
+        ]).NormalizeWhitespace();
 
-                            // Property declarations
-                            .. GeneratePropertyDeclarations(classSymbol, production.CancellationToken),
-
-                            // PreConstruct & PostConstruct Method declarations
-                            MethodDeclaration(VoidType, Identifier("PreConstruct"))
-                                .WithModifiers(TokenList(PartialKeyword))
-                                .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")))))
-                                .WithSemicolonToken(SemicolonToken),
-                            MethodDeclaration(VoidType, Identifier("PostConstruct"))
-                                .WithModifiers(TokenList(Token(SyntaxKind.PartialKeyword)))
-                                .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")))))
-                                .WithSemicolonToken(SemicolonToken)
-                        ]))))))
-            .NormalizeWhitespace();
-
-        production.AddSource(context.TargetSymbol.NormalizedFullyQualifiedName(), syntax.ToFullString());
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
     }
 
-    private static ConstructorDeclarationSyntax GenerateConstructorDeclaration(INamedTypeSymbol classSymbol, AttributeData attributeData)
+    private static ConstructorDeclarationSyntax GenerateConstructorDeclaration(ConstructorGeneratorContext context)
     {
-        ConstructorDeclarationSyntax constructorDeclaration = ConstructorDeclaration(Identifier(classSymbol.Name))
+        ConstructorDeclarationSyntax constructorDeclaration = ConstructorDeclaration(Identifier(context.Hierarchy.Hierarchy[0].Name))
             .WithModifiers(PublicTokenList);
 
-        if (attributeData.HasNamedArgument("CallBaseConstructor", true))
+        if (context.Attribute.HasNamedArgument("CallBaseConstructor", true))
         {
             constructorDeclaration = constructorDeclaration.WithInitializer(
                 BaseConstructorInitializer(ArgumentList(SingletonSeparatedList(
@@ -105,12 +88,12 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         return constructorDeclaration;
     }
 
-    private static ParameterListSyntax GenerateConstructorParameterList(AttributeData attributeData)
+    private static ParameterListSyntax GenerateConstructorParameterList(AttributeInfo attributeInfo)
     {
         ImmutableArray<ParameterSyntax>.Builder parameters = ImmutableArray.CreateBuilder<ParameterSyntax>();
         parameters.Add(Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")));
 
-        if (attributeData.HasNamedArgument("ResolveHttpClient", true))
+        if (attributeInfo.HasNamedArgument("ResolveHttpClient", true))
         {
             parameters.Add(Parameter(TypeOfSystemNetHttpHttpClient, Identifier("httpClient")));
         }
@@ -118,7 +101,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         return ParameterList(SeparatedList(parameters.ToImmutable()));
     }
 
-    private static IEnumerable<StatementSyntax> GenerateConstructorBodyStatements(INamedTypeSymbol classSymbol, AttributeData attributeData, CancellationToken token)
+    private static IEnumerable<StatementSyntax> GenerateConstructorBodyStatements(ConstructorGeneratorContext context, CancellationToken token)
     {
         // Call PreConstruct
         token.ThrowIfCancellationRequested();
@@ -127,14 +110,14 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 Argument(IdentifierName("serviceProvider"))))));
 
         // Assign fields
-        foreach (StatementSyntax? statementSyntax in GenerateConstructorBodyFieldAssignments(classSymbol, attributeData, token))
+        foreach (StatementSyntax? statementSyntax in GenerateConstructorBodyFieldAssignments(context, token))
         {
             token.ThrowIfCancellationRequested();
             yield return statementSyntax;
         }
 
         // Assign properties
-        foreach (StatementSyntax? statementSyntax in GenerateConstructorBodyPropertyAssignments(classSymbol, attributeData, token))
+        foreach (StatementSyntax? statementSyntax in GenerateConstructorBodyPropertyAssignments(context, token))
         {
             token.ThrowIfCancellationRequested();
             yield return statementSyntax;
@@ -143,14 +126,9 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         token.ThrowIfCancellationRequested();
 
         // Call Register for IRecipient interfaces
-        foreach (INamedTypeSymbol interfaceSymbol in classSymbol.Interfaces)
+        foreach (TypeInfo recipientInterface in context.Interfaces)
         {
-            if (!interfaceSymbol.HasFullyQualifiedMetadataName("CommunityToolkit.Mvvm.Messaging.IRecipient`1"))
-            {
-                continue;
-            }
-
-            string messageTypeString = interfaceSymbol.TypeArguments.Single().GetFullyQualifiedNameWithNullabilityAnnotations();
+            string messageTypeString = recipientInterface.TypeArguments.Single().FullyQualifiedTypeNameWithNullabilityAnnotations;
             TypeSyntax messageType = ParseTypeName(messageTypeString);
 
             token.ThrowIfCancellationRequested();
@@ -166,7 +144,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         }
 
         // Call InitializeComponent if specified
-        if (attributeData.HasNamedArgument("InitializeComponent", true))
+        if (context.Attribute.HasNamedArgument("InitializeComponent", true))
         {
             token.ThrowIfCancellationRequested();
             yield return ExpressionStatement(InvocationExpression(IdentifierName("InitializeComponent")));
@@ -179,36 +157,19 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 Argument(IdentifierName("serviceProvider"))))));
     }
 
-    private static IEnumerable<StatementSyntax> GenerateConstructorBodyFieldAssignments(INamedTypeSymbol classSymbol, AttributeData attributeData, CancellationToken token)
+    private static IEnumerable<StatementSyntax> GenerateConstructorBodyFieldAssignments(ConstructorGeneratorContext context, CancellationToken token)
     {
-        foreach (IFieldSymbol fieldSymbol in classSymbol.GetMembers().OfType<IFieldSymbol>())
+        foreach ((bool shouldSkip, FieldInfo fieldInfo) in context.Fields)
         {
-            if (fieldSymbol.IsImplicitlyDeclared || fieldSymbol.HasConstantValue || fieldSymbol.IsStatic || !fieldSymbol.IsReadOnly)
-            {
-                continue;
-            }
-
-            bool shouldSkip = false;
-            foreach (SyntaxReference syntaxReference in fieldSymbol.DeclaringSyntaxReferences)
-            {
-                if (syntaxReference.GetSyntax() is VariableDeclaratorSyntax { Initializer: not null })
-                {
-                    // Skip field with initializer
-                    token.ThrowIfCancellationRequested();
-                    yield return EmptyStatement().WithTrailingTrivia(Comment($"// Skipped field with initializer: {fieldSymbol.Name}"));
-                    shouldSkip = true;
-                    break;
-                }
-            }
-
             if (shouldSkip)
             {
+                yield return EmptyStatement().WithTrailingTrivia(Comment($"// Skipped field with initializer: {fieldInfo.MinimallyQualifiedName}"));
                 continue;
             }
 
-            string fullyQualifiedFieldTypeName = fieldSymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations();
+            string fullyQualifiedFieldTypeName = fieldInfo.FullyQualifiedTypeNameWithNullabilityAnnotation;
             TypeSyntax fieldType = ParseTypeName(fullyQualifiedFieldTypeName);
-            MemberAccessExpressionSyntax fieldAccess = SimpleMemberAccessExpression(ThisExpression(), IdentifierName(fieldSymbol.Name));
+            MemberAccessExpressionSyntax fieldAccess = SimpleMemberAccessExpression(ThisExpression(), IdentifierName(fieldInfo.MinimallyQualifiedName));
             token.ThrowIfCancellationRequested();
             switch (fullyQualifiedFieldTypeName)
             {
@@ -222,24 +183,24 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 case "global::System.Net.Http.HttpClient":
                     yield return ExpressionStatement(SimpleAssignmentExpression(
                         fieldAccess,
-                        attributeData.HasNamedArgument("ResolveHttpClient", true)
+                        context.Attribute.HasNamedArgument("ResolveHttpClient", true)
                             ? IdentifierName("httpClient")
                             : InvocationExpression(
                                     SimpleMemberAccessExpression(
                                         ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), TypeOfSystemNetHttpIHttpClientFactory),
                                         IdentifierName("CreateClient")))
                                 .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                                    Argument(NameOfExpression(IdentifierName(classSymbol.Name))))))));
+                                    Argument(NameOfExpression(IdentifierName(context.Hierarchy.Hierarchy[0].Name))))))));
                     break;
 
                 // this.${fieldName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
                 // this.${fieldName} = serviceProvider.GetRequiredService<${fieldType}>();
                 default:
-                    if (fieldSymbol.TryGetAttributeWithFullyQualifiedMetadataName(WellKnownMetadataNames.FromKeyedServicesAttribute, out AttributeData? fromKeyed))
+                    if (fieldInfo.TryGetAttributeWithFullyQualifiedMetadataName(WellKnownMetadataNames.FromKeyedServicesAttribute, out AttributeInfo? fromKeyed))
                     {
                         yield return ExpressionStatement(SimpleAssignmentExpression(
                             fieldAccess,
-                            ServiceProviderGetRequiredKeyedService(IdentifierName("serviceProvider"), fieldType, TypedConstantInfo.Create(fromKeyed.ConstructorArguments.Single()).GetSyntax())));
+                            ServiceProviderGetRequiredKeyedService(IdentifierName("serviceProvider"), fieldType, fromKeyed.ConstructorArguments.Single().GetSyntax())));
                     }
                     else
                     {
@@ -252,18 +213,13 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         }
     }
 
-    private static IEnumerable<StatementSyntax> GenerateConstructorBodyPropertyAssignments(INamedTypeSymbol classSymbol, AttributeData attributeData, CancellationToken token)
+    private static IEnumerable<StatementSyntax> GenerateConstructorBodyPropertyAssignments(ConstructorGeneratorContext context, CancellationToken token)
     {
-        foreach (IPropertySymbol propertySymbol in classSymbol.GetMembers().OfType<IPropertySymbol>())
+        foreach (PropertyInfo propertyInfo in context.Properties)
         {
-            if (ShouldSkipProperty(propertySymbol))
-            {
-                continue;
-            }
-
-            string fullyQualifiedPropertyTypeName = propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations();
+            string fullyQualifiedPropertyTypeName = propertyInfo.FullyQualifiedTypeNameWithNullabilityAnnotation;
             TypeSyntax propertyType = ParseTypeName(fullyQualifiedPropertyTypeName);
-            MemberAccessExpressionSyntax propertyAccess = SimpleMemberAccessExpression(ThisExpression(), IdentifierName(propertySymbol.Name));
+            MemberAccessExpressionSyntax propertyAccess = SimpleMemberAccessExpression(ThisExpression(), IdentifierName(propertyInfo.MinimallyQualifiedName));
             token.ThrowIfCancellationRequested();
             switch (fullyQualifiedPropertyTypeName)
             {
@@ -277,24 +233,24 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 case "global::System.Net.Http.HttpClient":
                     yield return ExpressionStatement(SimpleAssignmentExpression(
                         propertyAccess,
-                        attributeData.HasNamedArgument("ResolveHttpClient", true)
+                        context.Attribute.HasNamedArgument("ResolveHttpClient", true)
                             ? IdentifierName("httpClient")
                             : InvocationExpression(
                                     SimpleMemberAccessExpression(
                                         ServiceProviderGetRequiredService(IdentifierName("serviceProvider"), TypeOfSystemNetHttpIHttpClientFactory),
                                         IdentifierName("CreateClient")))
                                 .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                                    Argument(NameOfExpression(IdentifierName(classSymbol.Name))))))));
+                                    Argument(NameOfExpression(IdentifierName(context.Hierarchy.Hierarchy[0].Name))))))));
                     break;
 
                 // this.${propertyName} = serviceProvider.GetRequiredKeyedService<${fieldType}>(key);
                 // this.${propertyName} = serviceProvider.GetRequiredService<${fieldType}>();
                 default:
-                    if (propertySymbol.TryGetAttributeWithFullyQualifiedMetadataName(WellKnownMetadataNames.FromKeyedServicesAttribute, out AttributeData? fromKeyed))
+                    if (propertyInfo.TryGetAttributeWithFullyQualifiedMetadataName(WellKnownMetadataNames.FromKeyedServicesAttribute, out AttributeInfo? fromKeyed))
                     {
                         yield return ExpressionStatement(SimpleAssignmentExpression(
                             propertyAccess,
-                            ServiceProviderGetRequiredKeyedService(IdentifierName("serviceProvider"), propertyType, TypedConstantInfo.Create(fromKeyed.ConstructorArguments.Single()).GetSyntax())));
+                            ServiceProviderGetRequiredKeyedService(IdentifierName("serviceProvider"), propertyType, fromKeyed.ConstructorArguments.Single().GetSyntax())));
                     }
                     else
                     {
@@ -307,19 +263,14 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         }
     }
 
-    private static IEnumerable<PropertyDeclarationSyntax> GeneratePropertyDeclarations(INamedTypeSymbol classSymbol, CancellationToken token)
+    private static IEnumerable<PropertyDeclarationSyntax> GeneratePropertyDeclarations(ConstructorGeneratorContext context, CancellationToken token)
     {
-        foreach (IPropertySymbol propertySymbol in classSymbol.GetMembers().OfType<IPropertySymbol>())
+        foreach (PropertyInfo propertyInfo in context.Properties)
         {
-            if (ShouldSkipProperty(propertySymbol))
-            {
-                continue;
-            }
-
-            TypeSyntax propertyType = ParseTypeName(propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations());
+            TypeSyntax propertyType = ParseTypeName(propertyInfo.FullyQualifiedTypeNameWithNullabilityAnnotation);
             token.ThrowIfCancellationRequested();
-            yield return PropertyDeclaration(propertyType, Identifier(propertySymbol.Name))
-                .WithModifiers(propertySymbol.DeclaredAccessibility.ToSyntaxTokenList(PartialKeyword))
+            yield return PropertyDeclaration(propertyType, Identifier(propertyInfo.MinimallyQualifiedName))
+                .WithModifiers(propertyInfo.DeclaredAccessibility.ToSyntaxTokenList(PartialKeyword))
                 .WithAccessorList(AccessorList(SingletonList(
                     AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)
                         .WithExpressionBody(ArrowExpressionClause(FieldExpression()))
@@ -327,23 +278,85 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         }
     }
 
-    private static bool ShouldSkipProperty(IPropertySymbol propertySymbol)
+    private sealed record ConstructorGeneratorContext
     {
-        return propertySymbol.IsStatic || !propertySymbol.IsPartialDefinition || !propertySymbol.IsReadOnly;
-    }
+        public required AttributeInfo Attribute { get; init; }
 
-    private static InvocationExpressionSyntax ServiceProviderGetRequiredService(ExpressionSyntax serviceProvider, TypeSyntax type)
-    {
-        return InvocationExpression(SimpleMemberAccessExpression(
-            serviceProvider,
-            GenericName("GetRequiredService").WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))));
-    }
+        public required HierarchyInfo Hierarchy { get; init; }
 
-    private static InvocationExpressionSyntax ServiceProviderGetRequiredKeyedService(ExpressionSyntax serviceProvider, TypeSyntax type, ExpressionSyntax argument)
-    {
-        return InvocationExpression(SimpleMemberAccessExpression(
-                serviceProvider,
-                GenericName("GetRequiredKeyedService").WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))))
-            .WithArgumentList(ArgumentList(SingletonSeparatedList(Argument(argument))));
+        public required EquatableArray<(bool ShouldSkip, FieldInfo Field)> Fields { get; init; }
+
+        public required EquatableArray<PropertyInfo> Properties { get; init; }
+
+        public required EquatableArray<TypeInfo> Interfaces { get; init; }
+
+        public static ConstructorGeneratorContext Create(GeneratorAttributeSyntaxContext context, CancellationToken token)
+        {
+            if (context.TargetSymbol is not INamedTypeSymbol typeSymbol)
+            {
+                return default!;
+            }
+
+            ImmutableArray<(bool ShouldSkip, FieldInfo Field)>.Builder fieldsBuilder = ImmutableArray.CreateBuilder<(bool ShouldSkip, FieldInfo Field)>();
+            ImmutableArray<PropertyInfo>.Builder propertiesBuilder = ImmutableArray.CreateBuilder<PropertyInfo>();
+
+            foreach (ISymbol member in typeSymbol.GetMembers())
+            {
+                switch (member)
+                {
+                    case IFieldSymbol fieldSymbol:
+                        {
+                            if (fieldSymbol.IsImplicitlyDeclared || fieldSymbol.HasConstantValue || fieldSymbol.IsStatic || !fieldSymbol.IsReadOnly)
+                            {
+                                continue;
+                            }
+
+                            bool shouldSkip = false;
+                            foreach (SyntaxReference syntaxReference in fieldSymbol.DeclaringSyntaxReferences)
+                            {
+                                if (syntaxReference.GetSyntax() is VariableDeclaratorSyntax { Initializer: not null })
+                                {
+                                    // Skip field with initializer
+                                    shouldSkip = true;
+                                    break;
+                                }
+                            }
+
+                            fieldsBuilder.Add((shouldSkip, FieldInfo.Create(fieldSymbol)));
+                            break;
+                        }
+                    case IPropertySymbol propertySymbol:
+                        {
+                            if (propertySymbol.IsStatic || propertySymbol.IsImplicitlyDeclared || !propertySymbol.IsPartialDefinition || !propertySymbol.IsReadOnly)
+                            {
+                                continue;
+                            }
+
+                            propertiesBuilder.Add(PropertyInfo.Create(propertySymbol));
+                            break;
+                        }
+                }
+            }
+
+            ImmutableArray<TypeInfo>.Builder interfacesBuilder = ImmutableArray.CreateBuilder<TypeInfo>();
+            foreach (INamedTypeSymbol interfaceSymbol in typeSymbol.Interfaces)
+            {
+                if (!interfaceSymbol.HasFullyQualifiedMetadataName("CommunityToolkit.Mvvm.Messaging.IRecipient`1"))
+                {
+                    continue;
+                }
+
+                interfacesBuilder.Add(TypeInfo.Create(interfaceSymbol));
+            }
+
+            return new()
+            {
+                Attribute = AttributeInfo.Create(context.Attributes.Single()),
+                Hierarchy = HierarchyInfo.Create(typeSymbol),
+                Fields = fieldsBuilder.ToImmutable(),
+                Properties = propertiesBuilder.ToImmutable(),
+                Interfaces = interfacesBuilder.ToImmutable(),
+            };
+        }
     }
 }

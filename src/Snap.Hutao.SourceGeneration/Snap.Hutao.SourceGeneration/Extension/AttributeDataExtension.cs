@@ -50,6 +50,18 @@ internal static class AttributeDataExtension
         return false;
     }
 
+    public static bool TryGetConstructorArgument(this AttributeData attributeData, int index, out TypedConstant result)
+    {
+        if (attributeData.ConstructorArguments.Length > index)
+        {
+            result = attributeData.ConstructorArguments[index];
+            return true;
+        }
+
+        result = default;
+        return false;
+    }
+
     public static bool TryGetNamedArgument(this AttributeData data, string key, out TypedConstant value)
     {
         foreach ((string propertyName, TypedConstant constant) in data.NamedArguments)
