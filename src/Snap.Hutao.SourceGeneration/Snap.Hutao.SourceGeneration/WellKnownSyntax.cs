@@ -21,9 +21,12 @@ internal static class WellKnownSyntax
     public static readonly NameSyntax NameOfCommunityToolkitMvvmInput = ParseName("global::CommunityToolkit.Mvvm.Input");
     public static readonly NameSyntax NameOfCommunityToolkitMvvmInputAsyncRelayCommandOptions = ParseName("global::CommunityToolkit.Mvvm.Input.AsyncRelayCommandOptions");
     public static readonly NameSyntax NameOfMicrosoftUIXaml = ParseName("global::Microsoft.UI.Xaml");
-    public static readonly NameSyntax NameOfSnapHutaoModelPrimitiveConverter = ParseName("Snap.Hutao.Model.Primitive.Converter");
+    public static readonly NameSyntax NameOfSnapHutaoModelPrimitiveConverter = ParseName("global::Snap.Hutao.Model.Primitive.Converter");
     public static readonly NameSyntax NameOfSystem = ParseName("global::System");
+    public static readonly NameSyntax NameOfSystemComponentModelEditorBrowsable = ParseName("global::System.ComponentModel.EditorBrowsable");
+    public static readonly NameSyntax NameOfSystemComponentModelEditorBrowsableState = ParseName("global::System.ComponentModel.EditorBrowsableState");
     public static readonly NameSyntax NameOfSystemDiagnosticsCodeAnalysisMaybeNull = ParseName("global::System.Diagnostics.CodeAnalysis.MaybeNull");
+    public static readonly NameSyntax NameOfSystemDiagnosticsCodeAnalysisNotNullIfNotNull = ParseName("global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull");
     public static readonly NameSyntax NameOfSystemNumerics = ParseName("global::System.Numerics");
     public static readonly NameSyntax NameOfSystemRuntimeCompilerServicesUnsafeAccessor = ParseName("global::System.Runtime.CompilerServices.UnsafeAccessor");
     public static readonly NameSyntax NameOfSystemRuntimeCompilerServicesUnsafeAccessorKind = ParseName("global::System.Runtime.CompilerServices.UnsafeAccessorKind");
@@ -38,6 +41,7 @@ internal static class WellKnownSyntax
     public static readonly TypeSyntax TypeOfSystemEnum = ParseTypeName("global::System.Enum");
     public static readonly TypeSyntax TypeOfSystemGlobalizationCultureInfo = ParseTypeName("global::System.Globalization.CultureInfo");
     public static readonly TypeSyntax TypeOfSystemIComparable = ParseTypeName("global::System.IComparable");
+    public static readonly TypeSyntax TypeOfSystemIOStream = ParseTypeName("global::System.IO.Stream");
     public static readonly TypeSyntax TypeOfSystemIServiceProvider = ParseTypeName("global::System.IServiceProvider");
     public static readonly TypeSyntax TypeOfSystemNetHttpHttpClient = ParseTypeName("global::System.Net.Http.HttpClient");
     public static readonly TypeSyntax TypeOfSystemNetHttpIHttpClientFactory = ParseTypeName("global::System.Net.Http.IHttpClientFactory");

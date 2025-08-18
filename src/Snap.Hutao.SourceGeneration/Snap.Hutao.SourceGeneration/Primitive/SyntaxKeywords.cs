@@ -32,6 +32,8 @@ internal static class SyntaxKeywords
 
     public static SyntaxToken OverrideKeyword { get; } = SyntaxFactory.Token(SyntaxKind.OverrideKeyword);
 
+    public static SyntaxToken ParamsKeyword { get; } = SyntaxFactory.Token(SyntaxKind.ParamsKeyword);
+
     public static SyntaxToken PartialKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PartialKeyword);
 
     public static SyntaxToken PrivateKeyword { get; } = SyntaxFactory.Token(SyntaxKind.PrivateKeyword);
