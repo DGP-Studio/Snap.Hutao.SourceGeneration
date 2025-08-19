@@ -51,7 +51,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
                 GenerateAccessMethods(context, production.CancellationToken))
             .NormalizeWhitespace();
 
-        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
     private static ImmutableArray<MemberDeclarationSyntax> GenerateAccessMethods(FieldAccessorGeneratorContext context, CancellationToken token)

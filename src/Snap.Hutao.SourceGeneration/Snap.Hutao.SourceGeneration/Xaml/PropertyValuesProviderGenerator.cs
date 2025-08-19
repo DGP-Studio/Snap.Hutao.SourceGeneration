@@ -69,7 +69,7 @@ internal sealed class PropertyValuesProviderGenerator : IIncrementalGenerator
             ])
             .NormalizeWhitespace();
 
-        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
     private static IEnumerable<SwitchExpressionArmSyntax> GenerateSwitchExpressionArms(PropertyValuesProviderGeneratorContext context)

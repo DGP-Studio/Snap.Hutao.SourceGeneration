@@ -4,6 +4,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using System.Runtime.CompilerServices;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
@@ -32,6 +33,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
         SyntaxToken identifierOfCallBaseConstructor = Identifier("CallBaseConstructor");
         SyntaxToken identifierOfResolveHttpClient = Identifier("ResolveHttpClient");
         SyntaxToken identifierOfInitializeComponent = Identifier("InitializeComponent");
+        SyntaxToken identifierOfPrivate = Identifier("Private");
 
         SyntaxToken identifierOfDependencyPropertyAttribute = Identifier("DependencyPropertyAttribute");
         SyntaxToken identifierOfName = Identifier("name");
@@ -89,6 +91,9 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                                 .WithAccessorList(GetAndSetAccessorList),
                             PropertyDeclaration(BoolType, identifierOfInitializeComponent)
                                 .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
+                                .WithAccessorList(GetAndSetAccessorList),
+                            PropertyDeclaration(BoolType, identifierOfPrivate)
+                                .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
                                 .WithAccessorList(GetAndSetAccessorList)
                         ])),
                     ClassDeclaration(identifierOfDependencyPropertyAttribute)
@@ -109,7 +114,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                             PropertyDeclaration(BoolType, identifierOfIsAttached)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(TypeOfSystemType, identifierOfTargetType)
+                            PropertyDeclaration(NullableType(TypeOfSystemType), identifierOfTargetType)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
                             PropertyDeclaration(NullableObjectType, identifierOfDefaultValue)
@@ -132,7 +137,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 ]))))
             .NormalizeWhitespace();
 
-        context.AddSource("Snap.Hutao.Core.Annotation.Attributes.g.cs", coreAnnotation.ToFullString());
+        context.AddSource("Snap.Hutao.Core.Annotation.Attributes.g.cs", coreAnnotation.ToFullStringWithHeader());
 
         SyntaxToken identifierOfHttpClientAttribute = Identifier("HttpClientAttribute");
         TypeSyntax typeOfHttpClientConfiguration = ParseTypeName("global::Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientConfiguration");
@@ -228,7 +233,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 ]))))
             .NormalizeWhitespace();
 
-        context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.Attributes.g.cs", coreDependencyInjectionAnnotationHttpClient.ToFullString());
+        context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.Attributes.g.cs", coreDependencyInjectionAnnotationHttpClient.ToFullStringWithHeader());
 
         SyntaxToken identifierOfServiceLifetime = Identifier("serviceLifetime");
         SyntaxToken identifierOfNamedArgKey = Identifier("Key");
@@ -261,7 +266,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                                     Parameter(TypeOfSystemType, identifierOfServiceType)
                                 ])))
                                 .WithEmptyBlockBody(),
-                            PropertyDeclaration(ObjectType, identifierOfNamedArgKey)
+                            PropertyDeclaration(NullableObjectType, identifierOfNamedArgKey)
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList)
                         ])),
@@ -278,7 +283,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 ]))))
             .NormalizeWhitespace();
 
-        context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.Attributes.g.cs", coreDependencyInjectionAnnotation.ToFullString());
+        context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.Attributes.g.cs", coreDependencyInjectionAnnotation.ToFullStringWithHeader());
 
         SyntaxToken identifierOfExtendedEnumAttribute = Identifier("ExtendedEnumAttribute");
         SyntaxToken identifierOfLocalizationKeyAttribute = Identifier("LocalizationKeyAttribute");
@@ -305,7 +310,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                 ]))))
             .NormalizeWhitespace();
 
-        context.AddSource("Snap.Hutao.Resource.Localization.Attributes.g.cs", resourceLocalization.ToFullString());
+        context.AddSource("Snap.Hutao.Resource.Localization.Attributes.g.cs", resourceLocalization.ToFullStringWithHeader());
 
         SyntaxToken identifierOfInterceptsLocationAttribute = Identifier("InterceptsLocationAttribute");
         SyntaxToken identifierOfVersion = Identifier("version");
@@ -330,7 +335,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                                 .WithEmptyBlockBody()))))))
             .NormalizeWhitespace();
 
-        context.AddSource("System.Runtime.CompilerServices.InterceptsLocationAttribute.g.cs", interceptsLocation.ToFullString());
+        context.AddSource("System.Runtime.CompilerServices.InterceptsLocationAttribute.g.cs", interceptsLocation.ToFullStringWithHeader());
     }
 
     private static AttributeListSyntax SystemAttributeUsageList(AttributeArgumentSyntax attributeTargets, bool allowMultiple = false, bool inherited = true)

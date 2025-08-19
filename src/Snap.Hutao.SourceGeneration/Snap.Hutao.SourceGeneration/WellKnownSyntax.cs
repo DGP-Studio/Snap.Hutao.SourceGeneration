@@ -37,6 +37,7 @@ internal static class WellKnownSyntax
     public static readonly TypeSyntax TypeOfMicrosoftExtensionsDependencyInjectionIServiceCollection = ParseTypeName("global::Microsoft.Extensions.DependencyInjection.IServiceCollection");
     public static readonly TypeSyntax TypeOfMicrosoftExtensionsDependencyInjectionServiceLifetime = ParseTypeName("global::Microsoft.Extensions.DependencyInjection.ServiceLifetime");
     public static readonly TypeSyntax TypeOfSystemArgumentException = ParseTypeName("global::System.ArgumentException");
+    public static readonly TypeSyntax TypeOfSystemArgumentNullException = ParseTypeName("global::System.ArgumentNullException");
     public static readonly TypeSyntax TypeOfSystemAttributeTargets = ParseTypeName("global::System.AttributeTargets");
     public static readonly TypeSyntax TypeOfSystemEnum = ParseTypeName("global::System.Enum");
     public static readonly TypeSyntax TypeOfSystemGlobalizationCultureInfo = ParseTypeName("global::System.Globalization.CultureInfo");
@@ -60,6 +61,17 @@ internal static class WellKnownSyntax
 
     public static readonly AttributeArgumentSyntax AllowMultipleTrue = AttributeArgument(TrueLiteralExpression).WithNameEquals(NameEquals(IdentifierName("AllowMultiple")));
     public static readonly AttributeArgumentSyntax InheritedFalse = AttributeArgument(FalseLiteralExpression).WithNameEquals(NameEquals(IdentifierName("Inherited")));
+
+    // ArgumentNullException.ThrowIfNull(%argumentExpression%)
+    public static InvocationExpressionSyntax ArgumentNullExceptionThrowIfNull(ExpressionSyntax argumentExpression)
+    {
+        return InvocationExpression(
+                SimpleMemberAccessExpression(
+                    TypeOfSystemArgumentNullException,
+                    IdentifierName("ThrowIfNull")))
+            .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                Argument(argumentExpression))));
+    }
 
     // %serviceProvider%.GetRequiredService<%type%>()
     public static InvocationExpressionSyntax ServiceProviderGetRequiredService(ExpressionSyntax serviceProvider, TypeSyntax type)

@@ -4,6 +4,7 @@
 using JetBrains.Annotations;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using System;
 using System.Net.Http;
 using System.Text.Json;
@@ -57,7 +58,7 @@ internal sealed class SaltConstantGenerator : IIncrementalGenerator
                         ]))))))
             .NormalizeWhitespace();
 
-        context.AddSource("SaltConstants.g.cs", syntax.ToFullString());
+        context.AddSource("SaltConstants.g.cs", syntax.ToFullStringWithHeader());
     }
 
     private static FieldDeclarationSyntax ConstStringFieldDeclaration(string fieldName, string fieldValue)

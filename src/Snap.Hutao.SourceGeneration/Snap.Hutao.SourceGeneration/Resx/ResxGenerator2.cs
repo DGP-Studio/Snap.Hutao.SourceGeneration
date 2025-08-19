@@ -12,9 +12,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading;
+using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
@@ -31,6 +30,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
     private static readonly DiagnosticDescriptor InvalidPropertiesForNamespace = new("SH402", "Couldn't compute namespace", "Couldn't compute namespace for file '{0}'", "ResxGenerator", DiagnosticSeverity.Warning, true);
     private static readonly DiagnosticDescriptor InvalidPropertiesForResourceName = new("SH403", "Couldn't compute resource name", "Couldn't compute resource name for file '{0}'", "ResxGenerator", DiagnosticSeverity.Warning, true);
     private static readonly DiagnosticDescriptor InconsistentProperties = new("SH404", "Inconsistent properties", "Property '{0}' values for '{1}' are inconsistent", "ResxGenerator", DiagnosticSeverity.Warning, true);
+    private static readonly DiagnosticDescriptor NameShouldNotEndsWithFormat = new("SH405", "Resource data name should not ends with 'Format'", "Resource data '{0}' should not ends with 'Format'", "ResxGenerator", DiagnosticSeverity.Warning, true);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -79,21 +79,25 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             return;
         }
 
-        CompilationUnitSyntax syntax = GenerateCompilationUnit(context);
-        production.AddSource($"{context.ResourceName}.cs", syntax.ToFullString());
+        CompilationUnitSyntax standard = GenerateStandardCompilationUnit(production, context);
+        production.AddSource($"{context.ResourceName}.cs", standard.ToFullStringWithHeader());
+
+        CompilationUnitSyntax nameEnum = GenerateNameEnumCompilationUnit(context);
+        production.AddSource($"{context.ResourceName}Name.cs", nameEnum.ToFullStringWithHeader());
     }
 
-    private static CompilationUnitSyntax GenerateCompilationUnit(ResxGeneratorContext context)
+    private static CompilationUnitSyntax GenerateStandardCompilationUnit(SourceProductionContext production, ResxGeneratorContext context)
     {
         return CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(context.Namespace!)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration(context.ClassName!)
+                        .WithLeadingTrivia(NullableEnableTriviaList)
                         .WithModifiers(InternalAbstractPartialTokenList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
                             .. GenerateSharedMemberDeclarations(context),
-                            .. GenerateEntryMemberDeclarations(context)
+                            .. GenerateEntryMemberDeclarations(production, context)
                         ]))))))
             .NormalizeWhitespace();
     }
@@ -289,7 +293,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             [
                 Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
                 Parameter(StringType, Identifier("name")),
-                NullableArrayOfNullableObjectTypeParameter("args")
+                NullableParamsArrayOfNullableObjectTypeParameter("args")
             ])))
             .WithBody(Block(List<StatementSyntax>(
             [
@@ -355,7 +359,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             .WithParameterList(ParameterList(SeparatedList(
             [
                 Parameter(StringType, Identifier("name")),
-                NullableArrayOfNullableObjectTypeParameter("args")
+                NullableParamsArrayOfNullableObjectTypeParameter("args")
             ])))
             .WithBody(Block(SingletonList(
                 ReturnStatement(InvocationExpression(IdentifierName("GetString"))
@@ -392,7 +396,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                 Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
                 Parameter(StringType, Identifier("name")),
                 Parameter(NullableStringType, Identifier("defaultValue")),
-                NullableArrayOfNullableObjectTypeParameter("args")
+                NullableParamsArrayOfNullableObjectTypeParameter("args")
             ])))
             .WithBody(Block(List<StatementSyntax>(
             [
@@ -468,7 +472,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             [
                 Parameter(StringType, Identifier("name")),
                 Parameter(NullableStringType, Identifier("defaultValue")),
-                NullableArrayOfNullableObjectTypeParameter("args")
+                NullableParamsArrayOfNullableObjectTypeParameter("args")
             ])))
             .WithBody(Block(SingletonList(
                 ReturnStatement(InvocationExpression(IdentifierName("GetStringOrDefault"))
@@ -505,29 +509,116 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                     ])))))));
     }
 
-    private static IEnumerable<MemberDeclarationSyntax> GenerateEntryMemberDeclarations(ResxGeneratorContext context)
+    private static IEnumerable<MemberDeclarationSyntax> GenerateEntryMemberDeclarations(SourceProductionContext production, ResxGeneratorContext context)
     {
         foreach (ResxEntry entry in context.Entries)
         {
-            XElement summary = new("summary", new XElement("para", $"Looks up a localized string for \"{entry.Name}\"."));
-            if (!string.IsNullOrWhiteSpace(entry.Comment))
-            {
-                summary.Add(new XElement("para", entry.Comment));
-            }
-
-            foreach((string locale, string? each) in entry.Values)
-            {
-                summary.Add(new XElement("code", $"{locale,-8} Value: \"{each}\""));
-            }
-
-            SyntaxTriviaList comment = ParseLeadingTrivia(new StringBuilder(summary.ToString()).Replace("\r\n", "\r\n    /// ").ToString());
+            SyntaxTriviaList comment = GenerateCommentForEntry(entry);
 
             yield return PropertyDeclaration(StringType, entry.Name)
-                .WithLeadingTrivia(comment)
                 .WithModifiers(PublicStaticTokenList)
-                .WithExpressionBody(ArrowExpressionClause(InvocationExpression(IdentifierName("GetString"))
-                    .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                        Argument(StringLiteralExpression(entry.Name)))))));
+                .WithLeadingTrivia(comment)
+                .WithExpressionBody(ArrowExpressionClause(SuppressNullableWarningExpression(
+                    InvocationExpression(IdentifierName("GetString"))
+                        .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                            Argument(StringLiteralExpression(entry.Name))))))))
+                .WithSemicolonToken(SemicolonToken);
+
+            string? value = entry.Values.FirstOrDefault().Value;
+            if (string.IsNullOrEmpty(value))
+            {
+                continue;
+            }
+
+            if (!CompositeFormat.TryParse(entry.Values.First().Value!, out CompositeFormat? compositeFormat) ||
+                compositeFormat.MinimumArgumentCount <= 0)
+            {
+                continue;
+            }
+
+            if (entry.Name.EndsWith("Format", StringComparison.OrdinalIgnoreCase))
+            {
+                production.ReportDiagnostic(Diagnostic.Create(NameShouldNotEndsWithFormat, Location.None, entry.Name));
+            }
+
+            int argsCount = compositeFormat.MinimumArgumentCount;
+            yield return MethodDeclaration(StringType, Identifier($"Format{entry.Name}"))
+                .WithModifiers(PublicStaticTokenList)
+                .WithLeadingTrivia(ParseLeadingTrivia($"""
+                    /// <inheritdocs cref="{entry.Name}"/>
+
+                    """))
+                .WithParameterList(ParameterList(SeparatedList(GenerateFormatMethodParameters(argsCount))))
+                .WithExpressionBody(ArrowExpressionClause(SuppressNullableWarningExpression(
+                    InvocationExpression(IdentifierName("GetString"))
+                        .WithArgumentList(ArgumentList(SeparatedList(
+                            [
+                                Argument(StringLiteralExpression(entry.Name)),
+                                .. GenerateFormatMethodArguments(argsCount)
+                            ]))))))
+                .WithSemicolonToken(SemicolonToken);
+        }
+    }
+
+    private static SyntaxTriviaList GenerateCommentForEntry(ResxEntry entry)
+    {
+        XElement summary = new("summary", new XElement("para", $"Looks up a localized string for \"{entry.Name}\"."));
+        if (!string.IsNullOrWhiteSpace(entry.Comment))
+        {
+            summary.Add(new XElement("para", entry.Comment));
+        }
+
+        foreach((string locale, string? each) in entry.Values)
+        {
+            summary.Add(new XElement("code", $"{locale,-8} Value: \"{each}\""));
+        }
+
+        StringBuilder builder = new StringBuilder().Append("/// ");
+        using (XmlWriter writer = XmlWriter.Create(builder, new() { OmitXmlDeclaration = true }))
+        {
+            summary.WriteTo(writer);
+        }
+
+        builder.Replace("\r\n", "\r\n/// ").AppendLine();
+        SyntaxTriviaList comment = ParseLeadingTrivia(builder.ToString());
+        return comment;
+    }
+
+    private static IEnumerable<ParameterSyntax> GenerateFormatMethodParameters(int argsCount)
+    {
+        for (int i = 0; i < argsCount; i++)
+        {
+            yield return Parameter(Identifier($"arg{i}"))
+                .WithType(NullableObjectType);
+        }
+    }
+
+    private static IEnumerable<ArgumentSyntax> GenerateFormatMethodArguments(int argsCount)
+    {
+        for (int i = 0; i < argsCount; i++)
+        {
+            yield return Argument(IdentifierName($"arg{i}"));
+        }
+    }
+
+    private static CompilationUnitSyntax GenerateNameEnumCompilationUnit(ResxGeneratorContext context)
+    {
+        return CompilationUnit()
+            .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(context.Namespace!)
+                .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                    EnumDeclaration($"{context.ClassName}Name")
+                        .WithModifiers(InternalTokenList)
+                        .WithLeadingTrivia(NullableEnableTriviaList)
+                        .WithMembers(SeparatedList(GenerateEnumMembers(context)))))))
+            .NormalizeWhitespace();
+    }
+
+    private static IEnumerable<EnumMemberDeclarationSyntax> GenerateEnumMembers(ResxGeneratorContext context)
+    {
+        foreach (ResxEntry entry in context.Entries)
+        {
+            yield return EnumMemberDeclaration(entry.Name)
+                .WithLeadingTrivia(GenerateCommentForEntry(entry));
         }
     }
 
@@ -540,13 +631,14 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             .WithTarget(AttributeTargetSpecifier(Token(SyntaxKind.ReturnKeyword)));
     }
 
-    private static ParameterSyntax NullableArrayOfNullableObjectTypeParameter(string name)
+    private static ParameterSyntax NullableParamsArrayOfNullableObjectTypeParameter(string name)
     {
         return Parameter(Identifier(name))
             .WithType(NullableType(ArrayType(NullableObjectType)
                 .WithRankSpecifiers(SingletonList(
                     ArrayRankSpecifier(SingletonSeparatedList<ExpressionSyntax>(
-                        OmittedArraySizeExpression()))))));
+                        OmittedArraySizeExpression()))))))
+            .WithModifiers(ParamsTokenList);
     }
 
     private sealed record ResxGeneratorContext
@@ -592,11 +684,10 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
     {
         public required string Name { get; init; }
 
-        public string? Type { get; init; }
+        public required string? Type { get; init; }
 
-        public string? Comment { get; init; }
+        public required string? Comment { get; init; }
 
-        [JsonConverter(typeof(TupleArrayConverter))]
         public required EquatableArray<(string Locale, string? Value)> Values { get; init; }
 
         public static Builder CreateBuilder(string name, string? type = null, string? comment = null)
@@ -883,31 +974,5 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
         public string? Value { get; init; }
 
         public string? Comment { get; init; }
-    }
-
-    private sealed class TupleArrayConverter : JsonConverter<EquatableArray<(string Locale, string? Value)>>
-    {
-        public override EquatableArray<(string Locale, string? Value)> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Write(Utf8JsonWriter writer, EquatableArray<(string Locale, string? Value)> values, JsonSerializerOptions options)
-        {
-            writer.WriteStartObject();
-            foreach ((string locale, string? value) in values)
-            {
-                writer.WritePropertyName(locale);
-                if (value is not null)
-                {
-                    writer.WriteStringValue(value);
-                }
-                else
-                {
-                    writer.WriteNullValue();
-                }
-            }
-            writer.WriteEndObject();
-        }
     }
 }

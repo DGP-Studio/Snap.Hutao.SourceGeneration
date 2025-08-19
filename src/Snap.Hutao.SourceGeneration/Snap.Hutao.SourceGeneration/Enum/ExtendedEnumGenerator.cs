@@ -152,7 +152,7 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
                         ]))))))
             .NormalizeWhitespace();
 
-        production.AddSource(context.FileNameHint, syntax.ToFullString());
+        production.AddSource(context.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
     private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetNameSwitchArms(TypeSyntax enumType, ImmutableArray<(FieldInfo Field, AttributeInfo? Attribute)> fields)

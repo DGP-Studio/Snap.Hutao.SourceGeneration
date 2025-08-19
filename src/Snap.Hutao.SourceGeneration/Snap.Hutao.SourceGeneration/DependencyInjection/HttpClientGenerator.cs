@@ -66,7 +66,7 @@ internal sealed class HttpClientGenerator : IIncrementalGenerator
                                 .WithBody(Block(List(GenerateAddHttpClients(context))))))))))
             .NormalizeWhitespace();
 
-        production.AddSource("ServiceCollectionExtension.g.cs", syntax.ToFullString());
+        production.AddSource("ServiceCollectionExtension.g.cs", syntax.ToFullStringWithHeader());
     }
 
     private static IEnumerable<StatementSyntax> GenerateAddHttpClients(HttpClientGeneratorContext context)

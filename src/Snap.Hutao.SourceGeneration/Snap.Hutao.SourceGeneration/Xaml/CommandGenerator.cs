@@ -60,7 +60,7 @@ internal sealed class CommandGenerator : IIncrementalGenerator
         CompilationUnitSyntax syntax = context.Hierarchy.GetCompilationUnit([.. GenerateCommandProperties(context.Methods)])
             .NormalizeWhitespace();
 
-        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
     private static IEnumerable<MemberDeclarationSyntax> GenerateCommandProperties(EquatableArray<AttributedMethodInfo> methods)

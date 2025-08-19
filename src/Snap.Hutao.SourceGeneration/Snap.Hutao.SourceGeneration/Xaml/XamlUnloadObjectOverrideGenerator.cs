@@ -66,7 +66,7 @@ internal class XamlUnloadObjectOverrideGenerator : IIncrementalGenerator
             ])
             .NormalizeWhitespace();
 
-        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
     private sealed record XamlUnloadObjectOverrideGeneratorContext

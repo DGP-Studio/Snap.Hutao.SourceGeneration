@@ -70,13 +70,17 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 .WithSemicolonToken(SemicolonToken)
         ]).NormalizeWhitespace();
 
-        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
     private static ConstructorDeclarationSyntax GenerateConstructorDeclaration(ConstructorGeneratorContext context)
     {
+        SyntaxTokenList modifiers = context.Attribute.HasNamedArgument("Private", true)
+            ? PrivateTokenList
+            : PublicTokenList;
+
         ConstructorDeclarationSyntax constructorDeclaration = ConstructorDeclaration(Identifier(context.Hierarchy.Hierarchy[0].Name))
-            .WithModifiers(PublicTokenList);
+            .WithModifiers(modifiers);
 
         if (context.Attribute.HasNamedArgument("CallBaseConstructor", true))
         {

@@ -3,6 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Model;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
@@ -58,7 +59,7 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
             .GetCompilationUnit([.. GenerateMembers(context)])
             .NormalizeWhitespace();
 
-        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullString());
+        production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
     private static IEnumerable<MemberDeclarationSyntax> GenerateMembers(DependencyPropertyGeneratorContext context)
@@ -164,15 +165,16 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
             }
             else
             {
+                // Generate static methods for attached properties
                 TypeSyntax targetTypeSyntax;
                 if (attribute.TryGetNamedArgument("TargetType", out TypedConstantInfo? targetType) &&
                     targetType is TypedConstantInfo.Type type)
                 {
-                    targetTypeSyntax = NullableType(ParseName(type.FullyQualifiedTypeName));
+                    targetTypeSyntax = ParseName(type.FullyQualifiedTypeName);
                 }
                 else
                 {
-                    targetTypeSyntax = NullableType(QualifiedName(NameOfMicrosoftUIXaml, IdentifierName("DependencyObject")));
+                    targetTypeSyntax = QualifiedName(NameOfMicrosoftUIXaml, IdentifierName("DependencyObject"));
                 }
 
                 // Generate static methods for attached properties
@@ -182,14 +184,19 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                     [
                         Parameter(targetTypeSyntax, Identifier("obj"))
                     ])))
-                    .WithBody(Block(SingletonList(
+                    .WithBody(Block(List<StatementSyntax>(
+                    [
+                        ExpressionStatement(ArgumentNullExceptionThrowIfNull(IdentifierName("obj"))),
+
                         ReturnStatement(CastExpression(
                             propertyTypeSyntax,
-                            ConditionalAccessExpression(
-                                IdentifierName("obj"),
-                                InvocationExpression(MemberBindingExpression(IdentifierName("GetValue")))
-                                    .WithArgumentList(ArgumentList(SingletonSeparatedList(
-                                        Argument(IdentifierName(propertyName)))))))))));
+                            InvocationExpression(
+                                    SimpleMemberAccessExpression(
+                                        IdentifierName("obj"),
+                                        IdentifierName("GetValue")))
+                                .WithArgumentList(ArgumentList(SingletonSeparatedList(
+                                    Argument(IdentifierName(propertyName)))))))
+                    ])));
 
                 yield return MethodDeclaration(VoidType, Identifier($"Set{name}"))
                     .WithModifiers(PublicStaticTokenList)
@@ -198,15 +205,21 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
                         Parameter(targetTypeSyntax, Identifier("obj")),
                         Parameter(propertyTypeSyntax, Identifier("value"))
                     ])))
-                    .WithBody(Block(SingletonList(
-                        ExpressionStatement(ConditionalAccessExpression(
-                            IdentifierName("obj"),
-                            InvocationExpression(MemberBindingExpression(IdentifierName("SetValue")))
+                    .WithBody(Block(List<StatementSyntax>(
+                    [
+                        ExpressionStatement(ArgumentNullExceptionThrowIfNull(IdentifierName("obj"))),
+
+                        ExpressionStatement(
+                            InvocationExpression(
+                                    SimpleMemberAccessExpression(
+                                        IdentifierName("obj"),
+                                        IdentifierName("SetValue")))
                                 .WithArgumentList(ArgumentList(SeparatedList(
                                 [
                                     Argument(IdentifierName(propertyName)),
                                     Argument(IdentifierName("value"))
-                                ]))))))));
+                                ]))))
+                    ])));
             }
         }
     }

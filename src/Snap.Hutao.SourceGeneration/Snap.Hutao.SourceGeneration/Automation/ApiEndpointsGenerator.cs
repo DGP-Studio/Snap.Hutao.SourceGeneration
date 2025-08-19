@@ -3,6 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Model;
 using System;
 using System.Collections.Generic;
@@ -83,7 +84,7 @@ internal sealed class ApiEndpointsGenerator : IIncrementalGenerator
                     ]))))
             .NormalizeWhitespace();
 
-        production.AddSource($"{context.Name}.g.cs", compilation.ToFullString());
+        production.AddSource($"{context.Name}.g.cs", compilation.ToFullStringWithHeader());
     }
 
     private static IEnumerable<MemberDeclarationSyntax> GenerateInterfaceMethods(ImmutableArray<EndpointsMetadata> metadataArray)

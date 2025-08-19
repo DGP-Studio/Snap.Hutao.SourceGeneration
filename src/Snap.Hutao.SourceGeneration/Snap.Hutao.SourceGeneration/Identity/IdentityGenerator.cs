@@ -3,6 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -342,7 +343,7 @@ internal sealed class IdentityGenerator : IIncrementalGenerator
                         ]))))))
             .NormalizeWhitespace();
 
-        context.AddSource($"{metadataName}.g.cs", syntax.ToFullString());
+        context.AddSource($"{metadataName}.g.cs", syntax.ToFullStringWithHeader());
     }
 
     private static TypeOfExpressionSyntax GenerateTypeOfIdentityConverterGenericExpression(string typeName)

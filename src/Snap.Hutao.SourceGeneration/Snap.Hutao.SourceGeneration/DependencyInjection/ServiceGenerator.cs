@@ -3,6 +3,7 @@
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Snap.Hutao.SourceGeneration.Extension;
 using Snap.Hutao.SourceGeneration.Model;
 using Snap.Hutao.SourceGeneration.Primitive;
 using System;
@@ -64,7 +65,7 @@ internal sealed class ServiceGenerator : IIncrementalGenerator
                                 .WithBody(Block(List(GenerateAddServices(context))))))))))
             .NormalizeWhitespace();
 
-        production.AddSource("ServiceCollectionExtension.g.cs", syntax.ToFullString());
+        production.AddSource("ServiceCollectionExtension.g.cs", syntax.ToFullStringWithHeader());
     }
 
     private static IEnumerable<StatementSyntax> GenerateAddServices(ServiceGeneratorContext context)

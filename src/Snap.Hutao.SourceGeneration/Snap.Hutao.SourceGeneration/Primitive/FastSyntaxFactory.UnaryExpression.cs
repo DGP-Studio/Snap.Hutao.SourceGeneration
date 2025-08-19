@@ -7,6 +7,11 @@ namespace Snap.Hutao.SourceGeneration.Primitive;
 
 internal static partial class FastSyntaxFactory
 {
+    public static PostfixUnaryExpressionSyntax SuppressNullableWarningExpression(ExpressionSyntax operand)
+    {
+        return SyntaxFactory.PostfixUnaryExpression(SyntaxKind.SuppressNullableWarningExpression, operand);
+    }
+
     public static PrefixUnaryExpressionSyntax AddressOfExpression(ExpressionSyntax operand)
     {
         return SyntaxFactory.PrefixUnaryExpression(SyntaxKind.AddressOfExpression, operand);
