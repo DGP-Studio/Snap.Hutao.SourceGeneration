@@ -94,7 +94,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                     ClassDeclaration(context.ClassName!)
                         .WithLeadingTrivia(NullableEnableTriviaList)
                         .WithModifiers(InternalAbstractPartialTokenList)
-                        .WithMembers(List<MemberDeclarationSyntax>(
+                        .WithMembers(List(
                         [
                             .. GenerateSharedMemberDeclarations(context),
                             .. GenerateEntryMemberDeclarations(production, context)
@@ -111,7 +111,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
         //     get => field ??= new("${namespace}", typeof(${className}).Assembly);
         // }
         yield return PropertyDeclaration(TypeOfSystemResourcesResourceManager, Identifier("ResourceManager"))
-            .WithAttributeLists(List<AttributeListSyntax>(
+            .WithAttributeLists(List(
             [
                 AttributeList(SingletonSeparatedList(Attribute(NameOfSystemDiagnosticsCodeAnalysisMaybeNull)))
                     .WithTarget(AttributeTargetSpecifier(FieldKeyword)),
@@ -148,7 +148,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             .WithAccessorList(GetAndSetAccessorList);
 
         // [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(defaultValue))]
-        // public static object? GetObject(global::System.Globalization.CultureInfo? culture, string name, object? defaultValue)
+        // public static object? GetObject(string name, global::System.Globalization.CultureInfo? culture, object? defaultValue)
         // {
         //     return ResourceManager.GetObject(name, culture ?? Culture) ?? defaultValue;
         // }
@@ -158,8 +158,8 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             .WithModifiers(PublicStaticTokenList)
             .WithParameterList(ParameterList(SeparatedList(
             [
-                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
                 Parameter(StringType, Identifier("name")),
+                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
                 Parameter(NullableObjectType, Identifier("defaultValue"))
             ])))
             .WithBody(Block(SingletonList(
@@ -174,29 +174,29 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                         ]))),
                     IdentifierName("defaultValue"))))));
 
-        // public static object? GetObject(global::System.Globalization.CultureInfo? culture, string name)
+        // public static object? GetObject(string name, global::System.Globalization.CultureInfo? culture)
         // {
-        //     return GetObject(culture, name, default);
+        //     return GetObject(name, culture,default);
         // }
         yield return MethodDeclaration(NullableObjectType, Identifier("GetObject"))
             .WithModifiers(PublicStaticTokenList)
             .WithParameterList(ParameterList(SeparatedList(
             [
-                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
-                Parameter(StringType, Identifier("name"))
+                Parameter(StringType, Identifier("name")),
+                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture"))
             ])))
             .WithBody(Block(SingletonList(
                 ReturnStatement(InvocationExpression(IdentifierName("GetObject"))
                     .WithArgumentList(ArgumentList(SeparatedList(
                     [
-                        Argument(IdentifierName("culture")),
                         Argument(IdentifierName("name")),
-                        Argument(DefaultLiteralExpression),
+                        Argument(IdentifierName("culture")),
+                        Argument(DefaultLiteralExpression)
                     ])))))));
 
         // public static object? GetObject(string name)
         // {
-        //     return GetObject(default, name, default);
+        //     return GetObject(name, default, default);
         // }
         yield return MethodDeclaration(NullableObjectType, Identifier("GetObject"))
             .WithModifiers(PublicStaticTokenList)
@@ -206,15 +206,15 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                 ReturnStatement(InvocationExpression(IdentifierName("GetObject"))
                     .WithArgumentList(ArgumentList(SeparatedList(
                     [
-                        Argument(DefaultLiteralExpression),
                         Argument(IdentifierName("name")),
+                        Argument(DefaultLiteralExpression),
                         Argument(DefaultLiteralExpression),
                     ])))))));
 
         // [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(defaultValue))]
         // public static object? GetObject(string name, object? defaultValue)
         // {
-        //     return GetObject(default, name, defaultValue);
+        //     return GetObject(name, default, defaultValue);
         // }
         yield return MethodDeclaration(NullableObjectType, Identifier("GetObject"))
             .WithAttributeLists(SingletonList(
@@ -229,12 +229,12 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                 ReturnStatement(InvocationExpression(IdentifierName("GetObject"))
                     .WithArgumentList(ArgumentList(SeparatedList(
                     [
-                        Argument(DefaultLiteralExpression),
                         Argument(IdentifierName("name")),
+                        Argument(DefaultLiteralExpression),
                         Argument(IdentifierName("defaultValue")),
                     ])))))));
 
-        // public static global::System.IO.Stream? GetStream(global::System.Globalization.CultureInfo? culture, string name)
+        // public static global::System.IO.Stream? GetStream(string name, global::System.Globalization.CultureInfo? culture)
         // {
         //     return ResourceManager.GetStream(name, culture ?? Culture);
         // }
@@ -242,8 +242,8 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             .WithModifiers(PublicStaticTokenList)
             .WithParameterList(ParameterList(SeparatedList(
             [
-                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
-                Parameter(StringType, Identifier("name"))
+                Parameter(StringType, Identifier("name")),
+                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture"))
             ])))
             .WithBody(Block(SingletonList(
                 ReturnStatement(InvocationExpression(SimpleMemberAccessExpression(
@@ -257,7 +257,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
 
         // public static global::System.IO.Stream? GetStream(string name)
         // {
-        //     return GetStream(default, name);
+        //     return GetStream(name, default);
         // }
         yield return MethodDeclaration(NullableType(TypeOfSystemIOStream), Identifier("GetStream"))
             .WithModifiers(PublicStaticTokenList)
@@ -267,11 +267,11 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                 ReturnStatement(InvocationExpression(IdentifierName("GetStream"))
                     .WithArgumentList(ArgumentList(SeparatedList(
                     [
-                        Argument(DefaultLiteralExpression),
                         Argument(IdentifierName("name")),
+                        Argument(DefaultLiteralExpression),
                     ])))))));
 
-        // public static string? GetString(global::System.Globalization.CultureInfo? culture, string name, params object?[]? args)
+        // public static string? GetString(string name, global::System.Globalization.CultureInfo? culture, params object?[]? args)
         // {
         //     culture ??= Culture;
         //     string? str = ResourceManager.GetString(name, culture);
@@ -291,8 +291,8 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             .WithModifiers(PublicStaticTokenList)
             .WithParameterList(ParameterList(SeparatedList(
             [
-                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
                 Parameter(StringType, Identifier("name")),
+                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
                 NullableParamsArrayOfNullableObjectTypeParameter("args")
             ])))
             .WithBody(Block(List<StatementSyntax>(
@@ -330,29 +330,9 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                         ]))))
             ])));
 
-        // public static string? GetString(global::System.Globalization.CultureInfo? culture, string name)
-        // {
-        //     return GetString(culture, name, default);
-        // }
-        yield return MethodDeclaration(NullableStringType, Identifier("GetString"))
-            .WithModifiers(PublicStaticTokenList)
-            .WithParameterList(ParameterList(SeparatedList(
-            [
-                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
-                Parameter(StringType, Identifier("name"))
-            ])))
-            .WithBody(Block(SingletonList(
-                ReturnStatement(InvocationExpression(IdentifierName("GetString"))
-                    .WithArgumentList(ArgumentList(SeparatedList(
-                    [
-                        Argument(IdentifierName("culture")),
-                        Argument(IdentifierName("name")),
-                        Argument(DefaultLiteralExpression),
-                    ])))))));
-
         // public static string? GetString(string name, params object?[]? args)
         // {
-        //     return GetString(null, name, args);
+        //     return GetString(name, null, args);
         // }
         yield return MethodDeclaration(NullableStringType, Identifier("GetString"))
             .WithModifiers(PublicStaticTokenList)
@@ -365,147 +345,50 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
                 ReturnStatement(InvocationExpression(IdentifierName("GetString"))
                     .WithArgumentList(ArgumentList(SeparatedList(
                     [
-                        Argument(DefaultLiteralExpression),
                         Argument(IdentifierName("name")),
+                        Argument(DefaultLiteralExpression),
                         Argument(IdentifierName("args"))
                     ])))))));
 
-        // [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(defaultValue))]
-        // public static string? GetStringOrDefault(global::System.Globalization.CultureInfo? culture, string name, string? defaultValue, params object?[]? args)
+        // public static string? GetString(string name, global::System.Globalization.CultureInfo? culture)
         // {
-        //     culture ??= Culture;
-        //     string? str = ResourceManager.GetString(name, culture) ?? defaultValue;
-        //     if (str is null)
-        //     {
-        //         return null;
-        //     }
-        //
-        //     if (args is null)
-        //     {
-        //         return str;
-        //     }
-        //
-        //     return string.Format(culture, str, args);
+        //     return ResourceManager.GetString(name, culture ?? Culture);
         // }
-        yield return MethodDeclaration(NullableStringType, Identifier("GetStringOrDefault"))
-            .WithAttributeLists(SingletonList(
-                ReturnNotNullIfNotNullAttributeList("defaultValue")))
+        yield return MethodDeclaration(NullableStringType, Identifier("GetString"))
             .WithModifiers(PublicStaticTokenList)
             .WithParameterList(ParameterList(SeparatedList(
             [
-                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
                 Parameter(StringType, Identifier("name")),
-                Parameter(NullableStringType, Identifier("defaultValue")),
-                NullableParamsArrayOfNullableObjectTypeParameter("args")
-            ])))
-            .WithBody(Block(List<StatementSyntax>(
-            [
-                ExpressionStatement(CoalesceAssignmentExpression(
-                    IdentifierName("culture"),
-                    IdentifierName("Culture"))),
-                LocalDeclarationStatement(VariableDeclaration(NullableStringType)
-                    .WithVariables(SingletonSeparatedList(
-                        VariableDeclarator(Identifier("str"))
-                            .WithInitializer(EqualsValueClause(CoalesceExpression(
-                                InvocationExpression(SimpleMemberAccessExpression(
-                                        IdentifierName("ResourceManager"),
-                                        IdentifierName("GetString")))
-                                    .WithArgumentList(ArgumentList(SeparatedList(
-                                    [
-                                        Argument(IdentifierName("name")),
-                                        Argument(IdentifierName("culture")),
-                                    ]))),
-                                IdentifierName("defaultValue"))))))),
-                IfStatement(
-                    IsPatternExpression(IdentifierName("str"), ConstantPattern(NullLiteralExpression)),
-                    Block(SingletonList(ReturnStatement(DefaultLiteralExpression)))),
-                IfStatement(
-                    IsPatternExpression(IdentifierName("args"), ConstantPattern(NullLiteralExpression)),
-                    Block(SingletonList(ReturnStatement(IdentifierName("str"))))),
-                ReturnStatement(
-                    InvocationExpression(SimpleMemberAccessExpression(
-                            StringType,
-                            IdentifierName("Format")))
-                        .WithArgumentList(ArgumentList(SeparatedList(
-                        [
-                            Argument(IdentifierName("culture")),
-                            Argument(IdentifierName("str")),
-                            Argument(IdentifierName("args"))
-                        ]))))
-            ])));
-
-        // [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(defaultValue))]
-        // public static string? GetStringOrDefault(global::System.Globalization.CultureInfo? culture, string name, string? defaultValue)
-        // {
-        //     return GetStringOrDefault(culture, name, defaultValue, default);
-        // }
-        yield return MethodDeclaration(NullableStringType, Identifier("GetStringOrDefault"))
-            .WithAttributeLists(SingletonList(
-                ReturnNotNullIfNotNullAttributeList("defaultValue")))
-            .WithModifiers(PublicStaticTokenList)
-            .WithParameterList(ParameterList(SeparatedList(
-            [
-                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture")),
-                Parameter(StringType, Identifier("name")),
-                Parameter(NullableStringType, Identifier("defaultValue"))
+                Parameter(NullableType(TypeOfSystemGlobalizationCultureInfo), Identifier("culture"))
             ])))
             .WithBody(Block(SingletonList(
-                ReturnStatement(InvocationExpression(IdentifierName("GetStringOrDefault"))
+                ReturnStatement(InvocationExpression(SimpleMemberAccessExpression(
+                        IdentifierName("ResourceManager"),
+                        IdentifierName("GetString")))
                     .WithArgumentList(ArgumentList(SeparatedList(
                     [
-                        Argument(IdentifierName("culture")),
                         Argument(IdentifierName("name")),
-                        Argument(IdentifierName("defaultValue")),
-                        Argument(DefaultLiteralExpression)
+                        Argument(CoalesceExpression(
+                            IdentifierName("culture"),
+                            IdentifierName("Culture"))),
                     ])))))));
 
-        // [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(defaultValue))]
-        // public static string? GetStringOrDefault(string name, string? defaultValue, params object?[]? args)
+        // public static string? GetString(string name)
         // {
-        //     return GetStringOrDefault(null, name, defaultValue, args);
+        //     return ResourceManager.GetString(name, Culture);
         // }
-        yield return MethodDeclaration(NullableStringType, Identifier("GetStringOrDefault"))
-            .WithAttributeLists(SingletonList(
-                ReturnNotNullIfNotNullAttributeList("defaultValue")))
+        yield return MethodDeclaration(NullableStringType, Identifier("GetString"))
             .WithModifiers(PublicStaticTokenList)
-            .WithParameterList(ParameterList(SeparatedList(
-            [
-                Parameter(StringType, Identifier("name")),
-                Parameter(NullableStringType, Identifier("defaultValue")),
-                NullableParamsArrayOfNullableObjectTypeParameter("args")
-            ])))
+            .WithParameterList(ParameterList(SingletonSeparatedList(
+                Parameter(StringType, Identifier("name")))))
             .WithBody(Block(SingletonList(
-                ReturnStatement(InvocationExpression(IdentifierName("GetStringOrDefault"))
+                ReturnStatement(InvocationExpression(SimpleMemberAccessExpression(
+                        IdentifierName("ResourceManager"),
+                        IdentifierName("GetString")))
                     .WithArgumentList(ArgumentList(SeparatedList(
                     [
-                        Argument(DefaultLiteralExpression),
                         Argument(IdentifierName("name")),
-                        Argument(IdentifierName("defaultValue")),
-                        Argument(IdentifierName("args"))
-                    ])))))));
-
-        // [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull(nameof(defaultValue))]
-        // public static string? GetStringOrDefault(string name, string? defaultValue)
-        // {
-        //     return GetStringOrDefault(null, name, defaultValue, null);
-        // }
-        yield return MethodDeclaration(NullableStringType, Identifier("GetStringOrDefault"))
-            .WithAttributeLists(SingletonList(
-                ReturnNotNullIfNotNullAttributeList("defaultValue")))
-            .WithModifiers(PublicStaticTokenList)
-            .WithParameterList(ParameterList(SeparatedList(
-            [
-                Parameter(StringType, Identifier("name")),
-                Parameter(NullableStringType, Identifier("defaultValue"))
-            ])))
-            .WithBody(Block(SingletonList(
-                ReturnStatement(InvocationExpression(IdentifierName("GetStringOrDefault"))
-                    .WithArgumentList(ArgumentList(SeparatedList(
-                    [
-                        Argument(DefaultLiteralExpression),
-                        Argument(IdentifierName("name")),
-                        Argument(IdentifierName("defaultValue")),
-                        Argument(DefaultLiteralExpression)
+                        Argument(IdentifierName("Culture")),
                     ])))))));
     }
 
