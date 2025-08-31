@@ -95,13 +95,13 @@ internal sealed class DependencyPropertyGenerator : IIncrementalGenerator
 
             // PropertyMetadata.Create(object defaultValue)
             // PropertyMetadata.Create(object defaultValue, PropertyChangedCallback propertyChangedCallback)
+            // These two are not supposed to be used because they can be called multiple times and cause issues.
             // PropertyMetadata.Create(CreateDefaultValueCallback createDefaultValueCallback)
             // PropertyMetadata.Create(CreateDefaultValueCallback createDefaultValueCallback, PropertyChangedCallback propertyChangedCallback)
-
             SeparatedSyntaxList<ArgumentSyntax> createArguments = SeparatedList<ArgumentSyntax>();
             if (attribute.TryGetNamedArgument("CreateDefaultValueCallbackName", out string? createDefaultValueCallbackName))
             {
-                createArguments = createArguments.Add(Argument(IdentifierName(createDefaultValueCallbackName)));
+                createArguments = createArguments.Add(Argument(InvocationExpression(IdentifierName(createDefaultValueCallbackName)).WithEmptyArgumentList()));
             }
             else
             {
