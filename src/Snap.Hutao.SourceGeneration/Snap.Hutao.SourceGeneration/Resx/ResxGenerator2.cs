@@ -428,7 +428,7 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             yield return MethodDeclaration(StringType, Identifier($"Format{entry.Name}"))
                 .WithModifiers(PublicStaticTokenList)
                 .WithLeadingTrivia(ParseLeadingTrivia($"""
-                    /// <inheritdocs cref="{entry.Name}"/>
+                    /// <inheritdoc cref="{entry.Name}"/>
 
                     """))
                 .WithParameterList(ParameterList(SeparatedList(GenerateFormatMethodParameters(argsCount))))
