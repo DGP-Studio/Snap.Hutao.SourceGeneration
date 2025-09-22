@@ -92,8 +92,8 @@ public sealed class ResxGenerator2 : IIncrementalGenerator
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration(context.Namespace!)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
                     ClassDeclaration(context.ClassName!)
-                        .WithLeadingTrivia(NullableEnableTriviaList)
                         .WithModifiers(InternalAbstractPartialTokenList)
+                        .WithLeadingTrivia(NullableEnableTriviaList)
                         .WithMembers(List(
                         [
                             .. GenerateSharedMemberDeclarations(context),
