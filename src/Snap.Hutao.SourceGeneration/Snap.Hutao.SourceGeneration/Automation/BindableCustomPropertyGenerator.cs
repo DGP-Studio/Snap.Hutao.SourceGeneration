@@ -168,7 +168,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                     .WithExpressionBody(ElementAccessExpression(
                         ParenthesizedExpression(CastExpression(ownerType, IdentifierName("instance"))),
                         BracketedArgumentList(SingletonSeparatedList(
-                            Argument(CastExpression(indexerType!, IdentifierName("index")))))))
+                            Argument(CastExpression(indexerType, IdentifierName("index")))))))
                 : NullLiteralExpression;
 
             ExpressionSyntax setIndexedValue = canWrite
@@ -190,7 +190,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                         ExpressionStatement(SimpleAssignmentExpression(ElementAccessExpression(
                                 IdentifierName("typedInstance"),
                                 BracketedArgumentList(SingletonSeparatedList(
-                                    Argument(CastExpression(indexerType!, IdentifierName("index")))))),
+                                    Argument(CastExpression(indexerType, IdentifierName("index")))))),
                             CastExpression(propertyType, IdentifierName("value"))))
                     ])))
                 : NullLiteralExpression;
@@ -219,8 +219,6 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
 
     private sealed record BindableCustomPropertyGeneratorContext
     {
-        public required AttributeInfo Attribute { get; init; }
-
         public required HierarchyInfo Hierarchy { get; init; }
 
         public required EquatableArray<PropertyInfo> Properties { get; init; }
@@ -246,7 +244,6 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
 
             return new()
             {
-                Attribute = AttributeInfo.Create(context.Attributes.Single()),
                 Hierarchy = HierarchyInfo.Create(typeSymbol),
                 Properties = propertiesBuilder.ToImmutable(),
             };
