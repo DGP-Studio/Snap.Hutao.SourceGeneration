@@ -48,8 +48,6 @@ internal static class SyntaxKeywords
 
     public static SyntaxToken SealedKeyword { get; } = SyntaxFactory.Token(SyntaxKind.SealedKeyword);
 
-    public static SyntaxToken SemicolonToken { get; } = SyntaxFactory.Token(SyntaxKind.SemicolonToken);
-
     public static SyntaxToken StaticKeyword { get; } = SyntaxFactory.Token(SyntaxKind.StaticKeyword);
 
     public static SyntaxToken StringKeyword { get; } = SyntaxFactory.Token(SyntaxKind.StringKeyword);

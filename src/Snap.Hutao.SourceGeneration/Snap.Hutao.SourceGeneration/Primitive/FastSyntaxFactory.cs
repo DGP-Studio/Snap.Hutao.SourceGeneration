@@ -13,6 +13,8 @@ namespace Snap.Hutao.SourceGeneration.Primitive;
 // Properties and methods are ordered by return type
 internal static partial class FastSyntaxFactory
 {
+    public static SyntaxToken SemicolonToken { get; } = SyntaxFactory.Token(SyntaxKind.SemicolonToken);
+
     public static ArgumentListSyntax EmptyArgumentList { get; } = SyntaxFactory.ArgumentList();
 
     public static BlockSyntax EmptyBlock { get; } = SyntaxFactory.Block();

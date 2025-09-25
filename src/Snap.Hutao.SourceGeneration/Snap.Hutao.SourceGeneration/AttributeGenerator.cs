@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Primitive;
 using System.Runtime.CompilerServices;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
@@ -24,79 +25,62 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
     public static void GenerateAllAttributes(IncrementalGeneratorPostInitializationContext context)
     {
-        SyntaxToken identifierOfCommandAttribute = Identifier("CommandAttribute");
-        SyntaxToken identifierOfCommandName = Identifier("commandName");
-        SyntaxToken identifierOfCanExecuteName = Identifier("canExecuteName");
-        SyntaxToken identifierOfAllowConcurrentExecutions = Identifier("AllowConcurrentExecutions");
-
-        SyntaxToken identifierOfConstructorGeneratedAttribute = Identifier("ConstructorGeneratedAttribute");
-        SyntaxToken identifierOfCallBaseConstructor = Identifier("CallBaseConstructor");
-        SyntaxToken identifierOfResolveHttpClient = Identifier("ResolveHttpClient");
-        SyntaxToken identifierOfInitializeComponent = Identifier("InitializeComponent");
-        SyntaxToken identifierOfPrivate = Identifier("Private");
-
-        SyntaxToken identifierOfDependencyPropertyAttribute = Identifier("DependencyPropertyAttribute");
-        SyntaxToken identifierOfName = Identifier("name");
-        SyntaxToken identifierOfIsAttached = Identifier("IsAttached");
-        SyntaxToken identifierOfTargetType = Identifier("TargetType");
-        SyntaxToken identifierOfDefaultValue = Identifier("DefaultValue");
-        SyntaxToken identifierOfCreateDefaultValueCallbackName = Identifier("CreateDefaultValueCallbackName");
-        SyntaxToken identifierOfPropertyChangedCallbackName = Identifier("PropertyChangedCallbackName");
-        SyntaxToken identifierOfNotNull = Identifier("NotNull");
-
-        SyntaxToken identifierOfFieldAccessorAttribute = Identifier("FieldAccessorAttribute");
-
         CompilationUnitSyntax coreAnnotation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.Annotation")
                 .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
-                    ClassDeclaration(identifierOfCommandAttribute)
+                    ClassDeclaration(Identifier("CommandAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsMethod, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
-                            ConstructorDeclaration(identifierOfCommandAttribute)
+                            ConstructorDeclaration(Identifier("CommandAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(StringType, identifierOfCommandName))))
+                                    Parameter(StringType, Identifier("commandName")))))
                                 .WithEmptyBlockBody(),
-                            ConstructorDeclaration(identifierOfCommandAttribute)
+                            ConstructorDeclaration(Identifier("CommandAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(StringType, identifierOfCommandName),
-                                    Parameter(StringType, identifierOfCanExecuteName)
+                                    Parameter(StringType, Identifier("commandName")),
+                                    Parameter(StringType, Identifier("canExecuteName"))
                                 ])))
                                 .WithEmptyBlockBody(),
-                            PropertyDeclaration(BoolType, identifierOfAllowConcurrentExecutions)
+                            PropertyDeclaration(BoolType, Identifier("AllowConcurrentExecutions"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
                         ])),
-                    ClassDeclaration(identifierOfConstructorGeneratedAttribute)
+                    ClassDeclaration(Identifier("ConstructorGeneratedAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
-                            ConstructorDeclaration(identifierOfConstructorGeneratedAttribute)
+                            ConstructorDeclaration(Identifier("ConstructorGeneratedAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithEmptyBlockBody(),
-                            PropertyDeclaration(BoolType, identifierOfCallBaseConstructor)
+                            PropertyDeclaration(BoolType, Identifier("CallBaseConstructor"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(BoolType, identifierOfResolveHttpClient)
+                            PropertyDeclaration(BoolType, Identifier("ResolveHttpClient"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(BoolType, identifierOfInitializeComponent)
+                            PropertyDeclaration(BoolType, Identifier("InitializeComponent"))
                                 .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(BoolType, identifierOfPrivate)
+                            PropertyDeclaration(BoolType, Identifier("Private"))
                                 .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
                                 .WithAccessorList(GetAndSetAccessorList)
                         ])),
-                    ClassDeclaration(identifierOfDependencyPropertyAttribute)
+                    ClassDeclaration(Identifier("BindableCustomPropertyProviderAttribute"))
+                        .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, inherited: false)))
+                        .WithModifiers(InternalSealedTokenList)
+                        .WithBaseList(SystemAttributeBaseList)
+                        .WithSemicolonToken(SemicolonToken),
+                    ClassDeclaration(Identifier("DependencyPropertyAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, allowMultiple: true, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithTypeParameterList(TypeParameterList(SingletonSeparatedList(
@@ -104,33 +88,33 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
-                            ConstructorDeclaration(identifierOfDependencyPropertyAttribute)
+                            ConstructorDeclaration(Identifier("DependencyPropertyAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(StringType, identifierOfName)
+                                    Parameter(StringType, Identifier("name"))
                                 ])))
                                 .WithEmptyBlockBody(),
-                            PropertyDeclaration(BoolType, identifierOfIsAttached)
+                            PropertyDeclaration(BoolType, Identifier("IsAttached"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(NullableType(TypeOfSystemType), identifierOfTargetType)
+                            PropertyDeclaration(NullableType(TypeOfSystemType), Identifier("TargetType"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(NullableObjectType, identifierOfDefaultValue)
+                            PropertyDeclaration(NullableObjectType, Identifier("DefaultValue"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(NullableStringType, identifierOfCreateDefaultValueCallbackName)
+                            PropertyDeclaration(NullableStringType, Identifier("CreateDefaultValueCallbackName"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(NullableStringType, identifierOfPropertyChangedCallbackName)
+                            PropertyDeclaration(NullableStringType, Identifier("PropertyChangedCallbackName"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(BoolType, identifierOfNotNull)
+                            PropertyDeclaration(BoolType, Identifier("NotNull"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
                         ])),
-                    ClassDeclaration(identifierOfFieldAccessorAttribute)
+                    ClassDeclaration(Identifier("FieldAccessorAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsProperty, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList)
@@ -139,19 +123,14 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         context.AddSource("Snap.Hutao.Core.Annotation.Attributes.g.cs", coreAnnotation.ToFullStringWithHeader());
 
-        SyntaxToken identifierOfHttpClientAttribute = Identifier("HttpClientAttribute");
         TypeSyntax typeOfHttpClientConfiguration = ParseTypeName("global::Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientConfiguration");
-        SyntaxToken identifierOfConfiguration = Identifier("configuration");
-        SyntaxToken identifierOfServiceType = Identifier("serviceType");
-
-        SyntaxToken identifierOfPrimaryHttpMessageHandlerAttribute = Identifier("PrimaryHttpMessageHandlerAttribute");
 
         CompilationUnitSyntax coreDependencyInjectionAnnotationHttpClient = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient")
                 .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
-                    ClassDeclaration(identifierOfHttpClientAttribute)
+                    ClassDeclaration(Identifier("HttpClientAttribute"))
                         .WithAttributeLists(List(
                         [
                             JetBrainsAnnotationsMeansImplicitUseAttributeList,
@@ -161,21 +140,21 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(List<MemberDeclarationSyntax>(
                         [
-                            ConstructorDeclaration(identifierOfHttpClientAttribute)
+                            ConstructorDeclaration(Identifier("HttpClientAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(typeOfHttpClientConfiguration, identifierOfConfiguration))))
+                                    Parameter(typeOfHttpClientConfiguration, Identifier("configuration")))))
                                 .WithEmptyBlockBody(),
-                            ConstructorDeclaration(identifierOfHttpClientAttribute)
+                            ConstructorDeclaration(Identifier("HttpClientAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(typeOfHttpClientConfiguration, identifierOfConfiguration),
-                                    Parameter(TypeOfSystemType, identifierOfServiceType)
+                                    Parameter(typeOfHttpClientConfiguration, Identifier("configuration")),
+                                    Parameter(TypeOfSystemType, Identifier("serviceType"))
                                 ])))
                                 .WithEmptyBlockBody()
                         ])),
-                    ClassDeclaration(identifierOfPrimaryHttpMessageHandlerAttribute)
+                    ClassDeclaration(Identifier("PrimaryHttpMessageHandlerAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList)
@@ -235,102 +214,87 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
 
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.Attributes.g.cs", coreDependencyInjectionAnnotationHttpClient.ToFullStringWithHeader());
 
-        SyntaxToken identifierOfServiceLifetime = Identifier("serviceLifetime");
-        SyntaxToken identifierOfNamedArgKey = Identifier("Key");
-
-        SyntaxToken identifierOfServiceAttribute = Identifier("ServiceAttribute");
-
-        SyntaxToken identifierOfFromKeyedServicesAttribute = Identifier("FromKeyedServicesAttribute");
-        SyntaxToken identifierOfKey = Identifier("key");
-
         CompilationUnitSyntax coreDependencyInjectionAnnotation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Core.DependencyInjection.Annotation")
                 .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
-                    ClassDeclaration(identifierOfServiceAttribute)
+                    ClassDeclaration(Identifier("ServiceAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList).WithMembers(List<MemberDeclarationSyntax>(
                         [
-                            ConstructorDeclaration(identifierOfServiceAttribute)
+                            ConstructorDeclaration(Identifier("ServiceAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(TypeOfMicrosoftExtensionsDependencyInjectionServiceLifetime, identifierOfServiceLifetime))))
+                                    Parameter(TypeOfMicrosoftExtensionsDependencyInjectionServiceLifetime, Identifier("serviceLifetime")))))
                                 .WithEmptyBlockBody(),
-                            ConstructorDeclaration(identifierOfServiceAttribute)
+                            ConstructorDeclaration(Identifier("ServiceAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(TypeOfMicrosoftExtensionsDependencyInjectionServiceLifetime, identifierOfServiceLifetime),
-                                    Parameter(TypeOfSystemType, identifierOfServiceType)
+                                    Parameter(TypeOfMicrosoftExtensionsDependencyInjectionServiceLifetime, Identifier("serviceLifetime")),
+                                    Parameter(TypeOfSystemType, Identifier("serviceType"))
                                 ])))
                                 .WithEmptyBlockBody(),
-                            PropertyDeclaration(NullableObjectType, identifierOfNamedArgKey)
+                            PropertyDeclaration(NullableObjectType, Identifier("Key"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList)
                         ])),
-                    ClassDeclaration(identifierOfFromKeyedServicesAttribute)
+                    ClassDeclaration(Identifier("FromKeyedServicesAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsFieldAndProperty)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                            ConstructorDeclaration(identifierOfFromKeyedServicesAttribute)
+                            ConstructorDeclaration(Identifier("FromKeyedServicesAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(ObjectType, identifierOfKey))))
+                                    Parameter(ObjectType, Identifier("key")))))
                                 .WithEmptyBlockBody()))
                 ]))))
             .NormalizeWhitespace();
 
         context.AddSource("Snap.Hutao.Core.DependencyInjection.Annotation.Attributes.g.cs", coreDependencyInjectionAnnotation.ToFullStringWithHeader());
 
-        SyntaxToken identifierOfExtendedEnumAttribute = Identifier("ExtendedEnumAttribute");
-        SyntaxToken identifierOfLocalizationKeyAttribute = Identifier("LocalizationKeyAttribute");
-
         CompilationUnitSyntax resourceLocalization = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("Snap.Hutao.Resource.Localization")
                 .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(List<MemberDeclarationSyntax>(
                 [
-                    ClassDeclaration(identifierOfExtendedEnumAttribute)
+                    ClassDeclaration(Identifier("ExtendedEnumAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsEnum)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList),
-                    ClassDeclaration(identifierOfLocalizationKeyAttribute)
+                    ClassDeclaration(Identifier("LocalizationKeyAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsField)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                            ConstructorDeclaration(identifierOfLocalizationKeyAttribute)
+                            ConstructorDeclaration(Identifier("LocalizationKeyAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SingletonSeparatedList(
-                                    Parameter(StringType, identifierOfKey))))
+                                    Parameter(StringType, Identifier("key")))))
                                 .WithEmptyBlockBody()))
                 ]))))
             .NormalizeWhitespace();
 
         context.AddSource("Snap.Hutao.Resource.Localization.Attributes.g.cs", resourceLocalization.ToFullStringWithHeader());
 
-        SyntaxToken identifierOfInterceptsLocationAttribute = Identifier("InterceptsLocationAttribute");
-        SyntaxToken identifierOfVersion = Identifier("version");
-        SyntaxToken identifierOfData = Identifier("data");
-
         CompilationUnitSyntax interceptsLocation = CompilationUnit()
             .WithMembers(SingletonList<MemberDeclarationSyntax>(FileScopedNamespaceDeclaration("System.Runtime.CompilerServices")
                 .WithLeadingTrivia(NullableEnableTriviaList)
                 .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                    ClassDeclaration(identifierOfInterceptsLocationAttribute)
+                    ClassDeclaration(Identifier("InterceptsLocationAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsMethod, allowMultiple: true)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(SingletonList<MemberDeclarationSyntax>(
-                            ConstructorDeclaration(identifierOfInterceptsLocationAttribute)
+                            ConstructorDeclaration(Identifier("InterceptsLocationAttribute"))
                                 .WithModifiers(PublicTokenList)
                                 .WithParameterList(ParameterList(SeparatedList(
                                 [
-                                    Parameter(IntType, identifierOfVersion),
-                                    Parameter(StringType, identifierOfData)
+                                    Parameter(IntType, Identifier("version")),
+                                    Parameter(StringType, Identifier("data"))
                                 ])))
                                 .WithEmptyBlockBody()))))))
             .NormalizeWhitespace();

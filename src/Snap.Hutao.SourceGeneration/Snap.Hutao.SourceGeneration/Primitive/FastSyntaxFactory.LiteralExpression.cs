@@ -17,6 +17,11 @@ internal static partial class FastSyntaxFactory
 
     public static LiteralExpressionSyntax TrueLiteralExpression { get; } = SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression);
 
+    public static LiteralExpressionSyntax LiteralExpression(bool value)
+    {
+        return value ? TrueLiteralExpression : FalseLiteralExpression;
+    }
+
     public static LiteralExpressionSyntax NumericLiteralExpression(int value)
     {
         return SyntaxFactory.LiteralExpression(SyntaxKind.NumericLiteralExpression, SyntaxFactory.Literal(value));

@@ -59,12 +59,12 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
             // PreConstruct & PostConstruct Method declarations
             MethodDeclaration(VoidType, Identifier("PreConstruct"))
-                .WithModifiers(TokenList(PartialKeyword))
+                .WithModifiers(PartialTokenList)
                 .WithParameterList(ParameterList(SingletonSeparatedList(
                     Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")))))
                 .WithSemicolonToken(SemicolonToken),
             MethodDeclaration(VoidType, Identifier("PostConstruct"))
-                .WithModifiers(TokenList(Token(SyntaxKind.PartialKeyword)))
+                .WithModifiers(PartialTokenList)
                 .WithParameterList(ParameterList(SingletonSeparatedList(
                     Parameter(TypeOfSystemIServiceProvider, Identifier("serviceProvider")))))
                 .WithSemicolonToken(SemicolonToken)
@@ -223,7 +223,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         {
             string fullyQualifiedPropertyTypeName = propertyInfo.FullyQualifiedTypeNameWithNullabilityAnnotation;
             TypeSyntax propertyType = ParseTypeName(fullyQualifiedPropertyTypeName);
-            MemberAccessExpressionSyntax propertyAccess = SimpleMemberAccessExpression(ThisExpression(), IdentifierName(propertyInfo.MinimallyQualifiedName));
+            MemberAccessExpressionSyntax propertyAccess = SimpleMemberAccessExpression(ThisExpression(), IdentifierName(propertyInfo.Name));
             token.ThrowIfCancellationRequested();
             switch (fullyQualifiedPropertyTypeName)
             {
@@ -273,7 +273,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         {
             TypeSyntax propertyType = ParseTypeName(propertyInfo.FullyQualifiedTypeNameWithNullabilityAnnotation);
             token.ThrowIfCancellationRequested();
-            yield return PropertyDeclaration(propertyType, Identifier(propertyInfo.MinimallyQualifiedName))
+            yield return PropertyDeclaration(propertyType, Identifier(propertyInfo.Name))
                 .WithModifiers(propertyInfo.DeclaredAccessibility.ToSyntaxTokenList(PartialKeyword))
                 .WithAccessorList(AccessorList(SingletonList(
                     AccessorDeclaration(SyntaxKind.GetAccessorDeclaration)

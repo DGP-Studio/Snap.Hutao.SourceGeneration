@@ -76,7 +76,7 @@ internal sealed class PropertyValuesProviderGenerator : IIncrementalGenerator
     {
         foreach (PropertyInfo property in context.Properties)
         {
-            IdentifierNameSyntax propertyName = IdentifierName(property.MinimallyQualifiedName);
+            IdentifierNameSyntax propertyName = IdentifierName(property.Name);
 
             // nameof(${propertyName}) => ${propertyName}
             yield return SwitchExpressionArm(

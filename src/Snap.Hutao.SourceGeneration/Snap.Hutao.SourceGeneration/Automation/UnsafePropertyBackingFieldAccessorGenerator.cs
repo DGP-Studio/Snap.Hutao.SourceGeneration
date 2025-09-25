@@ -66,7 +66,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
                 refPropertyType = refPropertyType.WithReadOnlyKeyword(ReadOnlyKeyword);
             }
 
-            MethodDeclarationSyntax method = MethodDeclaration(refPropertyType, Identifier($"FieldRefOf{entry.Property.MinimallyQualifiedName}"))
+            MethodDeclarationSyntax method = MethodDeclaration(refPropertyType, Identifier($"FieldRefOf{entry.Property.Name}"))
                 .WithAttributeLists(SingletonList(AttributeList(SingletonSeparatedList(
                     GenerateUnsafeAccessorAttribute(entry.Field.MinimallyQualifiedName)))))
                 .WithModifiers(PrivateStaticExternTokenList)

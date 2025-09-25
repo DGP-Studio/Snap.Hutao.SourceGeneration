@@ -14,18 +14,22 @@ internal sealed record PropertyInfo
     private PropertyInfo(
         EquatableArray<AttributeInfo> attributes,
         Accessibility declaredAccessibility,
-        string minimallyQualifiedName,
+        Accessibility? getMethodAccessibility,
+        Accessibility? setMethodAccessibility,
+        string name,
         string fullyQualifiedTypeName,
         string fullyQualifiedTypeNameWithNullabilityAnnotation)
     {
         Attributes = attributes;
         DeclaredAccessibility = declaredAccessibility;
-        MinimallyQualifiedName = minimallyQualifiedName;
+        GetMethodAccessibility = getMethodAccessibility;
+        SetMethodAccessibility = setMethodAccessibility;
+        Name = name;
         FullyQualifiedTypeName = fullyQualifiedTypeName;
         FullyQualifiedTypeNameWithNullabilityAnnotation = fullyQualifiedTypeNameWithNullabilityAnnotation;
     }
 
-    public string MinimallyQualifiedName { get; }
+    public string Name { get; }
 
     public string FullyQualifiedTypeName { get; }
 
@@ -35,14 +39,31 @@ internal sealed record PropertyInfo
 
     public Accessibility DeclaredAccessibility { get; init; }
 
+    public Accessibility? GetMethodAccessibility { get; init; }
+
+    public Accessibility? SetMethodAccessibility { get; init; }
+
+    public bool IsIndexer { get; init; }
+
+    public string? FullyQualifiedIndexerParameterTypeName { get; init; }
+
+    public bool IsStatic { get; init; }
+
     public static PropertyInfo Create(IPropertySymbol propertySymbol)
     {
         return new(
             ImmutableArray.CreateRange(propertySymbol.GetAttributes(), AttributeInfo.Create),
             propertySymbol.DeclaredAccessibility,
+            propertySymbol.GetMethod?.DeclaredAccessibility,
+            propertySymbol.SetMethod?.DeclaredAccessibility,
             propertySymbol.Name,
             propertySymbol.Type.GetFullyQualifiedName(),
-            propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations());
+            propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations())
+        {
+            IsIndexer = propertySymbol.IsIndexer,
+            FullyQualifiedIndexerParameterTypeName = propertySymbol.IsIndexer ? propertySymbol.Parameters[0].Type.GetFullyQualifiedNameWithNullabilityAnnotations() : null,
+            IsStatic = propertySymbol.IsStatic,
+        };
     }
 
     public bool TryGetAttributeWithFullyQualifiedMetadataName(string name, [NotNullWhen(true)] out AttributeInfo? attributeInfo)
