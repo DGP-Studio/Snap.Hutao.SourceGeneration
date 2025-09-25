@@ -78,8 +78,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                     ClassDeclaration(Identifier("BindableCustomPropertyProviderAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
-                        .WithBaseList(SystemAttributeBaseList)
-                        .WithSemicolonToken(SemicolonToken),
+                        .WithBaseList(SystemAttributeBaseList),
                     ClassDeclaration(Identifier("DependencyPropertyAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, allowMultiple: true, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)

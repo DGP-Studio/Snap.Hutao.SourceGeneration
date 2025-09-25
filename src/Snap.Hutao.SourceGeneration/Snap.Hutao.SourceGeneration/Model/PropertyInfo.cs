@@ -43,11 +43,12 @@ internal sealed record PropertyInfo
 
     public Accessibility? SetMethodAccessibility { get; init; }
 
-    public bool IsIndexer { get; init; }
+    [MemberNotNullWhen(true, nameof(FullyQualifiedIndexerParameterTypeName))]
+    public bool IsIndexer { get; private init; }
 
     public string? FullyQualifiedIndexerParameterTypeName { get; init; }
 
-    public bool IsStatic { get; init; }
+    public bool IsStatic { get; private init; }
 
     public static PropertyInfo Create(IPropertySymbol propertySymbol)
     {

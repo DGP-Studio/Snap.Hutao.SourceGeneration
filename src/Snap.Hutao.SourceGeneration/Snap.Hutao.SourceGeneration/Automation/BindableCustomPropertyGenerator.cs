@@ -24,12 +24,12 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
     {
         IncrementalValuesProvider<BindableCustomPropertyGeneratorContext> provider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
-                WellKnownMetadataNames.ConstructorGeneratedAttribute,
+                WellKnownMetadataNames.BindableCustomPropertyProviderAttribute,
                 SyntaxNodeHelper.Is<ClassDeclarationSyntax>,
                 BindableCustomPropertyGeneratorContext.Create)
             .Where(context => context is not null);
 
-        context.RegisterSourceOutput(provider, GenerateWrapper);
+        context.RegisterImplementationSourceOutput(provider, GenerateWrapper);
     }
 
     private static void GenerateWrapper(SourceProductionContext production, BindableCustomPropertyGeneratorContext context)
@@ -49,20 +49,25 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
         TypeSyntax baseType = ParseTypeName("global::Microsoft.UI.Xaml.Data.IBindableCustomPropertyImplementation");
         TypeSyntax bindableCustomPropertyType = ParseTypeName("global::Microsoft.UI.Xaml.Data.BindableCustomProperty");
 
+        TypeSyntax type = ParseTypeName(context.Hierarchy.Hierarchy[0].FullyQualifiedName);
+
         CompilationUnitSyntax syntax = context.Hierarchy.GetCompilationUnit(
                 [
                     // GetProperty(string)
-                    MethodDeclaration(bindableCustomPropertyType, Identifier("GetProperty"))
+                    MethodDeclaration(NullableType(bindableCustomPropertyType), Identifier("GetProperty"))
                         .WithModifiers(PublicTokenList)
                         .WithParameterList(ParameterList(SingletonSeparatedList(
                             Parameter(StringType, Identifier("name")))))
                         .WithBody(Block(SingletonList(
                             ReturnStatement(SwitchExpression(IdentifierName("name"))
-                                .WithArms(SeparatedList(GenerateGetPropertySwitchExpressionArms(context.Hierarchy.Hierarchy[0].FullyQualifiedName, context.Properties))))))),
-                    MethodDeclaration(bindableCustomPropertyType, Identifier("GetProperty"))
+                                .WithArms(SeparatedList(GenerateGetPropertySwitchExpressionArms(type, context.Properties))))))),
+
+                    // GetProperty(Type)
+                    MethodDeclaration(NullableType(bindableCustomPropertyType), Identifier("GetProperty"))
                         .WithModifiers(PublicTokenList)
                         .WithParameterList(ParameterList(SingletonSeparatedList(
                             Parameter(TypeOfSystemType, Identifier("indexParameterType")))))
+                        .WithBody(Block(List(GenerateGetIndexerStatements(type, context.Properties))))
                 ],
                 BaseList(SingletonSeparatedList<BaseTypeSyntax>(SimpleBaseType(baseType))))
             .NormalizeWhitespace();
@@ -70,7 +75,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
         production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
-    private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetPropertySwitchExpressionArms(string typeName, EquatableArray<PropertyInfo> properties)
+    private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetPropertySwitchExpressionArms(TypeSyntax ownerType, EquatableArray<PropertyInfo> properties)
     {
         foreach (PropertyInfo property in properties)
         {
@@ -82,19 +87,18 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
             bool canRead = property.GetMethodAccessibility is Accessibility.Public;
             bool canWrite = property.SetMethodAccessibility is Accessibility.Public;
 
-            TypeSyntax ownerType = ParseTypeName(typeName);
             TypeSyntax propertyType = ParseTypeName(property.FullyQualifiedTypeName);
 
-            ExpressionSyntax getValue = canRead && !property.IsIndexer
+            ExpressionSyntax getValue = canRead
                 ? SimpleLambdaExpression(Parameter(Identifier("instance")))
                     .WithModifiers(StaticTokenList)
                     .WithExpressionBody(SimpleMemberAccessExpression(property.IsStatic
                             ? ownerType
                             : ParenthesizedExpression(CastExpression(ownerType, IdentifierName("instance"))),
                         IdentifierName(property.Name)))
-                : NullLiteralExpression;
+                : DefaultLiteralExpression;
 
-            ExpressionSyntax setValue = canWrite && !property.IsIndexer
+            ExpressionSyntax setValue = canWrite
                 ? ParenthesizedLambdaExpression()
                     .WithModifiers(StaticTokenList)
                     .WithParameterList(ParameterList(SeparatedList(
@@ -102,13 +106,20 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                         Parameter(Identifier("instance")),
                         Parameter(Identifier("value"))
                     ])))
-                    .WithExpressionBody(SimpleAssignmentExpression(
-                        SimpleMemberAccessExpression(property.IsStatic
-                                ? ownerType
-                                : ParenthesizedExpression(CastExpression(ownerType, IdentifierName("instance"))),
-                            IdentifierName(property.Name)),
-                        CastExpression(propertyType, IdentifierName("value"))))
-                : NullLiteralExpression;
+                    .WithBody(Block(List<StatementSyntax>(
+                    [
+                        LocalDeclarationStatement(VariableDeclaration(ownerType, SingletonSeparatedList(VariableDeclarator("typedInstance")
+                            .WithInitializer(EqualsValueClause(CastExpression(ownerType, IdentifierName("instance"))))))),
+                        IfStatement(
+                            SimpleMemberAccessExpression(SimpleMemberAccessExpression(IdentifierName("typedInstance"), IdentifierName("IsViewUnloaded")), IdentifierName("Value")),
+                            Block(ReturnStatement())),
+                        ExpressionStatement(SimpleAssignmentExpression(
+                            SimpleMemberAccessExpression(
+                                property.IsStatic ? ownerType : IdentifierName("typedInstance"),
+                                IdentifierName(property.Name)),
+                            CastExpression(propertyType, IdentifierName("value"))))
+                    ])))
+                : DefaultLiteralExpression;
 
             yield return SwitchExpressionArm(
                 ConstantPattern(NameOfExpression(IdentifierName(property.Name))),
@@ -121,10 +132,89 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                         Argument(TypeOfExpression(propertyType)),                  // type
                         Argument(getValue),                                        // getValue
                         Argument(setValue),                                        // setValue
-                        Argument(NullLiteralExpression),                           // getIndexedValue
-                        Argument(NullLiteralExpression)                            // setIndexedValue
+                        Argument(DefaultLiteralExpression),                        // getIndexedValue
+                        Argument(DefaultLiteralExpression)                         // setIndexedValue
                     ]))));
         }
+
+        yield return SwitchExpressionArm(
+            DiscardPattern(),
+            DefaultLiteralExpression);
+    }
+
+    private static IEnumerable<StatementSyntax> GenerateGetIndexerStatements(TypeSyntax ownerType, EquatableArray<PropertyInfo> properties)
+    {
+        foreach (PropertyInfo property in properties)
+        {
+            if (!property.IsIndexer)
+            {
+                continue;
+            }
+
+            bool canRead = property.GetMethodAccessibility is Accessibility.Public;
+            bool canWrite = property.SetMethodAccessibility is Accessibility.Public;
+
+            TypeSyntax propertyType = ParseTypeName(property.FullyQualifiedTypeName);
+            TypeSyntax indexerType = ParseTypeName(property.FullyQualifiedIndexerParameterTypeName!);
+
+            ExpressionSyntax getIndexedValue = canRead
+                ? ParenthesizedLambdaExpression()
+                    .WithModifiers(StaticTokenList)
+                    .WithParameterList(ParameterList(SeparatedList(
+                    [
+                        Parameter(Identifier("instance")),
+                        Parameter(Identifier("index"))
+                    ])))
+                    .WithExpressionBody(ElementAccessExpression(
+                        ParenthesizedExpression(CastExpression(ownerType, IdentifierName("instance"))),
+                        BracketedArgumentList(SingletonSeparatedList(
+                            Argument(CastExpression(indexerType!, IdentifierName("index")))))))
+                : NullLiteralExpression;
+
+            ExpressionSyntax setIndexedValue = canWrite
+                ? ParenthesizedLambdaExpression()
+                    .WithModifiers(StaticTokenList)
+                    .WithParameterList(ParameterList(SeparatedList(
+                    [
+                        Parameter(Identifier("instance")),
+                        Parameter(Identifier("value")),
+                        Parameter(Identifier("index"))
+                    ])))
+                    .WithBody(Block(List<StatementSyntax>(
+                    [
+                        LocalDeclarationStatement(VariableDeclaration(ownerType, SingletonSeparatedList(VariableDeclarator("typedInstance")
+                            .WithInitializer(EqualsValueClause(CastExpression(ownerType, IdentifierName("instance"))))))),
+                        IfStatement(
+                            SimpleMemberAccessExpression(SimpleMemberAccessExpression(IdentifierName("typedInstance"), IdentifierName("IsViewUnloaded")), IdentifierName("Value")),
+                            Block(ReturnStatement())),
+                        ExpressionStatement(SimpleAssignmentExpression(ElementAccessExpression(
+                                IdentifierName("typedInstance"),
+                                BracketedArgumentList(SingletonSeparatedList(
+                                    Argument(CastExpression(indexerType!, IdentifierName("index")))))),
+                            CastExpression(propertyType, IdentifierName("value"))))
+                    ])))
+                : NullLiteralExpression;
+
+            yield return IfStatement(
+                EqualsExpression(
+                    IdentifierName("indexParameterType"),
+                    TypeOfExpression(indexerType)),
+                Block(SingletonList(
+                    ReturnStatement(ImplicitObjectCreationExpression()
+                        .WithArgumentList(ArgumentList(SeparatedList(
+                        [
+                            Argument(LiteralExpression(canRead)),      // canRead
+                            Argument(LiteralExpression(canWrite)),     // canWrite
+                            Argument(StringLiteralExpression("Item")), // name
+                            Argument(TypeOfExpression(propertyType)),  // type
+                            Argument(DefaultLiteralExpression),        // getValue
+                            Argument(DefaultLiteralExpression),        // setValue
+                            Argument(getIndexedValue),                 // getIndexedValue
+                            Argument(setIndexedValue)                  // setIndexedValue
+                        ])))))));
+        }
+
+        yield return ReturnStatement(DefaultLiteralExpression);
     }
 
     private sealed record BindableCustomPropertyGeneratorContext
