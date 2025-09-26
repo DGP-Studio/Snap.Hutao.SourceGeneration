@@ -13,34 +13,32 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record TypeInfo
 {
-    private TypeInfo(INamedTypeSymbol symbol)
-    {
-        FullyQualifiedName = symbol.GetFullyQualifiedName();
-        FullyQualifiedMetadataName = symbol.GetFullyQualifiedMetadataName();
-        MinimallyQualifiedName = symbol.GetMinimallyQualifiedName();
-        Name = symbol.Name;
-        Kind = symbol.TypeKind;
-        IsRecord = symbol.IsRecord;
-        TypeArguments = ImmutableArray.CreateRange(symbol.TypeArguments, TypeArgumentInfo.Create);
-    }
+    public required string FullyQualifiedName { get; init; }
 
-    public string FullyQualifiedName { get; }
+    public required string FullyQualifiedMetadataName { get; init; }
 
-    public string FullyQualifiedMetadataName { get; }
+    public required string MinimallyQualifiedName { get; init; }
 
-    public string MinimallyQualifiedName { get; }
+    public required string Name { get; init; }
 
-    public string Name { get; }
+    public required TypeKind Kind { get; init; }
 
-    public TypeKind Kind { get; }
+    public required bool IsRecord { get; init; }
 
-    public bool IsRecord { get; }
-
-    public EquatableArray<TypeArgumentInfo> TypeArguments { get; }
+    public required EquatableArray<TypeArgumentInfo> TypeArguments { get; init; }
 
     public static TypeInfo Create(INamedTypeSymbol symbol)
     {
-        return new(symbol);
+        return new()
+        {
+            FullyQualifiedName = symbol.GetFullyQualifiedName(),
+            FullyQualifiedMetadataName = symbol.GetFullyQualifiedMetadataName(),
+            MinimallyQualifiedName = symbol.GetMinimallyQualifiedName(),
+            Name = symbol.Name,
+            Kind = symbol.TypeKind,
+            IsRecord = symbol.IsRecord,
+            TypeArguments = ImmutableArray.CreateRange(symbol.TypeArguments, TypeArgumentInfo.Create),
+        };
     }
 
     public TypeDeclarationSyntax GetSyntax()

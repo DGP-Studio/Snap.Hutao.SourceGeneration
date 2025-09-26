@@ -15,21 +15,13 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record HierarchyInfo
 {
-    private HierarchyInfo(string fileNameHint, string metadataName, string @namespace, EquatableArray<TypeInfo> hierarchy)
-    {
-        FileNameHint = fileNameHint;
-        MetadataName = metadataName;
-        Namespace = @namespace;
-        Hierarchy = hierarchy;
-    }
+    public required string FileNameHint { get; init; }
 
-    public string FileNameHint { get; }
+    public required string MetadataName { get; init; }
 
-    public string MetadataName { get; }
+    public required string Namespace { get; init; }
 
-    public string Namespace { get; }
-
-    public EquatableArray<TypeInfo> Hierarchy { get; }
+    public required EquatableArray<TypeInfo> Hierarchy { get; init; }
 
     public static HierarchyInfo Create(INamedTypeSymbol typeSymbol)
     {
@@ -40,11 +32,13 @@ internal sealed record HierarchyInfo
             hierarchy.Add(TypeInfo.Create(parent));
         }
 
-        return new(
-            typeSymbol.GetFullyQualifiedMetadataName(),
-            typeSymbol.MetadataName,
-            typeSymbol.ContainingNamespace.ToDisplayString(new(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces)),
-            hierarchy.ToImmutable());
+        return new()
+        {
+            FileNameHint = typeSymbol.GetFullyQualifiedMetadataName(),
+            MetadataName = typeSymbol.MetadataName,
+            Namespace = typeSymbol.ContainingNamespace.ToDisplayString(new(typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces)),
+            Hierarchy = hierarchy.ToImmutable(),
+        };
     }
 
     public CompilationUnitSyntax GetCompilationUnit(ImmutableArray<MemberDeclarationSyntax> memberDeclarations, BaseListSyntax? baseList = null)

@@ -14,37 +14,26 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record AttributeInfo
 {
-    private AttributeInfo(
-        string fullyQualifiedTypeName,
-        string fullyQualifiedMetadataName,
-        EquatableArray<TypeArgumentInfo> typeArguments,
-        EquatableArray<TypedConstantInfo> constructorArguments,
-        EquatableArray<(string Name, TypedConstantInfo Value)> namedArguments)
-    {
-        FullyQualifiedTypeName = fullyQualifiedTypeName;
-        FullyQualifiedMetadataName = fullyQualifiedMetadataName;
-        TypeArguments = typeArguments;
-        ConstructorArguments = constructorArguments;
-        NamedArguments = namedArguments;
-    }
+    public required string FullyQualifiedTypeName { get; init; }
 
-    public string FullyQualifiedTypeName { get; }
+    public required string FullyQualifiedMetadataName { get; init; }
 
-    public string FullyQualifiedMetadataName { get; }
+    public required EquatableArray<TypeArgumentInfo> TypeArguments { get; init; }
 
-    public EquatableArray<TypeArgumentInfo> TypeArguments { get; }
+    public required EquatableArray<TypedConstantInfo> ConstructorArguments { get; init; }
 
-    public EquatableArray<TypedConstantInfo> ConstructorArguments { get; }
-
-    public EquatableArray<(string Name, TypedConstantInfo Value)> NamedArguments { get; }
+    public required EquatableArray<(string Name, TypedConstantInfo Value)> NamedArguments { get; init; }
 
     public static AttributeInfo Create(AttributeData attributeData)
     {
-        return new(attributeData.AttributeClass!.GetFullyQualifiedName(),
-            attributeData.AttributeClass!.GetFullyQualifiedMetadataName(),
-            ImmutableArray.CreateRange(attributeData.AttributeClass!.TypeArguments, TypeArgumentInfo.Create),
-            ImmutableArray.CreateRange(attributeData.ConstructorArguments, TypedConstantInfo.Create),
-            ImmutableArray.CreateRange(attributeData.NamedArguments, static kvp => (kvp.Key, TypedConstantInfo.Create(kvp.Value))));
+        return new()
+        {
+            FullyQualifiedTypeName = attributeData.AttributeClass!.GetFullyQualifiedName(),
+            FullyQualifiedMetadataName = attributeData.AttributeClass!.GetFullyQualifiedMetadataName(),
+            TypeArguments = ImmutableArray.CreateRange(attributeData.AttributeClass!.TypeArguments, TypeArgumentInfo.Create),
+            ConstructorArguments = ImmutableArray.CreateRange(attributeData.ConstructorArguments, TypedConstantInfo.Create),
+            NamedArguments = ImmutableArray.CreateRange(attributeData.NamedArguments, static kvp => (kvp.Key, TypedConstantInfo.Create(kvp.Value))),
+        };
     }
 
     public static AttributeInfo? CreateOrDefault(AttributeData? attributeData)

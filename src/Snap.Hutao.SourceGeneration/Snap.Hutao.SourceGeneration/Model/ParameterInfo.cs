@@ -8,24 +8,19 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record ParameterInfo
 {
-    public ParameterInfo(string minimallyQualifiedName, string fullyQualifiedTypeName, string fullyQualifiedTypeNameWithNullabilityAnnotations)
-    {
-        MinimallyQualifiedName = minimallyQualifiedName;
-        FullyQualifiedTypeName = fullyQualifiedTypeName;
-        FullyQualifiedTypeNameWithNullabilityAnnotations = fullyQualifiedTypeNameWithNullabilityAnnotations;
-    }
+    public required string MinimallyQualifiedName { get; init; }
 
-    public string MinimallyQualifiedName { get; }
+    public required string FullyQualifiedTypeName { get; init; }
 
-    public string FullyQualifiedTypeName { get; }
-
-    public string FullyQualifiedTypeNameWithNullabilityAnnotations { get; }
+    public required string FullyQualifiedTypeNameWithNullabilityAnnotations { get; init; }
 
     public static ParameterInfo Create(IParameterSymbol parameterSymbol)
     {
-        return new(
-            parameterSymbol.Name,
-            parameterSymbol.Type.GetFullyQualifiedName(),
-            parameterSymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations());
+        return new()
+        {
+            MinimallyQualifiedName = parameterSymbol.Name,
+            FullyQualifiedTypeName = parameterSymbol.Type.GetFullyQualifiedName(),
+            FullyQualifiedTypeNameWithNullabilityAnnotations = parameterSymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations(),
+        };
     }
 }

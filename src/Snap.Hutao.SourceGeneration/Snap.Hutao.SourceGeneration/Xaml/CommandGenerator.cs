@@ -67,30 +67,35 @@ internal sealed class CommandGenerator : IIncrementalGenerator
     {
         foreach (AttributedMethodInfo attributedMethod in methods)
         {
-            bool isAsync = attributedMethod.Method.FullyQualifiedReturnTypeMetadataName.StartsWith("System.Threading.Tasks.Task");
-            SyntaxToken identifier = Identifier(isAsync ? "AsyncRelayCommand" : "RelayCommand");
-
-            TypeSyntax propertyType;
-            ImmutableArray<ParameterInfo> parameters = attributedMethod.Method.Parameters;
-            if (parameters.Length >= 1)
-            {
-                TypeSyntax type = ParseTypeName(parameters[0].FullyQualifiedTypeName);
-                propertyType = QualifiedName(NameOfCommunityToolkitMvvmInput, GenericName(identifier).WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type))));
-            }
-            else
-            {
-                propertyType = QualifiedName(NameOfCommunityToolkitMvvmInput, IdentifierName(identifier));
-            }
+            // bool isAsync = attributedMethod.Method.FullyQualifiedReturnTypeMetadataName.StartsWith("System.Threading.Tasks.Task");
+            // SyntaxToken identifier = Identifier(isAsync ? "AsyncRelayCommand" : "RelayCommand");
+            //
+            // TypeSyntax propertyType;
+            // ImmutableArray<ParameterInfo> parameters = attributedMethod.Method.Parameters;
+            // if (parameters.Length >= 1)
+            // {
+            //     TypeSyntax type = ParseTypeName(parameters[0].FullyQualifiedTypeName);
+            //     propertyType = QualifiedName(NameOfCommunityToolkitMvvmInput, GenericName(identifier).WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type))));
+            // }
+            // else
+            // {
+            //     propertyType = QualifiedName(NameOfCommunityToolkitMvvmInput, IdentifierName(identifier));
+            // }
 
             foreach (AttributeInfo attribute in attributedMethod.Attributes)
             {
+                if (attribute.FullyQualifiedMetadataName is not WellKnownMetadataNames.CommandAttribute)
+                {
+                    continue;
+                }
+
                 if (!attribute.TryGetConstructorArgument(0, out string? commandName))
                 {
                     continue;
                 }
 
                 SeparatedSyntaxList<ArgumentSyntax> arguments = SingletonSeparatedList(
-                    Argument(IdentifierName(attributedMethod.Method.MinimallyQualifiedName)));
+                    Argument(IdentifierName(attributedMethod.Method.Name)));
 
                 if (attribute.HasNamedArgument("AllowConcurrentExecutions", true))
                 {
@@ -99,12 +104,12 @@ internal sealed class CommandGenerator : IIncrementalGenerator
                         IdentifierName("AllowConcurrentExecutions"))));
                 }
 
-                yield return PropertyDeclaration(propertyType, commandName)
+                yield return PropertyDeclaration(CommandHelper.GetCommandType(attributedMethod), commandName)
                     .WithAttributeLists(SingletonList(
                         AttributeList(SingletonSeparatedList(
                             Attribute(NameOfSystemDiagnosticsCodeAnalysisMaybeNull)))
                             .WithTarget(AttributeTargetSpecifier(FieldKeyword))))
-                    .WithModifiers(PublicTokenList)
+                    .WithModifiers(attributedMethod.Method.IsStatic ? PublicStaticTokenList: PublicTokenList)
                     .WithAccessorList(AccessorList(SingletonList(
                         GetAccessorDeclaration()
                             .WithExpressionBody(ArrowExpressionClause(CoalesceAssignmentExpression(
@@ -128,22 +133,6 @@ internal sealed class CommandGenerator : IIncrementalGenerator
             {
                 Hierarchy = tuple.Hierarchy,
                 Methods = tuple.Methods,
-            };
-        }
-    }
-
-    private sealed record AttributedMethodInfo
-    {
-        public required EquatableArray<AttributeInfo> Attributes { get; init; }
-
-        public required MethodInfo Method { get; init; }
-
-        public static AttributedMethodInfo Create((EquatableArray<AttributeInfo> Attributes, MethodInfo Method) tuple)
-        {
-            return new()
-            {
-                Attributes = tuple.Attributes,
-                Method = tuple.Method,
             };
         }
     }

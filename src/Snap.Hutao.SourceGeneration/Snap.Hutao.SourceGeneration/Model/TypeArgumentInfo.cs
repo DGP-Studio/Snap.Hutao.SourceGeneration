@@ -10,25 +10,20 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record TypeArgumentInfo
 {
-    public TypeArgumentInfo(string minimallyQualifiedName, string fullyQualifiedTypeName, string fullyQualifiedTypeNameWithNullabilityAnnotations)
-    {
-        MinimallyQualifiedName = minimallyQualifiedName;
-        FullyQualifiedTypeName = fullyQualifiedTypeName;
-        FullyQualifiedTypeNameWithNullabilityAnnotations = fullyQualifiedTypeNameWithNullabilityAnnotations;
-    }
+    public required string MinimallyQualifiedName { get; init; }
 
-    public string MinimallyQualifiedName { get; }
+    public required string FullyQualifiedTypeName { get; init; }
 
-    public string FullyQualifiedTypeName { get; }
-
-    public string FullyQualifiedTypeNameWithNullabilityAnnotations { get; }
+    public required string FullyQualifiedTypeNameWithNullabilityAnnotations { get; init; }
 
     public static TypeArgumentInfo Create(ITypeSymbol typeSymbol)
     {
-        return new(
-            typeSymbol.Name,
-            typeSymbol.GetFullyQualifiedName(),
-            typeSymbol.GetFullyQualifiedNameWithNullabilityAnnotations());
+        return new()
+        {
+            MinimallyQualifiedName = typeSymbol.Name,
+            FullyQualifiedTypeName = typeSymbol.GetFullyQualifiedName(),
+            FullyQualifiedTypeNameWithNullabilityAnnotations = typeSymbol.GetFullyQualifiedNameWithNullabilityAnnotations(),
+        };
     }
 
     public TypeSyntax GetSyntax()

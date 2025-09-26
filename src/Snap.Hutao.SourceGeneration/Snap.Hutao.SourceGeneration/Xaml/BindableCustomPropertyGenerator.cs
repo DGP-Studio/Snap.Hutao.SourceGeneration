@@ -9,13 +9,12 @@ using Snap.Hutao.SourceGeneration.Primitive;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Threading;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 using static Snap.Hutao.SourceGeneration.WellKnownSyntax;
 
-namespace Snap.Hutao.SourceGeneration.Automation;
+namespace Snap.Hutao.SourceGeneration.Xaml;
 
 [Generator(LanguageNames.CSharp)]
 internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
@@ -60,7 +59,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                             Parameter(StringType, Identifier("name")))))
                         .WithBody(Block(SingletonList(
                             ReturnStatement(SwitchExpression(IdentifierName("name"))
-                                .WithArms(SeparatedList(GenerateGetPropertySwitchExpressionArms(type, context.Properties))))))),
+                                .WithArms(SeparatedList(GenerateGetPropertySwitchExpressionArms(type, context.Properties, context.Methods))))))),
 
                     // GetProperty(Type)
                     MethodDeclaration(NullableType(bindableCustomPropertyType), Identifier("GetProperty"))
@@ -75,7 +74,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
         production.AddSource(context.Hierarchy.FileNameHint, syntax.ToFullStringWithHeader());
     }
 
-    private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetPropertySwitchExpressionArms(TypeSyntax ownerType, EquatableArray<PropertyInfo> properties)
+    private static IEnumerable<SwitchExpressionArmSyntax> GenerateGetPropertySwitchExpressionArms(TypeSyntax ownerType, EquatableArray<PropertyInfo> properties, EquatableArray<AttributedMethodInfo> methods)
     {
         foreach (PropertyInfo property in properties)
         {
@@ -135,6 +134,44 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                         Argument(DefaultLiteralExpression),                        // getIndexedValue
                         Argument(DefaultLiteralExpression)                         // setIndexedValue
                     ]))));
+        }
+
+        foreach (AttributedMethodInfo method in methods)
+        {
+            foreach (AttributeInfo attribute in method.Attributes)
+            {
+                if (attribute.FullyQualifiedMetadataName is not WellKnownMetadataNames.CommandAttribute)
+                {
+                    continue;
+                }
+
+                if (!attribute.TryGetConstructorArgument(0, out string? commandName))
+                {
+                    continue;
+                }
+
+                ExpressionSyntax getValue = SimpleLambdaExpression(Parameter(Identifier("instance")))
+                    .WithModifiers(StaticTokenList)
+                    .WithExpressionBody(SimpleMemberAccessExpression(method.Method.IsStatic
+                            ? ownerType
+                            : ParenthesizedExpression(CastExpression(ownerType, IdentifierName("instance"))),
+                        IdentifierName(commandName)));
+
+                yield return SwitchExpressionArm(
+                    ConstantPattern(NameOfExpression(IdentifierName(commandName))),
+                    ImplicitObjectCreationExpression()
+                        .WithArgumentList(ArgumentList(SeparatedList(
+                        [
+                            Argument(LiteralExpression(true)),                                // canRead
+                            Argument(LiteralExpression(false)),                               // canWrite
+                            Argument(NameOfExpression(IdentifierName(commandName))),          // name
+                            Argument(TypeOfExpression(CommandHelper.GetCommandType(method))), // type
+                            Argument(getValue),                                               // getValue
+                            Argument(DefaultLiteralExpression),                               // setValue
+                            Argument(DefaultLiteralExpression),                               // getIndexedValue
+                            Argument(DefaultLiteralExpression)                                // setIndexedValue
+                        ]))));
+            }
         }
 
         yield return SwitchExpressionArm(
@@ -223,6 +260,8 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
 
         public required EquatableArray<PropertyInfo> Properties { get; init; }
 
+        public required EquatableArray<AttributedMethodInfo> Methods { get; init; }
+
         public static BindableCustomPropertyGeneratorContext Create(GeneratorAttributeSyntaxContext context, CancellationToken token)
         {
             if (context.TargetSymbol is not INamedTypeSymbol typeSymbol)
@@ -231,14 +270,30 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
             }
 
             ImmutableArray<PropertyInfo>.Builder propertiesBuilder = ImmutableArray.CreateBuilder<PropertyInfo>();
+            ImmutableArray<AttributedMethodInfo>.Builder methodsBuilder = ImmutableArray.CreateBuilder<AttributedMethodInfo>();
 
             for (INamedTypeSymbol? currentSymbol = typeSymbol; currentSymbol is not null; currentSymbol = currentSymbol.BaseType)
             {
-                propertiesBuilder.AddRange(currentSymbol
-                    .GetMembers()
-                    .Where(member => member.Kind is SymbolKind.Property && member.DeclaredAccessibility is Accessibility.Public)
-                    .Cast<IPropertySymbol>()
-                    .Select(PropertyInfo.Create));
+                foreach (ISymbol member in currentSymbol.GetMembers())
+                {
+                    switch (member.Kind)
+                    {
+                        case SymbolKind.Property:
+                            if (member.DeclaredAccessibility is Accessibility.Public)
+                            {
+                                propertiesBuilder.Add(PropertyInfo.Create((IPropertySymbol)member));
+                            }
+                            break;
+                        case SymbolKind.Method:
+                            IMethodSymbol methodSymbol = (IMethodSymbol)member;
+                            if (methodSymbol.HasAttributeWithFullyQualifiedMetadataName(WellKnownMetadataNames.CommandAttribute))
+                            {
+                                ImmutableArray<AttributeInfo> attributes = ImmutableArray.CreateRange(methodSymbol.GetAttributes(), AttributeInfo.Create);
+                                methodsBuilder.Add(AttributedMethodInfo.Create(attributes, MethodInfo.Create(methodSymbol)));
+                            }
+                            break;
+                    }
+                }
             }
 
 
@@ -246,6 +301,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
             {
                 Hierarchy = HierarchyInfo.Create(typeSymbol),
                 Properties = propertiesBuilder.ToImmutable(),
+                Methods = methodsBuilder.ToImmutable(),
             };
         }
     }

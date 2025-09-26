@@ -11,56 +11,38 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record PropertyInfo
 {
-    private PropertyInfo(
-        EquatableArray<AttributeInfo> attributes,
-        Accessibility declaredAccessibility,
-        Accessibility? getMethodAccessibility,
-        Accessibility? setMethodAccessibility,
-        string name,
-        string fullyQualifiedTypeName,
-        string fullyQualifiedTypeNameWithNullabilityAnnotation)
-    {
-        Attributes = attributes;
-        DeclaredAccessibility = declaredAccessibility;
-        GetMethodAccessibility = getMethodAccessibility;
-        SetMethodAccessibility = setMethodAccessibility;
-        Name = name;
-        FullyQualifiedTypeName = fullyQualifiedTypeName;
-        FullyQualifiedTypeNameWithNullabilityAnnotation = fullyQualifiedTypeNameWithNullabilityAnnotation;
-    }
+    public required string Name { get; init; }
 
-    public string Name { get; }
+    public required string FullyQualifiedTypeName { get; init; }
 
-    public string FullyQualifiedTypeName { get; }
+    public required string FullyQualifiedTypeNameWithNullabilityAnnotation { get; init; }
 
-    public string FullyQualifiedTypeNameWithNullabilityAnnotation { get; }
+    public required EquatableArray<AttributeInfo> Attributes { get; init; }
 
-    public EquatableArray<AttributeInfo> Attributes { get; set; }
+    public required Accessibility DeclaredAccessibility { get; init; }
 
-    public Accessibility DeclaredAccessibility { get; init; }
+    public required Accessibility? GetMethodAccessibility { get; init; }
 
-    public Accessibility? GetMethodAccessibility { get; init; }
-
-    public Accessibility? SetMethodAccessibility { get; init; }
+    public required Accessibility? SetMethodAccessibility { get; init; }
 
     [MemberNotNullWhen(true, nameof(FullyQualifiedIndexerParameterTypeName))]
-    public bool IsIndexer { get; private init; }
+    public required bool IsIndexer { get; init; }
 
-    public string? FullyQualifiedIndexerParameterTypeName { get; init; }
+    public required string? FullyQualifiedIndexerParameterTypeName { get; init; }
 
-    public bool IsStatic { get; private init; }
+    public required bool IsStatic { get; init; }
 
     public static PropertyInfo Create(IPropertySymbol propertySymbol)
     {
-        return new(
-            ImmutableArray.CreateRange(propertySymbol.GetAttributes(), AttributeInfo.Create),
-            propertySymbol.DeclaredAccessibility,
-            propertySymbol.GetMethod?.DeclaredAccessibility,
-            propertySymbol.SetMethod?.DeclaredAccessibility,
-            propertySymbol.Name,
-            propertySymbol.Type.GetFullyQualifiedName(),
-            propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations())
+        return new()
         {
+            Attributes = ImmutableArray.CreateRange(propertySymbol.GetAttributes(), AttributeInfo.Create),
+            DeclaredAccessibility = propertySymbol.DeclaredAccessibility,
+            GetMethodAccessibility = propertySymbol.GetMethod?.DeclaredAccessibility,
+            SetMethodAccessibility = propertySymbol.SetMethod?.DeclaredAccessibility,
+            Name = propertySymbol.Name,
+            FullyQualifiedTypeName = propertySymbol.Type.GetFullyQualifiedName(),
+            FullyQualifiedTypeNameWithNullabilityAnnotation = propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations(),
             IsIndexer = propertySymbol.IsIndexer,
             FullyQualifiedIndexerParameterTypeName = propertySymbol.IsIndexer ? propertySymbol.Parameters[0].Type.GetFullyQualifiedNameWithNullabilityAnnotations() : null,
             IsStatic = propertySymbol.IsStatic,

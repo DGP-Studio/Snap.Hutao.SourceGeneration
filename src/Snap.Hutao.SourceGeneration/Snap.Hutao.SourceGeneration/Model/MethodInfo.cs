@@ -9,32 +9,25 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record MethodInfo
 {
-    private MethodInfo(
-        string minimallyQualifiedName,
-        string fullyQualifiedReturnTypeName,
-        string fullyQualifiedReturnTypeMetadataName,
-        EquatableArray<ParameterInfo> parameters)
-    {
-        MinimallyQualifiedName = minimallyQualifiedName;
-        FullyQualifiedReturnTypeName = fullyQualifiedReturnTypeName;
-        FullyQualifiedReturnTypeMetadataName = fullyQualifiedReturnTypeMetadataName;
-        Parameters = parameters;
-    }
+    public required string Name { get; init; }
 
-    public string MinimallyQualifiedName { get; }
+    public required string FullyQualifiedReturnTypeName { get; init; }
 
-    public string FullyQualifiedReturnTypeName { get; }
+    public required string FullyQualifiedReturnTypeMetadataName { get; init; }
 
-    public string FullyQualifiedReturnTypeMetadataName { get; }
+    public required EquatableArray<ParameterInfo> Parameters { get; init; }
 
-    public EquatableArray<ParameterInfo> Parameters { get; init; }
+    public required bool IsStatic { get; init; }
 
     public static MethodInfo Create(IMethodSymbol methodSymbol)
     {
-        return new(
-            methodSymbol.Name,
-            methodSymbol.ReturnType.GetFullyQualifiedNameWithNullabilityAnnotations(),
-            methodSymbol.ReturnType.GetFullyQualifiedMetadataName(),
-            ImmutableArray.CreateRange(methodSymbol.Parameters, ParameterInfo.Create));
+        return new()
+        {
+            Name = methodSymbol.Name,
+            FullyQualifiedReturnTypeName = methodSymbol.ReturnType.GetFullyQualifiedNameWithNullabilityAnnotations(),
+            FullyQualifiedReturnTypeMetadataName = methodSymbol.ReturnType.GetFullyQualifiedMetadataName(),
+            Parameters = ImmutableArray.CreateRange(methodSymbol.Parameters, ParameterInfo.Create),
+            IsStatic = methodSymbol.IsStatic,
+        };
     }
 }
