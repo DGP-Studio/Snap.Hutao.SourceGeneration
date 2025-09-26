@@ -93,7 +93,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                     .WithModifiers(StaticTokenList)
                     .WithExpressionBody(SimpleMemberAccessExpression(property.IsStatic
                             ? ownerType
-                            : ParenthesizedExpression(UnsafeAsExpression(ownerType, IdentifierName("instance"))),
+                            : UnsafeAsExpression(ownerType, IdentifierName("instance")),
                         IdentifierName(property.Name)))
                 : DefaultLiteralExpression;
 
@@ -154,7 +154,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                     .WithModifiers(StaticTokenList)
                     .WithExpressionBody(SimpleMemberAccessExpression(method.Method.IsStatic
                             ? ownerType
-                            : ParenthesizedExpression(UnsafeAsExpression(ownerType, IdentifierName("instance"))),
+                            : UnsafeAsExpression(ownerType, IdentifierName("instance")),
                         IdentifierName(commandName)));
 
                 yield return SwitchExpressionArm(
@@ -203,7 +203,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                         Parameter(Identifier("index"))
                     ])))
                     .WithExpressionBody(ElementAccessExpression(
-                        ParenthesizedExpression(UnsafeAsExpression(ownerType, IdentifierName("instance"))),
+                        UnsafeAsExpression(ownerType, IdentifierName("instance")),
                         BracketedArgumentList(SingletonSeparatedList(
                             Argument(UnsafeUnboxOrAsExpression(indexerType, IdentifierName("index"), property.IndexerParameterTypeIsValueType.Value))))))
                 : NullLiteralExpression;
