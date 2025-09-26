@@ -15,7 +15,7 @@ internal static class SyntaxNodeExtension
             
             #pragma warning disable CS1591
             #pragma warning disable SA1003, SA1009, SA1010, SA1013, SA1027, SA1028
-            #pragma warning disable SA1101, SA1106, SA1122, SA1128
+            #pragma warning disable SA1101, SA1106, SA1117, SA1122, SA1128
             #pragma warning disable SA1201, SA1202, SA1205
             #pragma warning disable SA1413
             #pragma warning disable SA1514, SA1516

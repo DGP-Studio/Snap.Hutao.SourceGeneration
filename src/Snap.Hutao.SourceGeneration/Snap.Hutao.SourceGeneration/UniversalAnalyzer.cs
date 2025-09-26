@@ -20,7 +20,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
     // SH005: Use "is null" instead of "== null" whenever possible
     // SH006: Use "is { } obj" whenever possible
     private static readonly DiagnosticDescriptor UseArgumentNullExceptionThrowIfNullDescriptor = new("SH007", "Use \"ArgumentNullException.ThrowIfNull()\" instead of \"!\"", "Use \"ArgumentNullException.ThrowIfNull()\"", "Quality", DiagnosticSeverity.Info, true);
-    private static readonly DiagnosticDescriptor EquatableInterfaceTypeShouldBeNullableDescriptor = new("SH008", "The type parameter of IEquatable<T> interface should be nullable", "The type parameter of IEquatable<T> interface should be nullable", "Quality", DiagnosticSeverity.Info, true);
+    private static readonly DiagnosticDescriptor CastCanBeSlowDescriptor = new("SH008", "Cast can be slow", "Cast can be slow, consider use Unsafe.As or Unsafe.Unbox", "Quality", DiagnosticSeverity.Info, true);
     // SH020: File header mismatch
     // SH100: Use "IContentDialogFactory.EnqueueAndShowAsync" instead
 
@@ -31,6 +31,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
             TypeInternalDescriptor,
             UseValueTaskIfPossibleDescriptor,
             UseArgumentNullExceptionThrowIfNullDescriptor,
+            CastCanBeSlowDescriptor
         ];
     }
 
@@ -47,6 +48,7 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
         context.RegisterSyntaxNodeAction(HandleTypeShouldBeInternal, SyntaxKind.ClassDeclaration, SyntaxKind.InterfaceDeclaration, SyntaxKind.StructDeclaration, SyntaxKind.EnumDeclaration);
         context.RegisterSyntaxNodeAction(HandleMethodReturnTypeShouldUseValueTaskInsteadOfTask, SyntaxKind.MethodDeclaration);
         context.RegisterSyntaxNodeAction(HandleArgumentNullExceptionThrowIfNull, SyntaxKind.SuppressNullableWarningExpression);
+        context.RegisterSyntaxNodeAction(HandleCastCanBeSlow, SyntaxKind.CastExpression);
     }
 
     // SH001
@@ -135,6 +137,28 @@ internal sealed class UniversalAnalyzer : DiagnosticAnalyzer
 
         Location location = syntax.GetLocation();
         Diagnostic diagnostic = Diagnostic.Create(UseArgumentNullExceptionThrowIfNullDescriptor, location);
+        context.ReportDiagnostic(diagnostic);
+    }
+
+    // SH008
+    private static void HandleCastCanBeSlow(SyntaxNodeAnalysisContext context)
+    {
+        CastExpressionSyntax syntax = (CastExpressionSyntax)context.Node;
+
+        if (syntax.Expression.Kind() is SyntaxKind.CollectionExpression)
+        {
+            return;
+        }
+
+        TypeInfo targetType = context.SemanticModel.GetTypeInfo(syntax.Type);
+        TypeInfo expressionType = context.SemanticModel.GetTypeInfo(syntax.Expression);
+        if (targetType.Type?.IsValueType is not false && expressionType.Type?.IsValueType is not false) // null or true
+        {
+            return;
+        }
+
+        Location location = syntax.GetLocation();
+        Diagnostic diagnostic = Diagnostic.Create(CastCanBeSlowDescriptor, location);
         context.ReportDiagnostic(diagnostic);
     }
 }

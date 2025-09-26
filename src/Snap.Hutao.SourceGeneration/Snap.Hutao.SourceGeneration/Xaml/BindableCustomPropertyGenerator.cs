@@ -93,7 +93,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                     .WithModifiers(StaticTokenList)
                     .WithExpressionBody(SimpleMemberAccessExpression(property.IsStatic
                             ? ownerType
-                            : ParenthesizedExpression(CastExpression(ownerType, IdentifierName("instance"))),
+                            : ParenthesizedExpression(UnsafeAsExpression(ownerType, IdentifierName("instance"))),
                         IdentifierName(property.Name)))
                 : DefaultLiteralExpression;
 
@@ -108,7 +108,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                     .WithBody(Block(List<StatementSyntax>(
                     [
                         LocalDeclarationStatement(VariableDeclaration(ownerType, SingletonSeparatedList(VariableDeclarator("typedInstance")
-                            .WithInitializer(EqualsValueClause(CastExpression(ownerType, IdentifierName("instance"))))))),
+                            .WithInitializer(EqualsValueClause(UnsafeAsExpression(ownerType, IdentifierName("instance"))))))),
                         IfStatement(
                             SimpleMemberAccessExpression(SimpleMemberAccessExpression(IdentifierName("typedInstance"), IdentifierName("IsViewUnloaded")), IdentifierName("Value")),
                             Block(ReturnStatement())),
@@ -116,7 +116,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                             SimpleMemberAccessExpression(
                                 property.IsStatic ? ownerType : IdentifierName("typedInstance"),
                                 IdentifierName(property.Name)),
-                            CastExpression(propertyType, IdentifierName("value"))))
+                            UnsafeUnboxOrAsExpression(propertyType, IdentifierName("value"), property.TypeIsValueType)))
                     ])))
                 : DefaultLiteralExpression;
 
@@ -154,7 +154,7 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                     .WithModifiers(StaticTokenList)
                     .WithExpressionBody(SimpleMemberAccessExpression(method.Method.IsStatic
                             ? ownerType
-                            : ParenthesizedExpression(CastExpression(ownerType, IdentifierName("instance"))),
+                            : ParenthesizedExpression(UnsafeAsExpression(ownerType, IdentifierName("instance"))),
                         IdentifierName(commandName)));
 
                 yield return SwitchExpressionArm(
@@ -203,9 +203,9 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                         Parameter(Identifier("index"))
                     ])))
                     .WithExpressionBody(ElementAccessExpression(
-                        ParenthesizedExpression(CastExpression(ownerType, IdentifierName("instance"))),
+                        ParenthesizedExpression(UnsafeAsExpression(ownerType, IdentifierName("instance"))),
                         BracketedArgumentList(SingletonSeparatedList(
-                            Argument(CastExpression(indexerType, IdentifierName("index")))))))
+                            Argument(UnsafeUnboxOrAsExpression(indexerType, IdentifierName("index"), property.IndexerParameterTypeIsValueType.Value))))))
                 : NullLiteralExpression;
 
             ExpressionSyntax setIndexedValue = canWrite
@@ -220,15 +220,15 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
                     .WithBody(Block(List<StatementSyntax>(
                     [
                         LocalDeclarationStatement(VariableDeclaration(ownerType, SingletonSeparatedList(VariableDeclarator("typedInstance")
-                            .WithInitializer(EqualsValueClause(CastExpression(ownerType, IdentifierName("instance"))))))),
+                            .WithInitializer(EqualsValueClause(UnsafeAsExpression(ownerType, IdentifierName("instance"))))))),
                         IfStatement(
                             SimpleMemberAccessExpression(SimpleMemberAccessExpression(IdentifierName("typedInstance"), IdentifierName("IsViewUnloaded")), IdentifierName("Value")),
                             Block(ReturnStatement())),
                         ExpressionStatement(SimpleAssignmentExpression(ElementAccessExpression(
                                 IdentifierName("typedInstance"),
                                 BracketedArgumentList(SingletonSeparatedList(
-                                    Argument(CastExpression(indexerType, IdentifierName("index")))))),
-                            CastExpression(propertyType, IdentifierName("value"))))
+                                    Argument(UnsafeUnboxOrAsExpression(indexerType, IdentifierName("index"), property.IndexerParameterTypeIsValueType.Value))))),
+                            UnsafeUnboxOrAsExpression(propertyType, IdentifierName("value"), property.TypeIsValueType)))
                     ])))
                 : NullLiteralExpression;
 
@@ -252,6 +252,29 @@ internal sealed class BindableCustomPropertyGenerator : IIncrementalGenerator
         }
 
         yield return ReturnStatement(DefaultLiteralExpression);
+    }
+
+    private static ExpressionSyntax UnsafeUnboxOrAsExpression(TypeSyntax type, ExpressionSyntax expression, bool isValueType)
+    {
+        return isValueType
+            ? UnsafeUnboxExpression(type, expression)
+            : UnsafeAsExpression(type, expression);
+    }
+
+    private static ExpressionSyntax UnsafeAsExpression(TypeSyntax type, ExpressionSyntax expression)
+    {
+        return InvocationExpression(SimpleMemberAccessExpression(
+                TypeOfSystemRuntimeCompilerServicesUnsafe,
+                GenericName("As").WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))))
+            .WithArgumentList(ArgumentList(SingletonSeparatedList(Argument(expression))));
+    }
+
+    private static ExpressionSyntax UnsafeUnboxExpression(TypeSyntax type, ExpressionSyntax expression)
+    {
+        return InvocationExpression(SimpleMemberAccessExpression(
+                TypeOfSystemRuntimeCompilerServicesUnsafe,
+                GenericName("Unbox").WithTypeArgumentList(TypeArgumentList(SingletonSeparatedList(type)))))
+            .WithArgumentList(ArgumentList(SingletonSeparatedList(Argument(expression))));
     }
 
     private sealed record BindableCustomPropertyGeneratorContext

@@ -39,6 +39,7 @@ internal static class WellKnownSyntax
     public static readonly TypeSyntax TypeOfSystemArgumentException = ParseTypeName("global::System.ArgumentException");
     public static readonly TypeSyntax TypeOfSystemArgumentNullException = ParseTypeName("global::System.ArgumentNullException");
     public static readonly TypeSyntax TypeOfSystemAttributeTargets = ParseTypeName("global::System.AttributeTargets");
+    public static readonly TypeSyntax TypeOfSystemRuntimeCompilerServicesUnsafe = ParseTypeName("global::System.Runtime.CompilerServices.Unsafe");
     public static readonly TypeSyntax TypeOfSystemEnum = ParseTypeName("global::System.Enum");
     public static readonly TypeSyntax TypeOfSystemGlobalizationCultureInfo = ParseTypeName("global::System.Globalization.CultureInfo");
     public static readonly TypeSyntax TypeOfSystemIComparable = ParseTypeName("global::System.IComparable");

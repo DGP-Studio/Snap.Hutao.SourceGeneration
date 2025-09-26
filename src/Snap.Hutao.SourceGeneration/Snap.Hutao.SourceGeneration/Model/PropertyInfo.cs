@@ -17,6 +17,10 @@ internal sealed record PropertyInfo
 
     public required string FullyQualifiedTypeNameWithNullabilityAnnotation { get; init; }
 
+    public required bool TypeIsValueType { get; init; }
+
+    public required bool TypeIsReferenceType { get; init; }
+
     public required EquatableArray<AttributeInfo> Attributes { get; init; }
 
     public required Accessibility DeclaredAccessibility { get; init; }
@@ -25,15 +29,21 @@ internal sealed record PropertyInfo
 
     public required Accessibility? SetMethodAccessibility { get; init; }
 
-    [MemberNotNullWhen(true, nameof(FullyQualifiedIndexerParameterTypeName))]
+    [MemberNotNullWhen(true, nameof(FullyQualifiedIndexerParameterTypeName), nameof(IndexerParameterTypeIsValueType), nameof(IndexerParameterTypeIsReferenceType))]
     public required bool IsIndexer { get; init; }
 
     public required string? FullyQualifiedIndexerParameterTypeName { get; init; }
+
+    public required bool? IndexerParameterTypeIsValueType { get; init; }
+
+    public required bool? IndexerParameterTypeIsReferenceType { get; init; }
 
     public required bool IsStatic { get; init; }
 
     public static PropertyInfo Create(IPropertySymbol propertySymbol)
     {
+        ITypeSymbol? indexerParameterType = propertySymbol.IsIndexer ? propertySymbol.Parameters[0].Type : null;
+
         return new()
         {
             Attributes = ImmutableArray.CreateRange(propertySymbol.GetAttributes(), AttributeInfo.Create),
@@ -43,8 +53,12 @@ internal sealed record PropertyInfo
             Name = propertySymbol.Name,
             FullyQualifiedTypeName = propertySymbol.Type.GetFullyQualifiedName(),
             FullyQualifiedTypeNameWithNullabilityAnnotation = propertySymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations(),
+            TypeIsValueType = propertySymbol.Type.IsValueType,
+            TypeIsReferenceType = propertySymbol.Type.IsReferenceType,
             IsIndexer = propertySymbol.IsIndexer,
-            FullyQualifiedIndexerParameterTypeName = propertySymbol.IsIndexer ? propertySymbol.Parameters[0].Type.GetFullyQualifiedNameWithNullabilityAnnotations() : null,
+            FullyQualifiedIndexerParameterTypeName = indexerParameterType?.GetFullyQualifiedNameWithNullabilityAnnotations(),
+            IndexerParameterTypeIsValueType = indexerParameterType?.IsValueType,
+            IndexerParameterTypeIsReferenceType = indexerParameterType?.IsReferenceType,
             IsStatic = propertySymbol.IsStatic,
         };
     }
