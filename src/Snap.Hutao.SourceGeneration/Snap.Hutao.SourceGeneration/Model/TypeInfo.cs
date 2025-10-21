@@ -5,6 +5,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using Snap.Hutao.SourceGeneration.Primitive;
 using System.Collections.Immutable;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 using static Snap.Hutao.SourceGeneration.Primitive.SyntaxKeywords;
@@ -14,6 +15,8 @@ namespace Snap.Hutao.SourceGeneration.Model;
 internal sealed record TypeInfo
 {
     public required string FullyQualifiedName { get; init; }
+
+    public required string FullyQualifiedNameWithoutTypeParameters { get; init; }
 
     public required string FullyQualifiedMetadataName { get; init; }
 
@@ -32,6 +35,7 @@ internal sealed record TypeInfo
         return new()
         {
             FullyQualifiedName = symbol.GetFullyQualifiedName(),
+            FullyQualifiedNameWithoutTypeParameters = symbol.GetFullyQualifiedNameWithoutTypeParameters(),
             FullyQualifiedMetadataName = symbol.GetFullyQualifiedMetadataName(),
             MinimallyQualifiedName = symbol.GetMinimallyQualifiedName(),
             Name = symbol.Name,
@@ -67,8 +71,10 @@ internal sealed record TypeInfo
         };
     }
 
-    public TypeSyntax GetTypeSyntax()
+    public TypeSyntax GetTypeSyntax(bool includeTypeArguments = true)
     {
-        return ParseTypeName(FullyQualifiedName);
+        return includeTypeArguments || TypeArguments.IsEmpty
+            ? ParseTypeName(FullyQualifiedName)
+            : GenericName(FullyQualifiedNameWithoutTypeParameters).WithTypeArgumentList(FastSyntaxFactory.EmptyTypeArgumentList);
     }
 }

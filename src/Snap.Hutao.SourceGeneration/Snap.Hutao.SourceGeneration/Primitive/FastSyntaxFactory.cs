@@ -17,6 +17,8 @@ internal static partial class FastSyntaxFactory
 
     public static ArgumentListSyntax EmptyArgumentList { get; } = SyntaxFactory.ArgumentList();
 
+    public static TypeArgumentListSyntax EmptyTypeArgumentList { get; } = SyntaxFactory.TypeArgumentList();
+
     public static BlockSyntax EmptyBlock { get; } = SyntaxFactory.Block();
 
     public static SyntaxTriviaList NullableEnableTriviaList { get; } = SyntaxFactory.TriviaList(SyntaxFactory.Trivia(SyntaxFactory.NullableDirectiveTrivia(EnableKeyword, true)));

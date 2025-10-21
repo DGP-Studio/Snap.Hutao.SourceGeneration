@@ -48,7 +48,7 @@ internal abstract record TypedConstantInfo
                 ushort ush => new Primitive.Of<ushort>(ush),
                 _ => throw new ArgumentException("Invalid primitive type")
             },
-            (TypedConstantKind.Type, ITypeSymbol type) => new Type(type.GetFullyQualifiedName()),
+            (TypedConstantKind.Type, ITypeSymbol type) => new Type(type.GetFullyQualifiedName(), type is INamedTypeSymbol { IsUnboundGenericType: true }),
             (TypedConstantKind.Enum, { } value) => new Enum(arg.Type!.GetFullyQualifiedName(), value),
             _ => throw new ArgumentException("Invalid typed constant type"),
         };
@@ -146,12 +146,15 @@ internal abstract record TypedConstantInfo
 
     public sealed record Type : TypedConstantInfo
     {
-        public Type(string fullyQualifiedTypeName)
+        public Type(string fullyQualifiedTypeName, bool isUnboundGeneric)
         {
             FullyQualifiedTypeName = fullyQualifiedTypeName;
+            IsUnboundGeneric = isUnboundGeneric;
         }
 
         public string FullyQualifiedTypeName { get; }
+
+        public bool IsUnboundGeneric { get; }
 
         public override ExpressionSyntax GetSyntax()
         {

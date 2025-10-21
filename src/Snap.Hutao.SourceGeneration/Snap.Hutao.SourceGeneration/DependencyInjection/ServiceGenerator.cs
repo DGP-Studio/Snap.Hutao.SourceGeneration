@@ -72,27 +72,38 @@ internal sealed class ServiceGenerator : IIncrementalGenerator
     {
         foreach (ServiceEntry entry in context.Services)
         {
-            TypeSyntax targetType = entry.Type.GetTypeSyntax();
-            SeparatedSyntaxList<TypeSyntax> typeArguments = SingletonSeparatedList(targetType);
-            if (entry.Attribute.TryGetConstructorArgument(1, out TypedConstantInfo? info) &&
-                info is TypedConstantInfo.Type infoType) // [Service(serviceLifetime, typeof(T))]
+            // [Service(serviceLifetime, typeof(T))]
+            entry.Attribute.TryGetConstructorArgument(1, out TypedConstantInfo? info);
+            TypedConstantInfo.Type? interfaceType = info as TypedConstantInfo.Type;
+
+            TypeSyntax targetType = entry.Type.GetTypeSyntax(interfaceType is null || !interfaceType.IsUnboundGeneric);
+
+            // Add{LifeTime}(Type serviceType)
+            // Add{LifeTime}(Type serviceType, Type implementationType)
+            // AddKeyed{LifeTime}(Type serviceType, object? key)
+            // AddKeyed{LifeTime}(Type serviceType, object? key, Type implementationType)
+            ArgumentSyntax targetTypeArgument = Argument(TypeOfExpression(targetType));
+
+            entry.Attribute.TryGetNamedArgument("Key", out TypedConstantInfo? key);
+            ArgumentSyntax? keyArgument = key is null ? null : Argument(key!.GetSyntax());
+            ArgumentSyntax? interfaceTypeArgument = interfaceType is null ? null : Argument(TypeOfExpression(ParseTypeName(interfaceType.FullyQualifiedTypeName)));
+
+            ArgumentSyntax serviceType = interfaceTypeArgument ?? targetTypeArgument;
+            ArgumentSyntax? implementationType = interfaceTypeArgument is not null ? targetTypeArgument : null;
+
+            SeparatedSyntaxList<ArgumentSyntax> arguments = (keyArgument, implementationType) switch
             {
-                typeArguments = typeArguments.Insert(0, ParseTypeName(infoType.FullyQualifiedTypeName));
-            }
-
-            bool hasKey = entry.Attribute.TryGetNamedArgument("Key", out TypedConstantInfo? key);
-
-            ArgumentListSyntax argumentList = hasKey
-                ? ArgumentList(SingletonSeparatedList(
-                    Argument(key!.GetSyntax())))
-                : EmptyArgumentList;
+                (not null, not null) => SeparatedList([serviceType, keyArgument, implementationType]),
+                (not null, null) => SeparatedList([serviceType, keyArgument]),
+                (null, not null) => SeparatedList([serviceType, implementationType]),
+                (null, null) => SingletonSeparatedList(serviceType),
+            };
 
             InvocationExpressionSyntax invocation = InvocationExpression(
                     SimpleMemberAccessExpression(
                         IdentifierName("services"),
-                        GenericName($"Add{(hasKey ? "Keyed" : string.Empty)}{entry.ServiceLifetime}")
-                            .WithTypeArgumentList(TypeArgumentList(typeArguments))))
-                .WithArgumentList(argumentList);
+                        IdentifierName($"Add{(key is not null ? "Keyed" : string.Empty)}{entry.ServiceLifetime}")))
+                .WithArgumentList(ArgumentList(arguments));
 
             yield return ExpressionStatement(invocation);
         }
