@@ -6,7 +6,7 @@ namespace Snap.Hutao.SourceGeneration;
 internal static class WellKnownMetadataNames
 {
     public const string CommandAttribute = "Snap.Hutao.Core.Annotation.CommandAttribute";
-    public const string ConstructorGeneratedAttribute = "Snap.Hutao.Core.Annotation.ConstructorGeneratedAttribute";
+    public const string GeneratedConstructorAttribute = "Snap.Hutao.Core.Annotation.GeneratedConstructorAttribute";
     public const string BindableCustomPropertyProviderAttribute = "Snap.Hutao.Core.Annotation.BindableCustomPropertyProviderAttribute";
     public const string DependencyPropertyAttributeT = "Snap.Hutao.Core.Annotation.DependencyPropertyAttribute`1";
     public const string FieldAccessAttribute = "Snap.Hutao.Core.Annotation.FieldAccessorAttribute";

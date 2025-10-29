@@ -25,13 +25,21 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        IncrementalValuesProvider<ConstructorGeneratorContext> provider = context.SyntaxProvider
+        IncrementalValuesProvider<ConstructorGeneratorContext> classProvider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
-                WellKnownMetadataNames.ConstructorGeneratedAttribute,
+                WellKnownMetadataNames.GeneratedConstructorAttribute,
                 SyntaxNodeHelper.Is<ClassDeclarationSyntax>,
-                ConstructorGeneratorContext.Create);
+                ConstructorGeneratorContext.CreateFromClass);
 
-        context.RegisterSourceOutput(provider, GenerateWrapper);
+        context.RegisterSourceOutput(classProvider, GenerateWrapper);
+
+        IncrementalValuesProvider<ConstructorGeneratorContext> constructorProvider = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                WellKnownMetadataNames.GeneratedConstructorAttribute,
+                SyntaxNodeHelper.Is<ConstructorDeclarationSyntax>,
+                ConstructorGeneratorContext.CreateFromConstructor);
+
+        context.RegisterSourceOutput(constructorProvider, GenerateWrapper);
     }
 
     private static void GenerateWrapper(SourceProductionContext production, ConstructorGeneratorContext context)
@@ -76,8 +84,8 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
     private static ConstructorDeclarationSyntax GenerateConstructorDeclaration(ConstructorGeneratorContext context)
     {
         SyntaxTokenList modifiers = context.Attribute.HasNamedArgument("Private", true)
-            ? PrivateTokenList
-            : PublicTokenList;
+            ? context.Partial ? PrivatePartialTokenList : PrivateTokenList
+            : context.Partial ? PublicPartialTokenList : PublicTokenList;
 
         ConstructorDeclarationSyntax constructorDeclaration = ConstructorDeclaration(Identifier(context.Hierarchy.Hierarchy[0].Name))
             .WithModifiers(modifiers);
@@ -294,13 +302,24 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
         public required EquatableArray<TypeInfo> Interfaces { get; init; }
 
-        public static ConstructorGeneratorContext Create(GeneratorAttributeSyntaxContext context, CancellationToken token)
-        {
-            if (context.TargetSymbol is not INamedTypeSymbol typeSymbol)
-            {
-                return default!;
-            }
+        public required bool Partial { get; init; }
 
+        public static ConstructorGeneratorContext CreateFromClass(GeneratorAttributeSyntaxContext context, CancellationToken token)
+        {
+            return context.TargetSymbol is INamedTypeSymbol typeSymbol
+                ? Create(typeSymbol, context.Attributes.Single(), false, token)
+                : default!;
+        }
+
+        public static ConstructorGeneratorContext CreateFromConstructor(GeneratorAttributeSyntaxContext context, CancellationToken token)
+        {
+            return context.TargetSymbol is IMethodSymbol { ContainingType: { } typeSymbol }
+                ? Create(typeSymbol, context.Attributes.Single(), true, token)
+                : default!;
+        }
+
+        private static ConstructorGeneratorContext Create(INamedTypeSymbol typeSymbol, AttributeData attributeData, bool isPartial, CancellationToken token)
+        {
             ImmutableArray<(bool ShouldSkip, FieldInfo Field)>.Builder fieldsBuilder = ImmutableArray.CreateBuilder<(bool ShouldSkip, FieldInfo Field)>();
             ImmutableArray<PropertyInfo>.Builder propertiesBuilder = ImmutableArray.CreateBuilder<PropertyInfo>();
 
@@ -355,11 +374,12 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
 
             return new()
             {
-                Attribute = AttributeInfo.Create(context.Attributes.Single()),
+                Attribute = AttributeInfo.Create(attributeData),
                 Hierarchy = HierarchyInfo.Create(typeSymbol),
                 Fields = fieldsBuilder.ToImmutable(),
                 Properties = propertiesBuilder.ToImmutable(),
                 Interfaces = interfacesBuilder.ToImmutable(),
+                Partial = isPartial,
             };
         }
     }
