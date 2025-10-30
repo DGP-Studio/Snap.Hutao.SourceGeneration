@@ -54,7 +54,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                                 .WithAccessorList(GetAndSetAccessorList),
                         ])),
                     ClassDeclaration(Identifier("GeneratedConstructorAttribute"))
-                        .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClassAndConstructor, inherited: false)))
+                        .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsConstructor, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
                         .WithBaseList(SystemAttributeBaseList)
                         .WithMembers(List<MemberDeclarationSyntax>(
@@ -65,13 +65,7 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                             PropertyDeclaration(BoolType, Identifier("CallBaseConstructor"))
                                 .WithModifiers(PublicTokenList)
                                 .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(BoolType, Identifier("ResolveHttpClient"))
-                                .WithModifiers(PublicTokenList)
-                                .WithAccessorList(GetAndSetAccessorList),
                             PropertyDeclaration(BoolType, Identifier("InitializeComponent"))
-                                .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
-                                .WithAccessorList(GetAndSetAccessorList),
-                            PropertyDeclaration(BoolType, Identifier("Private"))
                                 .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
                                 .WithAccessorList(GetAndSetAccessorList)
                         ])),

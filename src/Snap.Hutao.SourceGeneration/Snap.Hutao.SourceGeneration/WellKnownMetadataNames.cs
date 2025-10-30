@@ -11,10 +11,12 @@ internal static class WellKnownMetadataNames
     public const string DependencyPropertyAttributeT = "Snap.Hutao.Core.Annotation.DependencyPropertyAttribute`1";
     public const string FieldAccessAttribute = "Snap.Hutao.Core.Annotation.FieldAccessorAttribute";
 
+    public const string HttpClient = "System.Net.Http.HttpClient";
     public const string HttpClientAttribute = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientAttribute";
     public const string PrimaryHttpMessageHandlerAttribute = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.PrimaryHttpMessageHandlerAttribute";
     public const string HttpClientConfiguration = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientConfiguration.";
 
+    public const string IServiceProvider = "System.IServiceProvider";
     public const string ServiceLifetimeSingleton = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Singleton";
     public const string ServiceLifetimeScoped = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped";
     public const string ServiceLifetimeTransient = "Microsoft.Extensions.DependencyInjection.ServiceLifetime.Transient";

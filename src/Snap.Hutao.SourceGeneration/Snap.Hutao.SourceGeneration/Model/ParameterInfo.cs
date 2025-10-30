@@ -2,15 +2,20 @@
 // Licensed under the MIT license.
 
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Snap.Hutao.SourceGeneration.Extension;
+using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
+using static Snap.Hutao.SourceGeneration.Primitive.FastSyntaxFactory;
 
 namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record ParameterInfo
 {
-    public required string MinimallyQualifiedName { get; init; }
+    public required string Name { get; init; }
 
     public required string FullyQualifiedTypeName { get; init; }
+
+    public required string FullyQualifiedTypeMetadataName { get; init; }
 
     public required string FullyQualifiedTypeNameWithNullabilityAnnotations { get; init; }
 
@@ -18,9 +23,15 @@ internal sealed record ParameterInfo
     {
         return new()
         {
-            MinimallyQualifiedName = parameterSymbol.Name,
+            Name = parameterSymbol.Name,
             FullyQualifiedTypeName = parameterSymbol.Type.GetFullyQualifiedName(),
+            FullyQualifiedTypeMetadataName = parameterSymbol.Type.GetFullyQualifiedMetadataName(),
             FullyQualifiedTypeNameWithNullabilityAnnotations = parameterSymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations(),
         };
+    }
+
+    public ParameterSyntax GetSyntax()
+    {
+        return Parameter(ParseTypeName(FullyQualifiedTypeNameWithNullabilityAnnotations), Identifier(Name));
     }
 }

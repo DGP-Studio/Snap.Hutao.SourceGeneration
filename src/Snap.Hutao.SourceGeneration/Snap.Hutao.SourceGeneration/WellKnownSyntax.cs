@@ -52,9 +52,7 @@ internal static class WellKnownSyntax
     public static readonly TypeSyntax TypeOfSystemType = ParseTypeName("global::System.Type");
 
     public static readonly AttributeArgumentSyntax AttributeTargetsClass = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Class")));
-    public static readonly AttributeArgumentSyntax AttributeTargetsClassAndConstructor = AttributeArgument(BitwiseOrExpression(
-        SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Class")),
-        SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Constructor"))));
+    public static readonly AttributeArgumentSyntax AttributeTargetsConstructor = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Constructor")));
     public static readonly AttributeArgumentSyntax AttributeTargetsEnum = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Enum")));
     public static readonly AttributeArgumentSyntax AttributeTargetsField = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Field")));
     public static readonly AttributeArgumentSyntax AttributeTargetsFieldAndProperty = AttributeArgument(BitwiseOrExpression(
