@@ -169,7 +169,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
                 fieldInfo.MinimallyQualifiedName,
                 serviceProviderName,
                 context,
-                null,
+                fromKeyed,
                 token);
         }
     }
