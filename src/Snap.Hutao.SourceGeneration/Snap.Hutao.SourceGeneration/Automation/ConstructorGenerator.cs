@@ -28,7 +28,7 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         IncrementalValuesProvider<ConstructorGeneratorContext> provider = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 WellKnownMetadataNames.GeneratedConstructorAttribute,
-                SyntaxNodeHelper.Is<ConstructorDeclarationSyntax>,
+                SyntaxNodeHelper.Is<BaseMethodDeclarationSyntax>,
                 ConstructorGeneratorContext.Create);
 
         context.RegisterSourceOutput(provider, GenerateWrapper);
