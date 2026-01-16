@@ -11,7 +11,7 @@ namespace Snap.Hutao.SourceGeneration.Model;
 
 internal sealed record FieldInfo
 {
-    public required string MinimallyQualifiedName { get; init; }
+    public required string Name { get; init; }
 
     public required string FullyQualifiedTypeName { get; init; }
 
@@ -24,7 +24,7 @@ internal sealed record FieldInfo
         return new()
         {
             Attributes = ImmutableArray.CreateRange(fieldSymbol.GetAttributes(), AttributeInfo.Create),
-            MinimallyQualifiedName = fieldSymbol.Name,
+            Name = fieldSymbol.Name,
             FullyQualifiedTypeName = fieldSymbol.Type.GetFullyQualifiedName(),
             FullyQualifiedTypeNameWithNullabilityAnnotation = fieldSymbol.Type.GetFullyQualifiedNameWithNullabilityAnnotations(),
         };

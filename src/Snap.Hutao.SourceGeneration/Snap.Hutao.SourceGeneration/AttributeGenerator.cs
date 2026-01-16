@@ -69,6 +69,14 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                                 .WithModifiers(TokenList(Token(SyntaxKind.PublicKeyword)))
                                 .WithAccessorList(GetAndSetAccessorList)
                         ])),
+                    ClassDeclaration(Identifier("GeneratedUnmanagedFunctionPointerAttribute"))
+                        .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsField, inherited: false)))
+                        .WithModifiers(InternalSealedTokenList)
+                        .WithBaseList(SystemAttributeBaseList)
+                        .WithMembers(SingletonList<MemberDeclarationSyntax>(
+                            ConstructorDeclaration(Identifier("GeneratedUnmanagedFunctionPointerAttribute"))
+                                .WithModifiers(PublicTokenList)
+                                .WithEmptyBlockBody())),
                     ClassDeclaration(Identifier("BindableCustomPropertyProviderAttribute"))
                         .WithAttributeLists(SingletonList(SystemAttributeUsageList(AttributeTargetsClass, inherited: false)))
                         .WithModifiers(InternalSealedTokenList)
@@ -83,10 +91,8 @@ internal sealed class AttributeGenerator : IIncrementalGenerator
                         [
                             ConstructorDeclaration(Identifier("DependencyPropertyAttribute"))
                                 .WithModifiers(PublicTokenList)
-                                .WithParameterList(ParameterList(SeparatedList(
-                                [
-                                    Parameter(StringType, Identifier("name"))
-                                ])))
+                                .WithParameterList(ParameterList(SingletonSeparatedList(
+                                    Parameter(StringType, Identifier("name")))))
                                 .WithEmptyBlockBody(),
                             PropertyDeclaration(BoolType, Identifier("IsAttached"))
                                 .WithModifiers(PublicTokenList)

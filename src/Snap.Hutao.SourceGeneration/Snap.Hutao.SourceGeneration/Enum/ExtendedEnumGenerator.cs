@@ -160,8 +160,8 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
         foreach ((FieldInfo field, _) in fields)
         {
             yield return SwitchExpressionArm(
-                ConstantPattern(SimpleMemberAccessExpression(enumType, IdentifierName(field.MinimallyQualifiedName))),
-                StringLiteralExpression(field.MinimallyQualifiedName));
+                ConstantPattern(SimpleMemberAccessExpression(enumType, IdentifierName(field.Name))),
+                StringLiteralExpression(field.Name));
         }
 
         yield return SwitchExpressionArm(
@@ -180,7 +180,7 @@ internal class ExtendedEnumGenerator : IIncrementalGenerator
             if (localizationKeyInfo is not null && localizationKeyInfo.TryGetConstructorArgument(0, out string? localizationKey))
             {
                 yield return SwitchExpressionArm(
-                    ConstantPattern(SimpleMemberAccessExpression(enumType, IdentifierName(field.MinimallyQualifiedName))),
+                    ConstantPattern(SimpleMemberAccessExpression(enumType, IdentifierName(field.Name))),
                     StringLiteralExpression(localizationKey));
             }
         }

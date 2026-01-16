@@ -10,6 +10,7 @@ internal static class WellKnownMetadataNames
     public const string BindableCustomPropertyProviderAttribute = "Snap.Hutao.Core.Annotation.BindableCustomPropertyProviderAttribute";
     public const string DependencyPropertyAttributeT = "Snap.Hutao.Core.Annotation.DependencyPropertyAttribute`1";
     public const string FieldAccessAttribute = "Snap.Hutao.Core.Annotation.FieldAccessorAttribute";
+    public const string GeneratedUnmanagedFunctionPointerAttribute = "Snap.Hutao.Core.Annotation.GeneratedUnmanagedFunctionPointerAttribute";
 
     public const string HttpClient = "System.Net.Http.HttpClient";
     public const string HttpClientAttribute = "Snap.Hutao.Core.DependencyInjection.Annotation.HttpClient.HttpClientAttribute";

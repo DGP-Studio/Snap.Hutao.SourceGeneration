@@ -68,7 +68,7 @@ internal sealed class UnsafePropertyBackingFieldAccessorGenerator : IIncremental
 
             MethodDeclarationSyntax method = MethodDeclaration(refPropertyType, Identifier($"FieldRefOf{entry.Property.Name}"))
                 .WithAttributeLists(SingletonList(AttributeList(SingletonSeparatedList(
-                    GenerateUnsafeAccessorAttribute(entry.Field.MinimallyQualifiedName)))))
+                    GenerateUnsafeAccessorAttribute(entry.Field.Name)))))
                 .WithModifiers(PrivateStaticExternTokenList)
                 .WithParameterList(ParameterList(SingletonSeparatedList(
                     Parameter(ParseTypeName(entry.Hierarchy.Hierarchy[0].FullyQualifiedName), Identifier("self")))))

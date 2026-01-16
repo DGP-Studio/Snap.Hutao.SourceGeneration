@@ -60,6 +60,7 @@ internal static class WellKnownSyntax
         SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Property"))));
     public static readonly AttributeArgumentSyntax AttributeTargetsMethod = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Method")));
     public static readonly AttributeArgumentSyntax AttributeTargetsProperty = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Property")));
+    public static readonly AttributeArgumentSyntax AttributeTargetsStruct = AttributeArgument(SimpleMemberAccessExpression(TypeOfSystemAttributeTargets, IdentifierName("Struct")));
 
     public static readonly AttributeArgumentSyntax AllowMultipleTrue = AttributeArgument(TrueLiteralExpression).WithNameEquals(NameEquals(IdentifierName("AllowMultiple")));
     public static readonly AttributeArgumentSyntax InheritedFalse = AttributeArgument(FalseLiteralExpression).WithNameEquals(NameEquals(IdentifierName("Inherited")));

@@ -159,14 +159,14 @@ internal sealed class ConstructorGenerator : IIncrementalGenerator
         {
             if (shouldSkip)
             {
-                yield return EmptyStatement().WithTrailingTrivia(Comment($"// Skipped field with initializer: {fieldInfo.MinimallyQualifiedName}"));
+                yield return EmptyStatement().WithTrailingTrivia(Comment($"// Skipped field with initializer: {fieldInfo.Name}"));
                 continue;
             }
 
             fieldInfo.TryGetAttributeWithFullyQualifiedMetadataName(WellKnownMetadataNames.FromKeyedServicesAttribute, out AttributeInfo? fromKeyed);
             yield return GenerateConstructorBodyMemberAssignment(
                 fieldInfo.FullyQualifiedTypeNameWithNullabilityAnnotation,
-                fieldInfo.MinimallyQualifiedName,
+                fieldInfo.Name,
                 serviceProviderName,
                 context,
                 fromKeyed,
